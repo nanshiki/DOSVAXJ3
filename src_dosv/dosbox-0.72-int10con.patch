@@ -1,0 +1,314 @@
+
+int10 callback console (for additional CON/BIOS drivers)
+
+--- dosbox-0.72-org/src/dos/dev_con.h	2007-07-01 05:29:08 +0900
++++ dosbox-0.72/src/dos/dev_con.h	2007-08-31 19:55:12 +0900
+@@ -58,7 +58,7 @@
+ 	Bit16u count=0;
+ 	if ((readcache) && (*size)) {
+ 		data[count++]=readcache;
+-		if(dos.echo) INT10_TeletypeOutput(readcache,7);
++		if(dos.echo) INT10_TeletypeOutput_viaRealInt(readcache,7);
+ 		readcache=0;
+ 	}
+ 	while (*size>count) {
+@@ -71,8 +71,8 @@
+ 			*size=count;
+ 			reg_ax=oldax;
+ 			if(dos.echo) { 
+-				INT10_TeletypeOutput(13,7); //maybe don't do this ( no need for it actually ) (but it's compatible)
+-				INT10_TeletypeOutput(10,7);
++				INT10_TeletypeOutput_viaRealInt(13,7); //maybe don't do this ( no need for it actually ) (but it's compatible)
++				INT10_TeletypeOutput_viaRealInt(10,7);
+ 			}
+ 			return true;
+ 			break;
+@@ -80,8 +80,8 @@
+ 			if(*size==1) data[count++]=reg_al;  //one char at the time so give back that BS
+ 			else if(count) {                    //Remove data if it exists (extended keys don't go right)
+ 				data[count--]=0;
+-				INT10_TeletypeOutput(8,7);
+-				INT10_TeletypeOutput(' ',7);
++				INT10_TeletypeOutput_viaRealInt(8,7);
++				INT10_TeletypeOutput_viaRealInt(' ',7);
+ 			} else {
+ 				continue;                       //no data read yet so restart whileloop.
+ 			}
+@@ -105,7 +105,7 @@
+ 			break;
+ 		}
+ 		if(dos.echo) { //what to do if *size==1 and character is BS ?????
+-			INT10_TeletypeOutput(reg_al,7);
++			INT10_TeletypeOutput_viaRealInt(reg_al,7);
+ 		}
+ 	}
+ 	*size=count;
+@@ -130,9 +130,9 @@
+ 				continue;
+ 			} else { 
+ 				/* Some sort of "hack" now that \n doesn't set col to 0 (int10_char.cpp old chessgame) */
+-				if((data[count] == '\n') && (lastwrite != '\r')) INT10_TeletypeOutputAttr('\r',ansi.attr,ansi.enabled);
++				if((data[count] == '\n') && (lastwrite != '\r')) INT10_TeletypeOutputAttr_viaRealInt('\r',ansi.attr,ansi.enabled);
+ 				/* pass attribute only if ansi is enabled */
+-				INT10_TeletypeOutputAttr(data[count],ansi.attr,ansi.enabled);
++				INT10_TeletypeOutputAttr_viaRealInt(data[count],ansi.attr,ansi.enabled);
+ 				lastwrite = data[count++];
+ 				continue;
+ 		}
+@@ -275,7 +275,7 @@
+ 			if(ansi.data[1] == 0) ansi.data[1] = 1;
+ 			if(ansi.data[0] > ansi.nrows) ansi.data[0] = (Bit8u)ansi.nrows;
+ 			if(ansi.data[1] > ansi.ncols) ansi.data[1] = (Bit8u)ansi.ncols;
+-			INT10_SetCursorPos(--(ansi.data[0]),--(ansi.data[1]),page); /*ansi=1 based, int10 is 0 based */
++			INT10_SetCursorPos_viaRealInt(--(ansi.data[0]),--(ansi.data[1]),page); /*ansi=1 based, int10 is 0 based */
+ 			ClearAnsi();
+ 			break;
+ 			/* cursor up down and forward and backward only change the row or the col not both */
+@@ -285,7 +285,7 @@
+ 			tempdata = (ansi.data[0]? ansi.data[0] : 1);
+ 			if(tempdata > row) { row=0; } 
+ 			else { row-=tempdata;}
+-			INT10_SetCursorPos(row,col,page);
++			INT10_SetCursorPos_viaRealInt(row,col,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 'B': /*cursor Down */
+@@ -295,7 +295,7 @@
+ 			if(tempdata + static_cast<Bitu>(row) >= ansi.nrows)
+ 				{ row = ansi.nrows - 1;}
+ 			else	{ row += tempdata; }
+-			INT10_SetCursorPos(row,col,page);
++			INT10_SetCursorPos_viaRealInt(row,col,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 'C': /*cursor forward */
+@@ -305,7 +305,7 @@
+ 			if(tempdata + static_cast<Bitu>(col) >= ansi.ncols) 
+ 				{ col = ansi.ncols - 1;} 
+ 			else	{ col += tempdata;}
+-			INT10_SetCursorPos(row,col,page);
++			INT10_SetCursorPos_viaRealInt(row,col,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 'D': /*Cursor Backward  */
+@@ -314,7 +314,7 @@
+ 			tempdata=(ansi.data[0]? ansi.data[0] : 1);
+ 			if(tempdata > col) {col = 0;}
+ 			else { col -= tempdata;}
+-			INT10_SetCursorPos(row,col,page);
++			INT10_SetCursorPos_viaRealInt(row,col,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 'J': /*erase screen and move cursor home*/
+@@ -322,9 +322,9 @@
+ 			if(ansi.data[0]!=2) {/* every version behaves like type 2 */
+ 				LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: esc[%dJ called : not supported handling as 2",ansi.data[0]);
+ 			}
+-			INT10_ScrollWindow(0,0,255,255,0,ansi.attr,page);
++			INT10_ScrollWindow_viaRealInt(0,0,255,255,0,ansi.attr,page);
+ 			ClearAnsi();
+-			INT10_SetCursorPos(0,0,page);
++			INT10_SetCursorPos_viaRealInt(0,0,page);
+ 			break;
+ 		case 'h': /* SET   MODE (if code =7 enable linewrap) */
+ 		case 'I': /* RESET MODE */
+@@ -332,7 +332,7 @@
+ 			ClearAnsi();
+ 			break;
+ 		case 'u': /* Restore Cursor Pos */
+-			INT10_SetCursorPos(ansi.saverow,ansi.savecol,page);
++			INT10_SetCursorPos_viaRealInt(ansi.saverow,ansi.savecol,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 's': /* SAVE CURSOR POS */
+@@ -343,15 +343,15 @@
+ 		case 'K': /* erase till end of line (don't touch cursor) */
+ 			col = CURSOR_POS_COL(page);
+ 			row = CURSOR_POS_ROW(page);
+-			INT10_WriteChar(' ',ansi.attr,page,ansi.ncols-col,true); //Use this one to prevent scrolling when end of screen is reached
++			INT10_WriteChar_viaRealInt(' ',ansi.attr,page,ansi.ncols-col,true);  //Use this one to prevent scrolling when end of screen is reached
+ 			//for(i = col;i<(Bitu) ansi.ncols; i++) INT10_TeletypeOutputAttr(' ',ansi.attr,true);
+-			INT10_SetCursorPos(row,col,page);
++			INT10_SetCursorPos_viaRealInt(row,col,page);
+ 			ClearAnsi();
+ 			break;
+ 		case 'M': /* delete line (NANSI) */
+ 			col = CURSOR_POS_COL(page);
+ 			row = CURSOR_POS_ROW(page);
+-			INT10_ScrollWindow(row,0,ansi.nrows-1,ansi.ncols-1,ansi.data[0]? -ansi.data[0] : -1,ansi.attr,0xFF);
++			INT10_ScrollWindow_viaRealInt(row,0,ansi.nrows-1,ansi.ncols-1,ansi.data[0]? -ansi.data[0] : -1,ansi.attr,0xFF);
+ 			ClearAnsi();
+ 			break;
+ 		case 'l':/* (if code =7) disable linewrap */
+--- dosbox-0.72-org/src/ints/int10.h	2007-01-10 19:17:39 +0900
++++ dosbox-0.72/src/ints/int10.h	2007-08-31 19:55:12 +0900
+@@ -158,6 +158,15 @@
+ void INT10_WriteChar(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr);
+ void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,Bit16u count,Bit8u page);
+ 
++#if 1
++void INT10_SetCursorShape_viaRealInt(Bit8u first,Bit8u last);
++void INT10_SetCursorPos_viaRealInt(Bit8u row,Bit8u col,Bit8u page);
++void INT10_ScrollWindow_viaRealInt(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit8u attr,Bit8u page);
++void INT10_TeletypeOutput_viaRealInt(Bit8u chr,Bit8u attr);
++void INT10_TeletypeOutputAttr_viaRealInt(Bit8u chr,Bit8u attr,bool useattr);
++void INT10_WriteChar_viaRealInt(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr);
++#endif
++
+ /* Graphics Stuff */
+ void INT10_PutPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u color);
+ void INT10_GetPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u * color);
+--- dosbox-0.72-org/src/ints/int10_char.cpp	2007-06-13 15:32:25 +0900
++++ dosbox-0.72/src/ints/int10_char.cpp	2007-08-31 19:55:12 +0900
+@@ -25,6 +25,8 @@
+ #include "mem.h"
+ #include "inout.h"
+ #include "int10.h"
++#include "regs.h"
++#include "callback.h"
+ 
+ static INLINE void CGA2_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) { 
+ 	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT); 
+@@ -623,3 +625,142 @@
+ 		INT10_SetCursorPos(cur_row,cur_col,page);
+ 	}
+ }
++
++
++#define _pushregs \
++    Bit16u tmp_ax = reg_ax, tmp_bx = reg_bx, tmp_cx = reg_cx, tmp_dx = reg_dx;
++#define _popregs \
++    reg_ax = tmp_ax, reg_bx = tmp_bx, reg_cx = tmp_cx, reg_dx = tmp_dx;
++
++bool INT10_isTextMode() {
++	bool result;
++	if (CurMode->type == M_TEXT)
++		return true;
++	
++	_pushregs;
++	Bit16u tmp_di = reg_di, tmp_es = SegValue(es);
++	SegSet16(es, 0); reg_di = 0;
++	reg_ah = 0xfe;
++	CALLBACK_RunRealInt(0x10);
++	result = !(SegValue(es) && reg_di);
++	SegSet16(es, tmp_es); reg_di = tmp_di;
++	_popregs;
++	return result;
++}
++
++void INT10_SetCursorShape_viaRealInt(Bit8u first,Bit8u last) {
++	_pushregs;
++	reg_ah = 0x01;
++	reg_ch = first;
++	reg_cl = last;
++	CALLBACK_RunRealInt(0x10);
++	_popregs;
++}
++
++void INT10_SetCursorPos_viaRealInt(Bit8u row,Bit8u col,Bit8u page) {
++	_pushregs;
++	reg_ah = 0x02;
++	if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
++	reg_bh = page;
++	reg_dl = col;
++	reg_dh = row;
++	CALLBACK_RunRealInt(0x10);
++	_popregs;
++}
++
++void INT10_ScrollWindow_viaRealInt(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit8u attr,Bit8u page) {
++	BIOS_NCOLS;
++	BIOS_NROWS;
++	
++	_pushregs;
++	
++	if (nrows == 256 || nrows == 1) nrows = 25;
++	if (nlines > 0) {
++		reg_ah = 0x07;
++		reg_al = (Bit8u)nlines;
++	}
++	else {
++		reg_ah = 0x06;
++		reg_al = (Bit8u)(-nlines);
++	}
++	/* only works with active page */
++	/* if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE); */
++
++	if (clr >= ncols) clr = (Bit8u)(ncols - 1);
++	if (rlr >= nrows) rlr = nrows - 1;
++	
++	reg_bh = attr;
++	reg_cl = cul;
++	reg_ch = rul;
++	reg_dl = clr;
++	reg_dh = rlr;
++	CALLBACK_RunRealInt(0x10);
++	
++	_popregs;
++}
++
++
++void INT10_TeletypeOutputAttr_viaRealInt(Bit8u chr,Bit8u attr,bool useattr) {
++	BIOS_NCOLS;BIOS_NROWS;
++	Bit8u page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
++	Bit8u cur_row=CURSOR_POS_ROW(page);
++	Bit8u cur_col=CURSOR_POS_COL(page);
++	switch (chr) {
++	case 7:
++	//TODO BEEP
++	break;
++	case 8:
++		if(cur_col>0) cur_col--;
++		break;
++	case '\r':
++		cur_col=0;
++		break;
++	case '\n':
++//		cur_col=0; //Seems to break an old chess game
++		cur_row++;
++		break;
++	case '\t':
++		do {
++			INT10_TeletypeOutputAttr_viaRealInt(' ',attr,useattr);
++			cur_row=CURSOR_POS_ROW(page);
++			cur_col=CURSOR_POS_COL(page);
++		} while(cur_col%8);
++		break;
++	default:
++		/* Draw the actual Character */
++		INT10_WriteChar_viaRealInt(chr,attr,page,1,useattr);
++		cur_col++;
++	}
++	if(cur_col>=ncols) {
++		cur_col=0;
++		cur_row++;
++	}
++	// Do we need to scroll ?
++	if(cur_row>=nrows) {
++		//Fill with black on non-text modes and with 0x7 on textmode
++		Bit8u fill = INT10_isTextMode() ? 0x7:0;
++		INT10_ScrollWindow_viaRealInt(0,0,nrows-1,ncols-1,-1,fill,page);
++		cur_row--;
++	}
++	// Set the cursor for the page
++	INT10_SetCursorPos_viaRealInt(cur_row,cur_col,page);
++}
++
++
++void INT10_TeletypeOutput_viaRealInt(Bit8u chr,Bit8u attr) {
++	INT10_TeletypeOutputAttr_viaRealInt(chr,attr,!INT10_isTextMode());
++}
++
++
++void INT10_WriteChar_viaRealInt(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr){
++	_pushregs;
++	if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
++	reg_ah = showattr ? 0x09 : 0x0a;
++	reg_al = chr;
++	reg_bh = page;
++	reg_bl = attr;
++	reg_cx = count;
++	CALLBACK_RunRealInt(0x10);
++	_popregs;
++}
++

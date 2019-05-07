@@ -1,0 +1,131 @@
+
+- fix func 6300h (return corrent pointer)
+- fix func 55h (duplicate cmdline to Child PSP)
+- workaround for FindFirstFCB/FindNextFCB
+
+--- dosbox-0.72-org/include/dos_inc.h	2007-07-21 03:53:52 +0900
++++ dosbox-0.72/include/dos_inc.h	2007-09-10 15:37:19 +0900
+@@ -488,7 +488,7 @@
+ 	DOS_FCB(Bit16u seg,Bit16u off);
+ 	void Create(bool _extended);
+ 	void SetName(Bit8u _drive,char * _fname,char * _ext);
+-	void SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time);
++	void SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time,bool byFindFCB=false);
+ 	void GetSizeDateTime(Bit32u & _size,Bit16u & _date,Bit16u & _time);
+ 	void GetName(char * fillname);
+ 	void FileOpen(Bit8u _fhandle);
+@@ -501,7 +501,7 @@
+ 	Bit8u GetDrive(void);
+ 	bool Extended(void);
+ 	void GetAttr(Bit8u & attr);
+-	void SetAttr(Bit8u attr);
++	void SetAttr(Bit8u attr, bool byFindFCB=false);
+ private:
+ 	bool extended;
+ 	PhysPt real_pt;
+--- dosbox-0.72-org/src/dos/dos.cpp	2007-07-28 04:17:23 +0900
++++ dosbox-0.72/src/dos/dos.cpp	2007-08-31 19:54:54 +0900
+@@ -865,7 +865,7 @@
+ 	case 0x63:					/* DOUBLE BYTE CHARACTER SET */
+ 		if(reg_al == 0) {
+ 			SegSet16(ds,RealSeg(dos.tables.dbcs));
+-			reg_si=RealOff(dos.tables.dbcs);		
++			reg_si=RealOff(dos.tables.dbcs) + 2;		
+ 			reg_al = 0;
+ 			CALLBACK_SCF(false); //undocumented
+ 		} else reg_al = 0xff; //Doesn't officially touch carry flag
+--- dosbox-0.72-org/src/dos/dos_classes.cpp	2007-06-13 16:25:14 +0900
++++ dosbox-0.72/src/dos/dos_classes.cpp	2007-09-10 16:15:51 +0900
+@@ -419,10 +419,18 @@
+ 	MEM_BlockWrite(pt+offsetof(sFCB,ext),_ext,3);
+ }
+ 
+-void DOS_FCB::SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time) {
++void DOS_FCB::SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time,bool byFindFCB) {
+ 	sSave(sFCB,filesize,_size);
+ 	sSave(sFCB,date,_date);
+ 	sSave(sFCB,time,_time);
++#if 1
++	if (byFindFCB) {
++		/* DOS directory entry (see table 01352 on Interrupt List) */
++		SaveIt(2, offsetof(sFCB,filename)+0x16,_time);
++		SaveIt(2, offsetof(sFCB,filename)+0x18,_date);
++		SaveIt(4, offsetof(sFCB,filename)+0x1c,_size);
++	}
++#endif
+ }
+ 
+ void DOS_FCB::GetSizeDateTime(Bit32u & _size,Bit16u & _date,Bit16u & _time) {
+@@ -496,8 +504,12 @@
+ 	if(extended) attr=mem_readb(pt - 1);
+ }
+ 
+-void DOS_FCB::SetAttr(Bit8u attr) {
++void DOS_FCB::SetAttr(Bit8u attr, bool byFindFCB) {
+ 	if(extended) mem_writeb(pt - 1,attr);
++#if 1
++	/* DOS directory entry (see table 01352 on Interrupt List) */
++	if (byFindFCB) SaveIt(1, offsetof(sFCB,filename)+0x0b,attr);
++#endif
+ }
+ 
+ void DOS_SDA::Init() {
+--- dosbox-0.72-org/src/dos/dos_execute.cpp	2007-08-13 01:23:49 +0900
++++ dosbox-0.72/src/dos/dos_execute.cpp	2007-09-01 23:41:59 +0900
+@@ -220,7 +220,15 @@
+ bool DOS_ChildPSP(Bit16u segment, Bit16u size) {
+ 	DOS_PSP psp(segment);
+ 	psp.MakeNew(size);
+-	DOS_PSP psp_parent(psp.GetParent());
++	Bit16u parent = psp.GetParent();
++	DOS_PSP psp_parent(parent);
++	{
++	    // copy cmdline arguments
++	    PhysPt pcmd, ccmd;
++	    pcmd = PhysMake(parent, 0x80);
++	    ccmd = PhysMake(segment, 0x80);
++	    mem_memcpy(ccmd, pcmd, 128);
++	}
+ 	psp.CopyFileTable(&psp_parent,true);
+ 	psp.SetEnvironment(psp_parent.GetEnvironment());
+ 	psp.SetSize(size);
+--- dosbox-0.72-org/src/dos/dos_files.cpp	2007-08-22 16:34:57 +0900
++++ dosbox-0.72/src/dos/dos_files.cpp	2007-09-10 15:52:39 +0900
+@@ -788,7 +788,7 @@
+ 	for (i=strlen(ext);i<3;i++) ext[i]=' ';ext[3]=0;
+ }
+ 
+-static void SaveFindResult(DOS_FCB & find_fcb) {
++static void SaveFindResult(DOS_FCB & find_fcb, bool byFindFCB=false) {
+ 	DOS_DTA find_dta(dos.tables.tempdta);
+ 	char name[DOS_NAMELENGTH_ASCII];Bit32u size;Bit16u date;Bit16u time;Bit8u attr;Bit8u drive;
+ 	char file_name[9];char ext[4];
+@@ -799,8 +799,8 @@
+ 	DOS_FCB fcb(RealSeg(dos.dta()),RealOff(dos.dta()));//TODO
+ 	fcb.Create(find_fcb.Extended());
+ 	fcb.SetName(drive,file_name,ext);
+-	fcb.SetAttr(attr);      /* Only adds attribute if fcb is extended */
+-	fcb.SetSizeDateTime(size,date,time);
++	fcb.SetAttr(attr, byFindFCB);  /* Only adds attribute if fcb is extended */
++	fcb.SetSizeDateTime(size,date,time, byFindFCB);
+ }
+ 
+ bool DOS_FCBCreate(Bit16u seg,Bit16u offset) { 
+@@ -858,7 +858,7 @@
+ 	fcb.GetAttr(attr); /* Gets search attributes if extended */
+ 	bool ret=DOS_FindFirst(name,attr,true);
+ 	dos.dta(old_dta);
+-	if (ret) SaveFindResult(fcb);
++	if (ret) SaveFindResult(fcb,true);
+ 	return ret;
+ }
+ 
+@@ -867,7 +867,7 @@
+ 	RealPt old_dta=dos.dta();dos.dta(dos.tables.tempdta);
+ 	bool ret=DOS_FindNext();
+ 	dos.dta(old_dta);
+-	if (ret) SaveFindResult(fcb);
++	if (ret) SaveFindResult(fcb,true);
+ 	return ret;
+ }
+ 

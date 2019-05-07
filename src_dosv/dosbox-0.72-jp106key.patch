@@ -1,0 +1,136 @@
+--- dosbox-0.72-org/include/bios.h	2007-01-15 03:23:22 +0900
++++ dosbox-0.72/include/bios.h	2007-08-31 19:55:29 +0900
+@@ -102,7 +102,7 @@
+ #define BIOS_VIDEO_SAVEPTR              0x4a8
+ 
+ /* maximum of scancodes handled by keyboard bios routines */
+-#define MAX_SCAN_CODE 0x58
++#define MAX_SCAN_CODE 0x7f
+ 
+ /* The Section handling Bios Disk Access */
+ #define BIOS_MAX_DISK 10
+--- dosbox-0.72-org/include/keyboard.h	2007-01-10 19:17:33 +0900
++++ dosbox-0.72/include/keyboard.h	2007-08-31 19:55:29 +0900
+@@ -42,6 +42,9 @@
+ 
+ 	KBD_kp1,KBD_kp2,KBD_kp3,KBD_kp4,KBD_kp5,KBD_kp6,KBD_kp7,KBD_kp8,KBD_kp9,KBD_kp0,
+ 	KBD_kpdivide,KBD_kpmultiply,KBD_kpminus,KBD_kpplus,KBD_kpenter,KBD_kpperiod,
++	/* for Japanese A01 (106) key */
++	KBD_yen, KBD_underscore,
++
+ 
+ 	
+ 	KBD_LAST
+--- dosbox-0.72-org/src/dos/dos_keyboard_layout.cpp	2007-08-21 23:45:38 +0900
++++ dosbox-0.72/src/dos/dos_keyboard_layout.cpp	2007-09-07 15:05:56 +0900
+@@ -390,9 +390,9 @@
+ 					if (addmap>additional_planes+2) break;
+ 					Bitu charptr=read_buf_pos+addmap*((read_buf[read_buf_pos-2]&0x80)?2:1);
+ 					Bit16u kchar=read_buf[charptr];
++					if (read_buf[read_buf_pos-2]&0x80) kchar|=read_buf[charptr+1]<<8;	// scancode/char pair
+ 
+ 					if (kchar!=0) {		// key remapped
+-						if (read_buf[read_buf_pos-2]&0x80) kchar|=read_buf[charptr+1]<<8;	// scancode/char pair
+ 						// overwrite mapping
+ 						current_layout[scan*layout_pages+addmap]=kchar;
+ 						// clear command bit
+--- dosbox-0.72-org/src/gui/sdl_mapper.cpp	2007-08-18 03:49:56 +0900
++++ dosbox-0.72/src/gui/sdl_mapper.cpp	2007-08-31 19:55:29 +0900
+@@ -444,6 +444,19 @@
+ 		/* special handling of 102-key under windows */
+ 		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==0x56)) return (Bitu)SDLK_LESS;
+ #endif
++		/* special handling of Japanese 106-key */
++#if !defined (WIN32) && !defined (MACOSX) && !defined(OS2)
++			/* Linux */
++		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==(0x7d + 8)))
++#elif defined (WIN32)
++			/* Win32 */
++		if (keysym.scancode==0x7d)
++#else
++			/* others (not tested) */
++		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==0x7d))
++#endif
++			return (Bitu)SDLK_WORLD_5; /* 0xa5 ... Yen in Latin-1 */
++
+ 		return (Bitu)keysym.sym;
+ 	}
+ }
+@@ -1730,12 +1743,12 @@
+ 	{"F10","f10",KBD_f10},	{"F11","f11",KBD_f11},	{"F12","f12",KBD_f12},
+ };
+ 
+-static KeyBlock combo_1[14]={
++static KeyBlock combo_1[15]={
+ 	{"`~","grave",KBD_grave},	{"1!","1",KBD_1},	{"2@","2",KBD_2},
+ 	{"3#","3",KBD_3},			{"4$","4",KBD_4},	{"5%","5",KBD_5},
+ 	{"6^","6",KBD_6},			{"7&","7",KBD_7},	{"8*","8",KBD_8},
+ 	{"9(","9",KBD_9},			{"0)","0",KBD_0},	{"-_","minus",KBD_minus},	
+-	{"=+","equals",KBD_equals},	{"\x1B","bspace",KBD_backspace},
++	{"=+","equals",KBD_equals},	{"\\","yen",KBD_yen},{"\x1B","bspace",KBD_backspace},
+ };
+ 
+ static KeyBlock combo_2[12]={
+@@ -1754,12 +1767,13 @@
+ 	{"\\","backslash",KBD_backslash},	
+ };
+ 
+-static KeyBlock combo_4[11]={
++static KeyBlock combo_4[12]={
+ 	{"<","lessthan",KBD_extra_lt_gt},
+ 	{"z","z",KBD_z},			{"x","x",KBD_x},	{"c","c",KBD_c},
+ 	{"v","v",KBD_v},			{"b","b",KBD_b},	{"n","n",KBD_n},
+ 	{"m","m",KBD_m},			{",","comma",KBD_comma},
+-	{".","period",KBD_period},						{"/","slash",KBD_slash},		
++	{".","period",KBD_period},	{"/","slash",KBD_slash},	{"\\","underscore",KBD_underscore},
++	
+ };
+ 
+ 
+@@ -1773,7 +1787,7 @@
+ #define PY(_Y_) (30+(_Y_)*BH)
+ 	AddKeyButtonEvent(PX(0),PY(0),BW,BH,"ESC","esc",KBD_esc);
+ 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(0),BW,BH,combo_f[i].title,combo_f[i].entry,combo_f[i].key);
+-	for (i=0;i<14;i++) AddKeyButtonEvent(PX(  i),PY(1),BW,BH,combo_1[i].title,combo_1[i].entry,combo_1[i].key);
++	for (i=0;i<sizeof(combo_1)/sizeof(combo_1[0]);i++) AddKeyButtonEvent(PX(  i),PY(1),BW,BH,combo_1[i].title,combo_1[i].entry,combo_1[i].key);
+ 
+ 	AddKeyButtonEvent(PX(0),PY(2),BW*2,BH,"TAB","tab",KBD_tab);
+ 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(2),BW,BH,combo_2[i].title,combo_2[i].entry,combo_2[i].key);
+@@ -1784,7 +1798,7 @@
+ 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3[i].title,combo_3[i].entry,combo_3[i].key);
+ 
+ 	AddKeyButtonEvent(PX(0),PY(4),BW*2,BH,"SHIFT","lshift",KBD_leftshift);
+-	for (i=0;i<11;i++) AddKeyButtonEvent(PX(2+i),PY(4),BW,BH,combo_4[i].title,combo_4[i].entry,combo_4[i].key);
++	for (i=0;i<sizeof(combo_4)/sizeof(combo_4[0]);i++) AddKeyButtonEvent(PX(2+i),PY(4),BW,BH,combo_4[i].title,combo_4[i].entry,combo_4[i].key);
+ 	AddKeyButtonEvent(PX(13),PY(4),BW*3,BH,"SHIFT","rshift",KBD_rightshift);
+ 
+ 	/* Last Row */
+@@ -2010,6 +2024,7 @@
+ #else
+ 	{"lessthan",SDLK_LESS},
+ #endif
++	{"yen",SDLK_WORLD_5}, {"underscore",SDLK_UNDERSCORE},
+ 
+ 	{0,0}
+ };
+@@ -2353,6 +2368,8 @@
+ 		sdlkey_map[0xc5]=SDLK_PAUSE;
+ 		sdlkey_map[0xb7]=SDLK_PRINT;
+ 		sdlkey_map[0xb8]=SDLK_RALT;
++		sdlkey_map[0x7d]=SDLK_WORLD_5;		/* jp106:IBM-14 7D/FD */
++		sdlkey_map[0x73]=SDLK_UNDERSCORE;	/* jp106:IBM-56 73/F3 */
+ #endif
+ 
+ 		Bitu i;
+--- dosbox-0.72-org/src/hardware/keyboard.cpp	2007-06-13 15:32:24 +0900
++++ dosbox-0.72/src/hardware/keyboard.cpp	2007-08-31 19:55:29 +0900
+@@ -342,6 +342,9 @@
+ 	case KBD_printscreen:
+ 		/* Not handled yet. But usuable in mapper for special events */
+ 		return;
++	case KBD_underscore:ret=0x73;break;
++	case KBD_yen:ret=0x7d;break;
++
+ 	default:
+ 		E_Exit("Unsupported key press");
+ 		break;
