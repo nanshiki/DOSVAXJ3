@@ -943,6 +943,9 @@ graphics_chars:
 			if(reg_al == 0x00) {
 				// scroll mode
 				reg_al = real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL);
+				if(reg_bl == 0x00 || reg_bl == 0x01) {
+					real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL, 0x01);
+				}
 			} else if(reg_al == 0x04) {
 				// cursor blink
 				reg_al = real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK);
