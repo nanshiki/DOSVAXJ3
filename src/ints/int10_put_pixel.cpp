@@ -211,9 +211,8 @@ void INT10_GetPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u * color) {
 		{
 			Bit16u off = (y >> 2) * 80 + (x >> 3);
 			off += 8 * 1024 * (y & 3);
-			if (y&1) off+=8*1024;
-			Bit8u val=real_readb(0xb800,off);
-			*color=(val>>(((7-(x&7))))) & 1 ;
+			Bit8u val=real_readb(GRAPH_J3_SEG, off);
+			*color=(val>>(((7-(x&7))))) & 1;
 		}
 		break;
 	case M_CGA2:
