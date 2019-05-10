@@ -42,6 +42,7 @@ static bool useps2callback,ps2callbackinit;
 static Bitu call_ps2;
 static RealPt ps2_callback;
 static Bit16s oldmouseX, oldmouseY;
+static Bit16u version_table_seg;
 // forward
 void WriteMouseIntVector(void);
 
@@ -763,6 +764,9 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 	case 0x12:
 		mouse.max_y = 479;
 		break;
+	case 0x74:
+		mouse.max_y = 399;
+		break;
 	default:
 		LOG(LOG_MOUSE,LOG_ERROR)("Unhandled videomode %X on reset",mode);
 		mouse.inhibit_draw = true;
@@ -1071,6 +1075,17 @@ static Bitu INT33_Handler(void) {
 		reg_cx=(Bit16u)mouse.max_x;
 		reg_dx=(Bit16u)mouse.max_y;
 		break;
+	case 0x25:	/* get general driver information */
+		if(CurMode->type == M_TEXT) {
+			reg_ah = 0x01;
+		} else {
+			reg_ah = 0x21;
+		}
+		break;
+	case 0x6d:	/* mouse driver version */
+		SegSet16(es, version_table_seg);
+		reg_di = 0x0000;
+		break;
 	default:
 		LOG(LOG_MOUSE,LOG_ERROR)("Mouse Function %04X not implemented!",reg_ax);
 		break;
@@ -1187,7 +1202,16 @@ void MOUSE_Init(Section* /*sec*/) {
 	// Callback for mouse interrupt 0x33
 	call_int33=CALLBACK_Allocate();
 //	RealPt i33loc=RealMake(CB_SEG+1,(call_int33*CB_SIZE)-0x10);
-	RealPt i33loc=RealMake(DOS_GetMemory(0x1)-1,0x10);
+//	RealPt i33loc=RealMake(DOS_GetMemory(0x1)-1,0x10);
+	version_table_seg = DOS_GetMemory(0x4);
+	RealPt i33loc=RealMake(version_table_seg-1,0x40);
+	Bit16u off = 0x0008;
+	char *text = "*** This is Copyright 1983 Microsoft ***";
+	while(*text != 0) {
+		real_writeb(version_table_seg, off++, *text++);
+	}
+	real_writeb(version_table_seg, 0x0000, 0x07);
+
 	CALLBACK_Setup(call_int33,&INT33_Handler,CB_MOUSE,Real2Phys(i33loc),"Mouse");
 	// Wasteland needs low(seg(int33))!=0 and low(ofs(int33))!=0
 	real_writed(0,0x33<<2,i33loc);
