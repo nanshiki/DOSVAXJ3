@@ -128,7 +128,17 @@ bool DOS_Shell::CheckConfig(char* cmd_in,char*line) {
 	return true;
 }
 
+extern Bitu autoreload;
+
 void DOS_Shell::DoCommand(char * line) {
+	if(autoreload & AUTORELOAD_CMD) {
+		Bit8u drive = DOS_GetDefaultDrive();
+		if(drive < DOS_DRIVES) {
+			if(Drives[drive]) {
+				Drives[drive]->EmptyCache();
+			}
+		}
+	}
 /* First split the line into command and arguments */
 	line=trim(line);
 	char cmd_buffer[CMD_MAXLINE];
@@ -456,6 +466,9 @@ static void FormatNumber(Bit32u num,char * buf) {
 	sprintf(buf,"%d",numb);
 }	
 
+extern bool check_key(Bit16u &code);
+extern bool get_key(Bit16u &code);
+
 void DOS_Shell::CMD_DIR(char * args) {
 	HELP("DIR");
 	char numformat[16];
@@ -629,6 +642,15 @@ void DOS_Shell::CMD_DIR(char * args) {
 		}
 		if (optP && !(++p_count%(22*w_size))) {
 			CMD_PAUSE(empty_string);
+		}
+		Bit16u code;
+		if(check_key(code)) {
+			if(code == 0x2e03) {
+				get_key(code);
+				WriteOut("^C\n");
+				dos.dta(save_dta);
+				return;
+			}
 		}
 	} while ( (ret=DOS_FindNext()) );
 	if (optW) {
