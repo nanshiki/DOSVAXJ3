@@ -28,6 +28,7 @@
 #include "dos_inc.h"
 #include "SDL.h"
 #include "j3.h"
+#include "jfont.h"
 
 /* SDL by default treats numlock and scrolllock different from all other keys.
  * In recent versions this can disabled by a environment variable which we set in sdlmain.cpp
@@ -39,6 +40,7 @@
 #endif
 
 static Bitu call_int16,call_irq1,call_irq6;
+static Bit8u fep_line = 0x01;
 
 /* Nice table from BOCHS i should feel bad for ripping this */
 #define none 0
@@ -212,7 +214,7 @@ static void add_key(Bit16u code) {
 	if (code!=0) BIOS_AddKeyToBuffer(code);
 }
 
-static bool get_key(Bit16u &code) {
+bool get_key(Bit16u &code) {
 	Bit16u start,end,head,tail,thead;
 	if (machine==MCH_PCJR) {
 		/* should be done for cga and others as well, to be tested */
@@ -238,7 +240,7 @@ static bool get_key(Bit16u &code) {
 	return true;
 }
 
-static bool check_key(Bit16u &code) {
+bool check_key(Bit16u &code) {
 	Bit16u head,tail;
 	head =mem_readw(BIOS_KEYBOARD_BUFFER_HEAD);
 	tail =mem_readw(BIOS_KEYBOARD_BUFFER_TAIL);
@@ -705,7 +707,7 @@ INT16_Handler(void) {
 	case 0x13:
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 			if(reg_al == 0x00) {
-				if(reg_dl & 0x80) {
+				if(reg_dl & 0x81) {
 					SDL_SetIMValues(SDL_IM_ONOFF, 1, NULL);
 				} else {
 					SDL_SetIMValues(SDL_IM_ONOFF, 0, NULL);
@@ -723,13 +725,12 @@ INT16_Handler(void) {
 		break;
 	case 0x14:
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
-			if(reg_al == 0x00) {
-				// FEP line on
-			} else if(reg_al == 0x01) {
-				// FEP line off
-			} else if(reg_al == 0x02) {
-				// FEP line status
-				reg_al = 0x01;
+			if(reg_al == 0x02) {
+				// get
+				reg_al = fep_line;
+			} else if(reg_al == 0x00 || reg_al == 0x01) {
+				// set
+				fep_line = reg_al;
 			}
 		}
 		break;
