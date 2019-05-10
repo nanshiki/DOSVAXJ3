@@ -74,6 +74,9 @@ public:
 		WriteOut(MSG_Get("PROGRAM_MOUNT_STATUS_1"));
 		WriteOut(MSG_Get("PROGRAM_MOUNT_STATUS_FORMAT"),"Drive","Type","Label");
 		for(int p = 0;p < 8;p++) WriteOut("----------");
+		if(mem_readb(BIOS_SCREEN_COLUMNS) > 80) {
+			WriteOut("\n");
+		}
 
 		for (int d = 0;d < DOS_DRIVES;d++) {
 			if (!Drives[d]) continue;
