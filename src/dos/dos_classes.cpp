@@ -413,7 +413,9 @@ Bit8u DOS_DTA::GetSearchDrive(void) {
 
 void DOS_DTA::GetSearchParams(Bit8u & attr,char * pattern, bool lfn) {
 	attr=(Bit8u)sGet(sDTA,sattr);
-	if (lfn) {
+	// Trouble with double calling FindFirst
+	//if (lfn) {
+	if (0) {
 		memcpy(pattern,sname,LFN_NAMELENGTH);
 		pattern[LFN_NAMELENGTH]=0;
 	} else {
