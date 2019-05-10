@@ -117,6 +117,7 @@ Bitu XMS_GetEnabledA20(void) {
 static RealPt xms_callback;
 static bool umb_available;
 bool uselfn, autolfn;
+Bitu autoreload;
 
 static XMS_Block xms_handles[XMS_HANDLES];
 
@@ -427,6 +428,17 @@ public:
 		dos.version.minor = strlen(dosver)==0?10:(p==NULL?0:(Bit8u)(atoi(p+1)));
 		uselfn = strcmp(section->Get_string("lfn"),"false") && (!strcmp(section->Get_string("lfn"),"true") || dos.version.major>=7);
 		autolfn = !strcmp(section->Get_string("lfn"),"auto");
+		autoreload = 0;
+		const char *auto_string = section->Get_string("autoreload");
+		if(!strcmp(auto_string, "cmd")) {
+			autoreload |= AUTORELOAD_CMD;
+		}
+		if(!strcmp(auto_string, "dos")) {
+			autoreload |= AUTORELOAD_DOS;
+		}
+		if(!strcmp(auto_string, "all")) {
+			autoreload |= AUTORELOAD_ALL;
+		}
 		if (!section->Get_bool("xms")) return;
 		Bitu i;
 		BIOS_ZeroExtendedSize(true);
