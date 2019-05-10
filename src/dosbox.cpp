@@ -382,7 +382,9 @@ static void DOSBOX_RealInit(Section * sec) {
 	else if (mtype == "ega")      { machine = MCH_EGA; }
 	else if (mtype == "jega") { machine = MCH_EGA; dos.set_ax_enabled = true; }
 	else if (mtype == "dcga") { machine = MCH_DCGA; }
-	else if (mtype == "dosv") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }		// IS_DOSV enabled
+	else if (mtype == "dosv") { dos.set_dosv_enabled = true; }
+	else if (mtype == "dosv_et4000") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }
+	else if (mtype == "dosv_s3") { dos.set_dosv_enabled = true; svgaCard = SVGA_S3Trio; }
 //	else if (mtype == "vga")          { svgaCard = SVGA_S3Trio; }
 	else if (mtype == "vga")           { svgaCard = SVGA_None; }
 	else if (mtype == "svga_s3")       { svgaCard = SVGA_S3Trio; }
@@ -433,7 +435,7 @@ void DOSBOX_Init(void) {
 	/* Setup all the different modules making up DOSBox */
 	const char* machines[] = {
 		"hercules", "cga", "tandy", "pcjr", "ega", "jega", //for AX
-		"dcga", "dosv",
+		"dcga", "dosv", "dosv_s3", "dosv_et4000",
 		"vgaonly", "svga_s3", "svga_et3000", "svga_et4000",
 		"svga_paradise", "vesa_nolfb", "vesa_oldvbe", 0 };
 	secprop=control->AddSection_prop("dosbox",&DOSBOX_RealInit);
@@ -817,6 +819,11 @@ void DOSBOX_Init(void) {
 
 	Pbool = secprop->Add_bool("automount",Property::Changeable::WhenIdle,true);
 	Pbool->Set_help("Enable automatic drive mounting.");
+
+	const char *autoreload_settings[]={ "all", "dos", "cmd", "false", 0};
+	Pstring = secprop->Add_string("autoreload",Property::Changeable::WhenIdle,"cmd");
+	Pstring->Set_values(autoreload_settings);
+	Pstring->Set_help("Enable automatic drive reloading.");
 
 	secprop->AddInitFunction(&DOS_KeyboardLayout_Init,true);
 	Pstring = secprop->Add_string("keyboardlayout",Property::Changeable::WhenIdle, "auto");
