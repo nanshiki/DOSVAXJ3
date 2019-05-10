@@ -669,4 +669,8 @@ static INLINE Bit8u RealHandle(Bit16u handle) {
 #define IS_DOS_JAPANESE		(real_readw(dos.tables.country_seg,5) == 932 && mem_readb(Real2Phys(dos.tables.dbcs) + 0x02) == 0x81)
 #define IS_DOSV				(dos.set_dosv_enabled)
 
+#define	AUTORELOAD_CMD		0x01
+#define	AUTORELOAD_DOS		0x02
+#define	AUTORELOAD_ALL		0x03
+
 #endif
