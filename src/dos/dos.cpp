@@ -31,11 +31,14 @@
 #include "setup.h"
 #include "support.h"
 #include "serialport.h"
+#include "../ints/int10.h"
 #include "jega.h" //for AX
 #include "j3.h"
 #include "dosv.h"
 #include "jfont.h"
 #include <time.h>
+
+#define	IAS_DEVICE_HANDLE	0x1a50
 
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
@@ -43,6 +46,8 @@ extern bool force;
 
 #define DOS_COPYBUFSIZE 0x10000
 Bit8u dos_copybuf[DOS_COPYBUFSIZE];
+
+static Bit16u ias_handle;
 
 void DOS_SetError(Bit16u code) {
 	dos.errorcode=code;
@@ -154,8 +159,7 @@ static Bitu DOS_21Handler(void) {
 	case 0x02:		/* Write character to STDOUT */
 		{
 			Bit8u c=reg_dl;Bit16u n=1;
-			// for Vz
-			if(real_readw(0, 0x86) != 0xf000) {
+			if(CheckStayVz()) {
 				if(c == 0x0d) {
 					c = 0x0a;
 				}
@@ -687,6 +691,8 @@ static Bitu DOS_21Handler(void) {
 		MEM_StrCopy(SegPhys(ds)+reg_dx,name1,DOSNAMEBUF);
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 			if(!strncmp(name1, "$IBMAIAS", 8) || !strncmp(name1, "@:$IBMAIAS", 10)) {
+				ias_handle = IAS_DEVICE_HANDLE;
+				reg_ax = IAS_DEVICE_HANDLE;
 				force = false;
 				CALLBACK_SCF(false);
 				break;
@@ -707,6 +713,11 @@ static Bitu DOS_21Handler(void) {
 		}
 		break;
 	case 0x3e:		/* CLOSE Close file */
+		if(ias_handle != 0 && ias_handle == reg_bx) {
+			ias_handle = 0;
+			CALLBACK_SCF(false);
+		}
+
 		if (DOS_CloseFile(reg_bx)) {
 //			reg_al=0x01;	/* al destroyed. Refcount */
 			CALLBACK_SCF(false);
@@ -801,6 +812,11 @@ static Bitu DOS_21Handler(void) {
 		}
 		break;
 	case 0x44:					/* IOCTL Functions */
+		if(ias_handle != 0 && ias_handle == reg_bx) {
+			reg_dx = 0x0080;
+			CALLBACK_SCF(false);
+			break;
+		}
 		if (DOS_IOCTL()) {
 			CALLBACK_SCF(false);
 		} else {
@@ -1861,6 +1877,22 @@ static Bitu DOS_29Handler(void)
 	Bit16u tmp_ax = reg_ax;
 	Bit16u tmp_bx = reg_bx;
 
+	if(IS_DOS_JAPANESE) {
+		Bit16u tmp_es = SegValue(es);
+		Bit16u tmp_di = reg_di;
+
+		reg_ah = 0xfe;
+		CALLBACK_RunRealInt(0x10);
+
+		Bit16u seg = SegValue(es);
+		Bit16u col = CURSOR_POS_COL(0);
+		Bit16u row = CURSOR_POS_ROW(0);
+		Bit16u width = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
+		real_writeb(seg, reg_di + row * width * 2 + col * 2 + 1, 0x07);
+
+		reg_di = tmp_di;
+		SegSet16(es, tmp_es);
+	}
 	reg_ah = 0x0e;
 	reg_bl = 0x07;
 	CALLBACK_RunRealInt(0x10);
