@@ -48,6 +48,8 @@ DOS_Drive * Drives[DOS_DRIVES];
 bool force = false;
 int sdrive;
 
+extern Bitu autoreload;
+
 Bit8u DOS_GetDefaultDrive(void) {
 //	return DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).GetDrive();
 	Bit8u d = DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).GetDrive();
@@ -327,6 +329,11 @@ bool DOS_ChangeDir(char const * const dir) {
 		return false;
 	}
 	if (!DOS_MakeName(dir,fulldir,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	if (strlen(fulldir) && testdir[len-1]=='\\') {
 		DOS_SetError(DOSERR_PATH_NOT_FOUND);
 		return false;
@@ -349,6 +356,11 @@ bool DOS_MakeDir(char const * const dir) {
 		return false;
 	}
 	if (!DOS_MakeName(dir,fulldir,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	if (Drives[drive]->isWriteProtected()) {
 		LOG(LOG_FILES, LOG_NORMAL)("Attempt to write on a write-protected drive: %s", Drives[drive]->GetInfo());
 		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
@@ -371,6 +383,11 @@ bool DOS_RemoveDir(char const * const dir) {
  */
 	Bit8u drive;char fulldir[DOS_PATHLENGTH];
 	if (!DOS_MakeName(dir,fulldir,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	/* Check if exists */
 	if(!Drives[drive]->TestDir(fulldir)) {
 		DOS_SetError(DOSERR_PATH_NOT_FOUND);
@@ -397,7 +414,17 @@ bool DOS_Rename(char const * const oldname,char const * const newname) {
 	Bit8u driveold;char fullold[DOS_PATHLENGTH];
 	Bit8u drivenew;char fullnew[DOS_PATHLENGTH];
 	if (!DOS_MakeName(oldname,fullold,&driveold)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[driveold]->EmptyCache();
+	}
+
 	if (!DOS_MakeName(newname,fullnew,&drivenew)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drivenew]->EmptyCache();
+	}
+
 	/* No tricks with devices */
 	if ( (DOS_FindDevice(oldname) != DOS_DEVICES) ||
 	     (DOS_FindDevice(newname) != DOS_DEVICES) ) {
@@ -445,6 +472,11 @@ bool DOS_FindFirst(char * search,Bit16u attr,bool fcb_findfirst) {
 		return false;
 	}
 	if (!DOS_MakeName(search,fullsearch,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	//Check for devices. FindDevice checks for leading subdir as well
 	bool device = (DOS_FindDevice(search) != DOS_DEVICES);
 
@@ -613,6 +645,11 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 	char fullname[DOS_PATHLENGTH];Bit8u drive;
 	DOS_PSP psp(dos.psp());
 	if (!DOS_MakeName(name,fullname,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	/* Check for a free file handle */
 	Bit8u handle=DOS_FILES;Bit8u i;
 	for (i=0;i<DOS_FILES;i++) {
@@ -682,6 +719,11 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	char fullname[DOS_PATHLENGTH];Bit8u drive;Bit8u i;
 	/* First check if the name is correct */
 	if (!DOS_MakeName(name,fullname,&drive)) return false;
+
+	if(autoreload & AUTORELOAD_DOS) {
+		Drives[drive]->EmptyCache();
+	}
+
 	Bit8u handle=255;		
 	/* Check for a free file handle */
 	for (i=0;i<DOS_FILES;i++) {
