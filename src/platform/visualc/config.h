@@ -1,6 +1,3 @@
-//#define VERSION "4000AX11"
-#define VERSION "JP190510"
-
 /* Define to 1 to enable internal debugger, requires libcurses */
 #if defined(_DEBUG) || defined(ENABLE_DEBUGGER)
 #define C_DEBUG 1
