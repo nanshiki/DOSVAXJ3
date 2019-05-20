@@ -1300,7 +1300,18 @@ void DOS_KeyboardLayout_ShutDown(Section* /*sec*/) {
 	delete test;	
 }
 
+#if defined(LINUX)
+bool keyboard_jp_flag = false;
+#endif
+
 void DOS_KeyboardLayout_Init(Section* sec) {
+#if defined(LINUX)
+	Section_prop *section=static_cast<Section_prop *>(sec);
+	if(!strcasecmp(section->Get_string("keyboardlayout"), "jp")) {
+		keyboard_jp_flag = true;
+	}
+#endif
+
 	test = new DOS_KeyboardLayout(sec);
 	sec->AddDestroyFunction(&DOS_KeyboardLayout_ShutDown,true);
 //	MAPPER_AddHandler(switch_keyboard_layout,MK_f2,MMOD1|MMOD2,"sw_layout","Switch Layout");
