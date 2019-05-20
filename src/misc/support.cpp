@@ -29,11 +29,11 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
-  
 #include "dosbox.h"
 #include "debug.h"
 #include "support.h"
 #include "video.h"
+#include "cross.h"
 
 
 void upcase(std::string &str) {
@@ -201,3 +201,78 @@ void E_Exit(const char * format,...) {
 
 	throw(buf);
 }
+
+#if defined(LINUX)
+#include <iconv.h>
+
+void utf8_to_sjis_copy(char *dst, char *src, int len)
+{
+	iconv_t ic;
+	char *psrc, *pdst;
+	size_t srcsize, dstsize;
+	ic = iconv_open("Shift_JIS", "UTF-8");
+	psrc = src;
+	pdst = dst;
+	srcsize = strlen(src);
+	dstsize = len;
+	iconv(ic, &psrc, &srcsize, &pdst, &dstsize);
+	iconv_close(ic);
+	*pdst = 0;
+}
+
+void sjis_to_utf8_copy(char *dst, char *src, int len)
+{
+	iconv_t ic;
+	char *psrc, *pdst;
+	size_t srcsize, dstsize;
+	ic = iconv_open("UTF-8", "Shift_JIS");
+	psrc = src;
+	pdst = dst;
+	srcsize = strlen(src);
+	dstsize = len;
+	iconv(ic, &psrc, &srcsize, &pdst, &dstsize);
+	iconv_close(ic);
+	*pdst = 0;
+}
+
+void sjis_to_utf16_copy(char *dst, char *src, int len)
+{
+	iconv_t ic;
+	char *psrc, *pdst;
+	size_t srcsize, dstsize;
+	ic = iconv_open("UTF-16LE", "Shift_JIS");
+	psrc = src;
+	pdst = dst;
+	srcsize = strlen(src);
+	dstsize = len;
+	iconv(ic, &psrc, &srcsize, &pdst, &dstsize);
+	iconv_close(ic);
+	*pdst = 0;
+}
+
+void ChangeUtf8FileName(char *fullname)
+{
+	char *dst, *src;
+	char temp[CROSS_LEN];
+	sjis_to_utf8_copy(temp, fullname, CROSS_LEN);
+	src = temp;
+	dst = fullname;
+	while(*src != '\0') {
+		if(*src == (char)0xe2 && *(src + 1) == (char)0x80 && *(src + 2) == (char)0xbe) {
+			*dst = '~';
+			src += 2;
+		} else if(*src == (char)0xc2 && *(src + 1) == (char)0xa5) {
+			*dst = '/';
+			src++;
+		} else {
+			*dst = *src;
+		}
+		src++;
+		dst++;
+	}
+	*dst = 0;
+}
+
+#endif
+
+
