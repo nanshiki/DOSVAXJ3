@@ -19,6 +19,7 @@
 
 
 #include "vga.h"
+#include "dosv.h"
 
 #define S3_LFB_BASE		0xC0000000
 
@@ -253,6 +254,5 @@ Bit16u INT10_SetupVideoParameterTable(PhysPt basepos);
 void INT10_SetupBasicVideoParameterTable(void);
 
 void WriteCharTopView(Bit16u off, int count);
-bool INT10_SetDOSVMode(Bit16u mode);
-bool INT10_SetDOSVMode_SVGA(Bit16u mode);
+bool INT10_SetDOSVModeVtext(Bit16u mode, enum DOSV_VTEXT_MODE vtext_mode);
 
