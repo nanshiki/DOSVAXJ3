@@ -20,7 +20,6 @@
 #include "jega.h"//for AX
 #include "mem.h"
 
-#include <windows.h>
 #include <string.h>
 #include <math.h>
 #include "dosbox.h"
@@ -29,6 +28,7 @@
 #include "../gui/render_scalers.h"
 #include "vga.h"
 #include "pic.h"
+#include "jfont.h"
 
 //#undef C_DEBUG
 //#define C_DEBUG 1
@@ -566,6 +566,8 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 						if (exattr & 0x10) fline = (fline >> 1) + 8;
 						else fline = fline >> 1;
 					}
+					// read font
+					GetDbcsFont(chr);
 					//Vertical wide font (Extended Attribute)
 					if (exattr & 0x40) {
 						// Get the font pattern
