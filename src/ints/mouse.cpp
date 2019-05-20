@@ -1206,7 +1206,7 @@ void MOUSE_Init(Section* /*sec*/) {
 	version_table_seg = DOS_GetMemory(0x4);
 	RealPt i33loc=RealMake(version_table_seg-1,0x40);
 	Bit16u off = 0x0008;
-	char *text = "*** This is Copyright 1983 Microsoft ***";
+	const char *text = "*** This is Copyright 1983 Microsoft ***";
 	while(*text != 0) {
 		real_writeb(version_table_seg, off++, *text++);
 	}
