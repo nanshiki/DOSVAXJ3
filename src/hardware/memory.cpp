@@ -23,7 +23,6 @@
 #include "setup.h"
 #include "paging.h"
 #include "regs.h"
-#include <windows.h>
 
 #include <string.h>
 
