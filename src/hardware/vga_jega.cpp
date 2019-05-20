@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-
+#include <string.h>
 #include "jega.h"//for AX
 
 #include "setup.h"
@@ -152,7 +152,7 @@ void write_p3d5_jega(Bitu reg, Bitu val, Bitu iolen) {
 		break;
 	}
 }
-//CRT Control Register can be read from I/O 3D5h, after set the index at I/O 3D4h
+//CRT Control Register can be read from I/O 3D5h, after setting index at I/O 3D4h
 Bitu read_p3d5_jega(Bitu reg, Bitu iolen) {
 	switch (reg) {
 	case 0xb9:
@@ -205,26 +205,26 @@ Bitu read_p3d5_jega(Bitu reg, Bitu iolen) {
 
 void JEGA_setupAX(void) {
 	memset(&jega, 0, sizeof(JEGA_DATA));
-	jega.RMOD1 = 0xC8;//Mode register 1
-	jega.RMOD2 = 0x00;//Mode register 2
-	jega.RDAGS = 0x00;//ANK Group sel (not implemented)
-	jega.RDFFB = 0x00;// Font access first byte
-	jega.RDFSB = 0x00;// second
-	jega.RDFAP = 0x00;// pattern
-	jega.RPESL = 0x00;// end scan line (superceded by EGA)
-	jega.RPULP = 0x00;// under scan line (superceded by EGA)
-	jega.RPSSC = 1;// DBCS start scan line
-	jega.RPSSU = 3;// 2x DBCS upper start scan
-	jega.RPSSL = 0;// 2x DBCS lower start scan
-	jega.RPPAJ = 0x00;//super imposed (only AX-2 system, not implemented)
-	jega.RCMOD = 0x00;//Cursor Mode (not implemented)
-	jega.RCCLH = 0x00;//Cursor location Upper bits (superceded by EGA)
-	jega.RCCLL = 0x00;//Cursor location Lower bits (superceded by EGA)
-	jega.RCCSL = 0x00;//Cursor Start Line (superceded by EGA)
-	jega.RCCEL = 0x00;//Cursor End Line (superceded by EGA)
-	jega.RCSKW = 0x20;//Cursor Skew control (not implemented)
-	jega.ROMSL = 0x00;//Unused?
-	jega.RSTAT = 0x03;//font status register
+	jega.RMOD1 = 0xC8;//b9: Mode register 1
+	jega.RMOD2 = 0x00;//ba: Mode register 2
+	jega.RDAGS = 0x00;//bb: ANK Group sel (not implemented)
+	jega.RDFFB = 0x00;//bc: Font access first byte
+	jega.RDFSB = 0x00;//bd: second
+	jega.RDFAP = 0x00;//be: Font Access Pattern
+	jega.RPESL = 0x00;//09: end scan line (superceded by EGA)
+	jega.RPULP = 0x00;//14: under scan line (superceded by EGA)
+	jega.RPSSC = 1;//db: DBCS start scan line
+	jega.RPSSU = 3;//d9: 2x DBCS upper start scan
+	jega.RPSSL = 0;//da: 2x DBCS lower start scan
+	jega.RPPAJ = 0x00;//dc: super imposed (only AX-2 system, not implemented)
+	jega.RCMOD = 0x00;//dd: Cursor Mode (not implemented)
+	jega.RCCLH = 0x00;//0e: Cursor location Upper bits (superceded by EGA)
+	jega.RCCLL = 0x00;//0f: Cursor location Lower bits (superceded by EGA)
+	jega.RCCSL = 0x00;//0a: Cursor Start Line (superceded by EGA)
+	jega.RCCEL = 0x00;//0b: Cursor End Line (superceded by EGA)
+	jega.RCSKW = 0x20;//de: Cursor Skew control (not implemented)
+	jega.ROMSL = 0x00;//df: Unused?
+	jega.RSTAT = 0x03;//bf: Font register accessible status
 	real_writeb(BIOSMEM_AX_SEG, BIOSMEM_AX_JPNSTATUS, 0);
 	real_writeb(BIOSMEM_AX_SEG, BIOSMEM_AX_JEGA_RMOD1, jega.RMOD1);
 	real_writeb(BIOSMEM_AX_SEG, BIOSMEM_AX_JEGA_RMOD2, jega.RMOD2);
