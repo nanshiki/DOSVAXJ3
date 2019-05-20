@@ -28,8 +28,11 @@
 #include "render.h"
 #include "support.h"
 #include "control.h"
+#include "timer.h"
 #include "j3.h"
 #include "jfont.h"
+
+#define CHANGE_IM_POSITION_TIME		100
 
 #define KANJI_ROM_PAGE		(0xE0000/4096)
 
@@ -41,7 +44,6 @@ static Bitu j3_text_color;
 static Bitu j3_back_color;
 static Bit16u j3_machine_code;
 static Bit16u j3_font_seg;
-static Bit16u j3_gaiji_seg;
 
 static Bit8u jfont_yen[32];
 static Bit8u jfont_kana[32*64];
@@ -56,11 +58,6 @@ bool INT10_J3_SetCRTBIOSMode(Bitu mode)
 		return true;
 	}
 	return false;
-}
-
-Bit16u J3_GetGaijiSeg()
-{
-	return j3_gaiji_seg;
 }
 
 static Bit16u jis2shift(Bit16u jis)
@@ -254,7 +251,6 @@ void INT60_J3_Setup()
 
 	SetTextSeg();
 	j3_font_seg = DOS_GetMemory(0x100);
-	j3_gaiji_seg = DOS_GetMemory(0x100);
 
 	PhysPt fontdata = Real2Phys(int10.rom.font_16);
 	for(code = 0 ; code < 256 ; code++) {
@@ -309,8 +305,33 @@ void J3_OffCursor()
 	}
 }
 
+static Bitu im_x, im_y;
+static Bit32u last_ticks;
+
+void SetIMPosition()
+{
+	Bitu x = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS);
+	Bitu y = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS + 1);
+
+	if((im_x != x || im_y != y) && GetTicks() - last_ticks > CHANGE_IM_POSITION_TIME) {
+		last_ticks = GetTicks();
+		im_x = x;
+		im_y = y;
+#if defined(LINUX)
+		y++;
+#endif
+		if(real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) == 24) {
+			SDL_SetIMPosition(x * 12, y * 24 + 4);
+		} else {
+			SDL_SetIMPosition(x * 8, y * real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) - 2);
+		}
+	}
+}
+
 void INT8_J3()
 {
+	SetIMPosition();
+
 	j3_timer++;
 	if((j3_timer & 0x03) == 0) {
 		if((real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK) & 0x01) == 0 || j3_cursor_stat == 0) {
