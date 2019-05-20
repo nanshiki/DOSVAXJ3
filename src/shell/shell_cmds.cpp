@@ -196,10 +196,15 @@ void DOS_Shell::DoCommand(char * line) {
 		return; \
 	}
 
+extern Bit8u RealVtextMode;
+
 void DOS_Shell::CMD_CLS(char * args) {
 	HELP("CLS");
 	reg_ah = 0x00;
 	reg_al = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE);
+	if(reg_al == 0x70) {
+		reg_al = RealVtextMode;
+	}
 	CALLBACK_RunRealInt(0x10);
 }
 
@@ -569,6 +574,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 
 	Bitu cr_count = mem_readb(BIOS_SCREEN_COLUMNS) / 16;
  
+	Bit16u code;
 	do {    /* File name and extension */
 		char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH+1];
 		Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
@@ -643,7 +649,6 @@ void DOS_Shell::CMD_DIR(char * args) {
 		if (optP && !(++p_count%(22*w_size))) {
 			CMD_PAUSE(empty_string);
 		}
-		Bit16u code;
 		if(check_key(code)) {
 			if(code == 0x2e03) {
 				get_key(code);
@@ -1066,12 +1071,21 @@ nextfile:
 		WriteOut(MSG_Get("SHELL_CMD_FILE_NOT_FOUND"),word);
 		return;
 	}
+	Bit16u code;
 	Bit16u n;Bit8u c;
 	do {
 		n=1;
 		DOS_ReadFile(handle,&c,&n);
 		if (c==0x1a) break; // stop at EOF
 		DOS_WriteFile(STDOUT,&c,&n);
+
+		if(check_key(code)) {
+			if(code == 0x2e03) {
+				get_key(code);
+				WriteOut("^C\n");
+				return;
+			}
+		}
 	} while (n);
 	DOS_CloseFile(handle);
 	if (*args) goto nextfile;
@@ -1395,6 +1409,10 @@ static char *str_replace(char *orig, char *rep, char *with) {
     return result;
 }
 
+#ifndef WIN32
+#define	_strnicmp	strncasecmp
+#endif
+
 void DOS_Shell::CMD_FOR(char *args){
 	HELP("FOR");
 	args = ltrim(args);
@@ -1559,7 +1577,7 @@ void DOS_Shell::CMD_CHEV(char *args)
 	HELP("CHEV");
 
 	bool japanese_flag = false;
-	char *status = "US";
+	const char *status = "US";
 	Bit8u new_mode = 0xff;
 	Bit8u mode = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE);
 	if(args && *args) {
@@ -1573,10 +1591,10 @@ void DOS_Shell::CMD_CHEV(char *args)
 				new_mode = 0x03;
 			}
 			japanese_flag = true;
-		} else if(!strcasecmp(word, "vt")) {
+		} else if(!strcasecmp(word, "vt") || !strcasecmp(word, "vt2")) {
 			status = "DOS/V(V-Text)";
 			japanese_flag = true;
-			new_mode = 0x70;
+			new_mode = !strcasecmp(word, "vt") ? 0x70 : 0x78;
 		} else if(!strcasecmp(word, "j3")) {
 			if(IS_J3_ARCH) {
 				status = "J-3100";
@@ -1599,6 +1617,9 @@ void DOS_Shell::CMD_CHEV(char *args)
 			} else {
 				reg_ax = new_mode;
 				CALLBACK_RunRealInt(0x10);
+			}
+			if(new_mode == 0x78) {
+				new_mode = 0x70;
 			}
 			WriteOut(MSG_Get("SHELL_CMD_CHEV_CHANGE"), status, new_mode);
 		}
