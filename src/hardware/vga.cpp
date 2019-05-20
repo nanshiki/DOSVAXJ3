@@ -144,7 +144,6 @@ void VGA_SetClock(Bitu which,Bitu target) {
 	VGA_StartResize();
 }
 
-#include <windows.h>
 void VGA_SetCGA2Table(Bit8u val0,Bit8u val1) {
 	Bit8u total[2]={ val0,val1};
 	for (Bitu i=0;i<16;i++) {
