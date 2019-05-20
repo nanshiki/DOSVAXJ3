@@ -31,6 +31,7 @@
 #include "support.h"
 #include "cross.h"
 #include "inout.h"
+#include "jega.h"
 
 class localFile : public DOS_File {
 public:
@@ -225,6 +226,7 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 	char end[2]={CROSS_FILESPLIT,0};
 	if (tempDir[strlen(tempDir)-1]!=CROSS_FILESPLIT) strcat(tempDir,end);
 	
+
 	Bit16u id;
 	if (!dirCache.FindFirst(tempDir,id)) {
 		DOS_SetError(DOSERR_PATH_NOT_FOUND);
@@ -279,6 +281,10 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 	dta.GetSearchParams(srch_attr,srch_pattern,true);
 	Bit16u id = dta.GetDirID();
 
+#if defined(LINUX)
+	ChangeUtf8FileName(srch_pattern);
+#endif
+
 again:
 	if (!dirCache.FindNext(id,dir_ent,ldir_ent)) {
 		DOS_SetError(DOSERR_NO_MORE_FILES);
@@ -292,8 +298,13 @@ again:
 	//GetExpandName might indirectly destroy dir_ent (by caching in a new directory 
 	//and due to its design dir_ent might be lost.)
 	//Copying dir_ent first
+#if defined(LINUX)
+	utf8_to_sjis_copy(dir_entcopy,dir_ent, CROSS_LEN);
+	utf8_to_sjis_copy(ldir_entcopy,ldir_ent, CROSS_LEN);
+#else
 	strcpy(dir_entcopy,dir_ent);
 	strcpy(ldir_entcopy,ldir_ent);
+#endif
 	if (stat(dirCache.GetExpandName(full_name),&stat_block)!=0) { 
 		goto again;//No symlinks and such
 	}	
@@ -308,7 +319,26 @@ again:
 
 	if(strlen(dir_entcopy)<DOS_NAMELENGTH_ASCII){
 		strcpy(find_name,dir_entcopy);
+#if defined(LINUX)
+		{
+			bool flag = false;
+			Bit8u *pt = (Bit8u *)find_name;
+			while(*pt != '\0') {
+				if(flag) {
+					flag = false;
+				} else {
+					if(isKanji1(*pt)) {
+						flag = true;
+					} else {
+						*pt = toupper(*pt);
+					}
+				}
+				pt++;
+			}
+		}
+#else
 		upcase(find_name);
+#endif
 	} 
 	strcpy(lfind_name,ldir_entcopy);
 	lfind_name[LFN_NAMELENGTH]=0;
@@ -332,7 +362,9 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
-
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	struct stat status;
 	if (stat(newname,&status)==0) {
 		*attr=DOS_ATTR_ARCHIVE;
@@ -348,6 +380,9 @@ bool localDrive::GetFileAttrEx(char* name, struct stat *status) {
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
 	return !stat(newname,status);
 }
@@ -361,6 +396,9 @@ DWORD localDrive::GetCompressedSize(char* name)
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
 	DWORD size = GetCompressedFileSize(newname, NULL);
 	if (size != INVALID_FILE_SIZE) {
@@ -384,6 +422,9 @@ HANDLE localDrive::CreateOpenFile(const char* name)
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
 #if defined (WIN32)
 	HANDLE handle=CreateFile(newname, FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -400,6 +441,9 @@ bool localDrive::MakeDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
+#if defined(LINUX)
+	ChangeUtf8FileName(newdir);
+#endif
 #if defined (WIN32)						/* MS Visual C++ */
 	int temp=mkdir(dirCache.GetExpandName(newdir));
 #else
@@ -415,6 +459,9 @@ bool localDrive::RemoveDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
+#if defined(LINUX)
+	ChangeUtf8FileName(newdir);
+#endif
 	int temp=rmdir(dirCache.GetExpandName(newdir));
 	if (temp==0) dirCache.DeleteEntry(newdir,true);
 	return (temp==0);
@@ -425,6 +472,9 @@ bool localDrive::TestDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
+#if defined(LINUX)
+	ChangeUtf8FileName(newdir);
+#endif
 	dirCache.ExpandName(newdir);
 	// Skip directory test, if "\"
 	size_t len = strlen(newdir);
@@ -443,12 +493,17 @@ bool localDrive::Rename(char * oldname,char * newname) {
 	strcpy(newold,basedir);
 	strcat(newold,oldname);
 	CROSS_FILENAME(newold);
+#if defined(LINUX)
+	ChangeUtf8FileName(newold);
+#endif
 	dirCache.ExpandName(newold);
-	
 	char newnew[CROSS_LEN];
 	strcpy(newnew,basedir);
 	strcat(newnew,newname);
 	CROSS_FILENAME(newnew);
+#if defined(LINUX)
+	ChangeUtf8FileName(newnew);
+#endif
 	int temp=rename(newold,dirCache.GetExpandName(newnew));
 	if (temp==0) dirCache.CacheOut(newnew);
 	return (temp==0);
@@ -469,6 +524,9 @@ bool localDrive::FileExists(const char* name) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	struct stat temp_stat;
 	if(stat(newname,&temp_stat)!=0) return false;
 	if(temp_stat.st_mode & S_IFDIR) return false;
@@ -481,6 +539,9 @@ bool localDrive::FileStat(const char* name, FileStat_Block * const stat_block) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
+#if defined(LINUX)
+	ChangeUtf8FileName(newname);
+#endif
 	struct stat temp_stat;
 	if(stat(newname,&temp_stat)!=0) return false;
 	/* Convert the stat to a FileStat */
