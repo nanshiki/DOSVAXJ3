@@ -1,5 +1,7 @@
 /*
  *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2016-2019 akm
+ *  Copyright (C) 2019 takapyu
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +30,7 @@
 #include "shell.h"
 #include "callback.h"
 #include "support.h"
+#include "timer.h"
 
 Bitu call_shellstop;
 bool insert;
@@ -256,7 +259,7 @@ void DOS_Shell::ParseLine(char * line) {
 	char pipetmp[15];
 	bool fail = false;
 	if (toc) {
-		srand(GetTickCount());
+		srand(GetTicks());
 		sprintf(pipetmp, "pipe%d.tmp", rand()%10000);
 	}
 	if (out||toc){
@@ -353,18 +356,18 @@ void DOS_Shell::Run(void) {
 	if (cmd->FindString("/INIT",line,true)) {
 		if (IS_AX_ARCH) {
 			if (dos.set_ax_enabled)
-				WriteOut(MSG_Get("SHELL_STARTUP_AX_JEGA"), VERSION);
+				WriteOut(MSG_Get("SHELL_STARTUP_AX_JEGA"), BUILD_VERSION);
 			else
-				WriteOut(MSG_Get("SHELL_STARTUP_AX_EGA"), VERSION);
+				WriteOut(MSG_Get("SHELL_STARTUP_AX_EGA"), BUILD_VERSION);
 		}
 		else if (IS_J3_ARCH) {
-			WriteOut(MSG_Get("SHELL_STARTUP_J3"), VERSION);
+			WriteOut(MSG_Get("SHELL_STARTUP_J3"), BUILD_VERSION);
 		}
 		else if (IS_DOSV) {
-			WriteOut(MSG_Get("SHELL_STARTUP_DOSV"), VERSION);
+			WriteOut(MSG_Get("SHELL_STARTUP_DOSV"), BUILD_VERSION);
 		}
 		else {
-			WriteOut(MSG_Get("SHELL_STARTUP_BEGIN"), VERSION);
+			WriteOut(MSG_Get("SHELL_STARTUP_BEGIN"), BUILD_VERSION);
 #if C_DEBUG
 			WriteOut(MSG_Get("SHELL_STARTUP_DEBUG"));
 #endif
@@ -679,7 +682,7 @@ void SHELL_Init() {
 		"\xBA \033[36m////  /////////  \033[37m  You can also map AX special keys \033[31mctrl-F1\033[37m.       \xBA\n"
 		"\xBA                                                                    \xBA\n"
 		"\xBA \033[32mHAVE FUN!\033[37m                                                          \xBA\n"
-		"\xBA \033[32makm \033[33mhttp://lsair.html.xdomain.jp\033[37m                                   \xBA\n"
+		"\xBA \033[32makm \033[33mhttp://diarywind.com\033[37m                                           \xBA\n"
 		"\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD"
 		"\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD"
 		"\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\033[0m\n");
@@ -695,25 +698,25 @@ void SHELL_Init() {
 		"│ \033[36m////  /////////  \033[37m   You can map AX special keys \033[31mctrl-F1\033[37m.           │\n"
 		"│                                                                    │\n"
 		"│ \033[32mHAVE FUN!\033[37m                                                          │\n"
-		"│ \033[32makm \033[33mhttp://lsair.html.xdomain.jp\033[37m                                   │\n"
+		"│ \033[32makm \033[33mhttp://diarywind.com\033[37m                                           │\n"
 		"└──────────────────────────────────┘\033[0m\n");
 	MSG_Add("SHELL_STARTUP_J3",
 		"┌──────────────────────────────────┐\n"
 		"│ Welcome to DOSVAXJ3 build %-8s                                 │\n"
 		"│                                                                    │\n"
 		"│                 This is a modified DOSBox emulates J-3100 machine. │\n"
-		"│                                  J-3100モードでの起動 machine=dcga │\n"
-		"│                                   DOS/Vモードでの起動 machine=dosv │\n"
-		"│               英語/日本語/V-text/J-3100 切替 chev [us][jp][vt][j3] │\n"
+		"│                                  J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dcga │\n"
+		"│                                   DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dosv │\n"
+		"│               \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-text/J-3100 \x090\x0d8\x091\x0d6 chev [us][jp][vt][j3] │\n"
 		"└──────────────────────────────────┘\n");
 	MSG_Add("SHELL_STARTUP_DOSV",
 		"\033[44;1m┌──────────────────────────────────┐\n"
 		"│ Welcome to DOSVAXJ3 build %-8s                                 │\n"
 		"│                                                                    │\n"
 		"│                  This is a modified DOSBox emulates DOS/V machine. │\n"
-		"│                                  J-3100モードでの起動 \033[31mmachine=dcga\033[37m │\n"
-		"│                                   DOS/Vモードでの起動 \033[31mmachine=dosv\033[37m │\n"
-		"│                          英語/日本語/V-Text 切替 \033[33mchev [us][jp][vt]\033[37m │\n"
+		"│                                  J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dcga\033[37m │\n"
+		"│                                   DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dosv\033[37m │\n"
+		"│                     \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-Text \x090\x0d8\x091\x0d6 \033[33mchev [us][jp][vt][vt2]\033[37m │\n"
 		"└──────────────────────────────────┘\033[0m\n");
 	MSG_Add("SHELL_STARTUP_SUB","\n\n\033[32;1mDOSBox %s Command Shell\033[0m\n\n");
 	MSG_Add("SHELL_CMD_CHDIR_HELP","Displays/changes the current directory.\n");
