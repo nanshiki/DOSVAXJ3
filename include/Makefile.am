@@ -10,12 +10,16 @@ dma.h \
 dos_inc.h \
 dos_system.h \
 dosbox.h \
+dosv.h \
 fpu.h \
 hardware.h \
 inout.h \
-joystick.h \
 ipx.h \
 ipxserver.h \
+j3.h \
+jega.h \
+jfont.h \
+joystick.h \
 keyboard.h \
 logging.h \
 mapper.h \
