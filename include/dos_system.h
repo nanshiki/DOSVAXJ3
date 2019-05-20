@@ -168,7 +168,7 @@ public:
 			longNameList.clear();
 		};
 		char		orgname		[CROSS_LEN];
-		char		shortname	[DOS_NAMELENGTH_ASCII];
+		char		shortname	[DOS_NAMELENGTH_ASCII+16];
 		bool		isDir;
 		Bit16u		id;
 		Bitu		nextEntry;
