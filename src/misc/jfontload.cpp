@@ -21,13 +21,15 @@ using namespace std;
 #define SBCS19_LEN 256 * 19
 #define DBCS16_LEN 65536 * 32
 #define DBCS24_LEN 65536 * 72
-#define SBCS24_LEN 65536 * 48
+#define SBCS24_LEN 256 * 48
 
 Bit8u jfont_sbcs_19[SBCS19_LEN];//256 * 19( * 8)
 Bit8u jfont_dbcs_16[DBCS16_LEN];//65536 * 16 * 2 (* 8)
 Bit8u jfont_sbcs_16[SBCS16_LEN];//256 * 16( * 8)
 Bit8u jfont_dbcs_24[DBCS24_LEN];//65536 * 24 * 3
-Bit8u jfont_sbcs_24[SBCS24_LEN];//65536 * 12 * 2
+Bit8u jfont_sbcs_24[SBCS24_LEN];//256 * 12 * 2
+Bit8u jfont_cache_dbcs_16[65536];
+Bit8u jfont_cache_dbcs_24[65536];
 
 typedef struct {
     char id[ID_LEN];
@@ -73,6 +75,10 @@ void readfontxtbl(fontxTbl *table, Bitu size, FILE *fp)
     }
 }
 
+#if defined(LINUX)
+#include <limits.h>
+#endif
+
 static bool LoadFontxFile(const char *fname, int height = 16) {
     fontx_h head;
     fontxTbl *table;
@@ -82,8 +88,21 @@ static bool LoadFontxFile(const char *fname, int height = 16) {
 	if(*fname=='\0') return false;
 	FILE * mfile=fopen(fname,"rb");
 	if (!mfile) {
+#if defined(LINUX)
+		char *start = strrchr((char *)fname, '/');
+		if(start != NULL) {
+			char cname[PATH_MAX + 1];
+			sprintf(cname, ".%s", start);
+			mfile=fopen(cname, "rb");
+			if (!mfile) {
+				LOG_MSG("MSG: Can't open FONTX2 file: %s",cname);
+				return false;
+			}
+		}
+#else
 		LOG_MSG("MSG: Can't open FONTX2 file: %s",fname);
 		return false;
+#endif
 	}
 	if (getfontx2header(mfile, &head) != 0) {
 		fclose(mfile);
@@ -98,10 +117,10 @@ static bool LoadFontxFile(const char *fname, int height = 16) {
 			readfontxtbl(table, size, mfile);
 			for (Bitu i = 0; i < size; i++) {
 				for (code = table[i].start; code <= table[i].end; code++) {
-					fread(&jfont_dbcs_16[(code * 32)], sizeof(Bit8u), 32, mfile);
+					fread(&jfont_dbcs_16[code * 32], sizeof(Bit8u), 32, mfile);
+					jfont_cache_dbcs_16[code] = 1;
 				}
 			}
-			EnableDbcs16Font();
 		}
 		else if (head.width == 24 && head.height == 24) {
 			size = getc(mfile);
@@ -109,10 +128,10 @@ static bool LoadFontxFile(const char *fname, int height = 16) {
 			readfontxtbl(table, size, mfile);
 			for (Bitu i = 0; i < size; i++) {
 				for (code = table[i].start ; code <= table[i].end ; code++) {
-					fread(&jfont_dbcs_24[(code * 72)], sizeof(Bit8u), 72, mfile);
+					fread(&jfont_dbcs_24[code * 72], sizeof(Bit8u), 72, mfile);
+					jfont_cache_dbcs_24[code] = 1;
 				}
 			}
-			EnableDbcs24Font();
 		}
 		else {
 			fclose(mfile);
@@ -146,9 +165,22 @@ static bool LoadFontxFile(const char *fname, int height = 16) {
 	return true;
 }
 
+static bool CheckEmptyData(Bit8u *data, Bitu length)
+{
+	while(length > 0) {
+		if(*data++ != 0) {
+			return false;
+		}
+		length--;
+	}
+	return true;
+}
+
+
 void JFONT_Init(Section_prop * section) {
 	std::string file_name;
 	std::string font_name;
+	bool yen_flag = section->Get_bool("yen");
 
 	font_name = section->Get_string("jfontname");
 	SetFontName(font_name.c_str());
@@ -158,6 +190,10 @@ void JFONT_Init(Section_prop * section) {
 			if(!MakeSbcs19Font()) {
 				LOG_MSG("MSG: SBCS 8x19 font file path is not specified.\n");
 			}
+		} else if(yen_flag) {
+			if(!CheckEmptyData(&jfont_sbcs_19[0x7f * 19], 19)) {
+				memcpy(&jfont_sbcs_19[0x5c * 19], &jfont_sbcs_19[0x7f * 19], 19);
+			}
 		}
 	} else {
 		if(!MakeSbcs19Font()) {
@@ -166,15 +202,7 @@ void JFONT_Init(Section_prop * section) {
 	}
 	pathprop = section->Get_path("jfontdbcs");
 	if(pathprop) {
-		if(!LoadFontxFile(pathprop->realpath.c_str())) {
-			if(!MakeDbcsFont()) {
-				LOG_MSG("MSG: DBCS font file path is not specified.\n");
-			}
-		}
-	} else {
-		if(!MakeDbcsFont()) {
-			LOG_MSG("MSG: DBCS font file path is not specified.\n");
-		}
+		LoadFontxFile(pathprop->realpath.c_str());
 	}
 	if(IS_J3_ARCH || IS_DOSV) {
 		pathprop = section->Get_path("jfontsbcs16");
@@ -182,6 +210,10 @@ void JFONT_Init(Section_prop * section) {
 			if(!LoadFontxFile(pathprop->realpath.c_str())) {
 				if(!MakeSbcs16Font()) {
 					LOG_MSG("MSG: SBCS 8x16 font file path is not specified.\n");
+				}
+			} else if(yen_flag) {
+				if(!CheckEmptyData(&jfont_sbcs_16[0x7f * 16], 16)) {
+					memcpy(&jfont_sbcs_16[0x5c * 16], &jfont_sbcs_16[0x7f * 16], 16);
 				}
 			}
 		} else {
@@ -198,6 +230,10 @@ void JFONT_Init(Section_prop * section) {
 			if(!LoadFontxFile(pathprop->realpath.c_str())) {
 				if(!MakeSbcs24Font()) {
 					LOG_MSG("MSG: SBCS 12x24 font file path is not specified.\n");
+				}
+			} else if(yen_flag) {
+				if(!CheckEmptyData(&jfont_sbcs_24[0x7f * 2 * 24], 2 * 24)) {
+					memcpy(&jfont_sbcs_24[0x5c * 2 * 24], &jfont_sbcs_24[0x7f * 2 * 24], 2 * 24);
 				}
 			}
 		} else {
