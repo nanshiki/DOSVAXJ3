@@ -504,7 +504,7 @@ bool DOS_FindFirst(char * search,Bit16u attr,bool fcb_findfirst) {
 		return true;
 	}
    
-	bool r=Drives[drive]->FindFirst(dir,dta,fcb_findfirst);
+	//bool r=Drives[drive]->FindFirst(dir,dta,fcb_findfirst);
 	if (Drives[drive]->FindFirst(dir,dta,fcb_findfirst)) return true;
 	
 	return false;
@@ -634,7 +634,6 @@ static bool PathExists(char const * const name) {
 	return true;
 }
 
-
 bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb) {
 	// Creation of a device is the same as opening it
 	// Tc201 installer
@@ -678,6 +677,9 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
 		return false;
 	}
+#if defined(LINUX)
+	ChangeUtf8FileName(fullname);
+#endif
 	bool foundit=Drives[drive]->FileCreate(&Files[handle],fullname,attributes);
 	if (foundit) { 
 		Files[handle]->SetDrive(drive);
@@ -747,6 +749,9 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	if (device) {
 		Files[handle]=new DOS_Device(*Devices[devnum]);
 	} else {
+#if defined(LINUX)
+		ChangeUtf8FileName(fullname);
+#endif
 		exists=Drives[drive]->FileOpen(&Files[handle],fullname,flags)||Drives[drive]->FileOpen(&Files[handle],upcase(fullname),flags);
 		if (exists) Files[handle]->SetDrive(drive);
 	}
