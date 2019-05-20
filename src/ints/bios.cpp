@@ -535,6 +535,8 @@ static void BIOS_HostTimeSync() {
 	mem_writed(BIOS_TIMER,ticks);
 }
 
+extern void SetIMPosition();
+
 static Bitu INT8_Handler(void) {
 	/* Increase the bios tick counter */
 	Bit32u value = mem_readd(BIOS_TIMER) + 1;
@@ -570,6 +572,8 @@ static Bitu INT8_Handler(void) {
 		INT8_J3();
 	} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 		INT8_DOSV();
+	} else if(IS_AX_ARCH) {
+		SetIMPosition();
 	}
 	/* decrease floppy motor timer */
 	Bit8u val = mem_readb(BIOS_DISK_MOTOR_TIMEOUT);
@@ -596,9 +600,10 @@ static Bitu INT17_Handler(void) {
 		reg_ah=1;	/* Report a timeout */
 		break;
 	case 0x01:		/* PRINTER: Initialize port */
+		reg_ah = 1;	/* Report a timeout */
 		break;
 	case 0x02:		/* PRINTER: Get Status */
-		reg_ah=0;	
+		reg_ah=1;	/* Report a timeout */
 		break;
 	case 0x20:		/* Some sort of printerdriver install check*/
 		break;
@@ -1008,7 +1013,21 @@ static Bitu INT15_Handler(void) {
 				}
 			}
 		} else if(reg_al == 0x01) {
-			reg_ah = 0x06;		// read only
+			if(reg_dh == 16 && reg_dl == 16) {
+				reg_ah = 0x00;
+				SegSet16(es, CB_SEG);
+				reg_bx = DOSV_GetFontHandlerOffset(DOSV_FONT_16X16_WRITE);
+				CALLBACK_SCF(false);
+				break;
+			} else if(reg_dh == 24 && reg_dl == 24) {
+				reg_ah = 0x00;
+				SegSet16(es, CB_SEG);
+				reg_bx = DOSV_GetFontHandlerOffset(DOSV_FONT_24X24_WRITE);
+				CALLBACK_SCF(false);
+				break;
+			} else {
+				reg_ah = 0x06;		// read only
+			}
 		}
 		CALLBACK_SCF(true);
 		break;
