@@ -511,7 +511,18 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 	} else {
 		len = (Bits)strlen(tmpName);
 	}
-
+#if defined(LINUX)
+	if(!createShort) {
+		char sjis[CROSS_LEN];
+		char *spos;
+		utf8_to_sjis_copy(sjis, tmpNameBuffer, CROSS_LEN);
+		if ((spos = strchr(sjis, '.')) != NULL) {
+			len = (Bits)(spos - sjis);
+		} else {
+			len = (Bits)strlen(sjis);
+		}
+	}
+#endif
 	// Should shortname version be created ?
 	createShort = createShort || (len>8);
 	if (!createShort) {
