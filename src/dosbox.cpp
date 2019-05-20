@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2002-2015  The DOSBox Team
- *  Copyright (C) 2016 akm
+ *  Copyright (C) 2016-2019 akm
  *  Copyright (C) 2019 takapyu
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,7 @@
 #include "pci_bus.h"
 #include "j3.h"
 #include "dosv.h"
+#include "jfont.h"
 
 Config * control;
 MachineType machine;
@@ -382,7 +383,7 @@ static void DOSBOX_RealInit(Section * sec) {
 	else if (mtype == "ega")      { machine = MCH_EGA; }
 	else if (mtype == "jega") { machine = MCH_EGA; dos.set_ax_enabled = true; }
 	else if (mtype == "dcga") { machine = MCH_DCGA; }
-	else if (mtype == "dosv") { dos.set_dosv_enabled = true; }
+	else if (mtype == "dosv") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }
 	else if (mtype == "dosv_et4000") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }
 	else if (mtype == "dosv_s3") { dos.set_dosv_enabled = true; svgaCard = SVGA_S3Trio; }
 //	else if (mtype == "vga")          { svgaCard = SVGA_S3Trio; }
@@ -403,7 +404,13 @@ static void DOSBOX_RealInit(Section * sec) {
 			J3_SetConfig(section);
 		}
 		if(IS_J3_ARCH || IS_DOSV) {
+			SetGaijiConfig(section);
 			DOSV_SetConfig(section);
+		}
+		if(section->Get_bool("im")) {
+			SDL_SetIMValues(SDL_IM_ENABLE, 1, NULL);
+		} else {
+			SDL_SetIMValues(SDL_IM_ENABLE, 0, NULL);
 		}
 	}
 }
@@ -441,10 +448,13 @@ void DOSBOX_Init(void) {
 	secprop=control->AddSection_prop("dosbox",&DOSBOX_RealInit);
 	Pstring = secprop->Add_path("language",Property::Changeable::Always,"");
 	Pstring->Set_help("Select another language file.");
-	Pstring = secprop->Add_path("languagejp",Property::Changeable::Always,"");
+	Pstring = secprop->Add_path("languagejp",Property::Changeable::Always,"japanese.lng");
+	Pstring->Set_help("Japanese mode language file.");
 
 //	Pstring = secprop->Add_string("machine",Property::Changeable::OnlyAtStart,"svga_s3");
-	Pstring = secprop->Add_string("machine",Property::Changeable::OnlyAtStart,"vgaonly");
+//	Pstring = secprop->Add_string("machine",Property::Changeable::OnlyAtStart,"vgaonly");
+	// DOSVAXJ3
+	Pstring = secprop->Add_string("machine",Property::Changeable::OnlyAtStart,"dosv");
 	Pstring->Set_values(machines);
 	Pstring->Set_help("The type of machine DOSBox tries to emulate.");
 
@@ -453,19 +463,47 @@ void DOSBOX_Init(void) {
 
 	//for loading a fontx2 Japanese font
 	Pstring = secprop->Add_path("jfontsbcs",Property::Changeable::OnlyAtStart,"");
-	Pstring->Set_help("FONTX2 file used to rendering SBCS characters (8x19) in JEGA mode.");
+	Pstring->Set_help("FONTX2 file used to rendering SBCS characters (8x19).");
 	Pstring = secprop->Add_path("jfontdbcs",Property::Changeable::OnlyAtStart,"");
-	Pstring->Set_help("FONTX2 file used to rendering DBCS characters (16x16) in JEGA mode.");
+	Pstring->Set_help("FONTX2 file used to rendering DBCS characters (16x16).");
+	Pstring = secprop->Add_path("jfontsbcs16",Property::Changeable::OnlyAtStart,"");
+	Pstring->Set_help("FONTX2 file used to rendering SBCS characters (8x16).");
+	Pstring = secprop->Add_path("jfontdbcs24",Property::Changeable::OnlyAtStart,"");
+	Pstring->Set_help("FONTX2 file used to rendering SBCS characters (24x24).");
+	Pstring = secprop->Add_path("jfontsbcs24",Property::Changeable::OnlyAtStart,"");
+	Pstring->Set_help("FONTX2 file used to rendering SBCS characters (12x24).");
+#if defined(LINUX)
+	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"");
+	Pstring->Set_help("not used.");
+#else
+	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"\x082\x06c\x082\x072\x020\x083\x053\x083\x056\x083\x062\x083\x04e");
+#endif
+	// gaiji
+	Phex = secprop->Add_hex("gaijistart",Property::Changeable::OnlyAtStart,0xf040);
+	Phex->Set_help("Japanese gaiji font code start");
+	Phex = secprop->Add_hex("gaijiend",Property::Changeable::OnlyAtStart,0xf0fc);
+	Phex->Set_help("Japanese gaiji font code end");
+	Pbool = secprop->Add_bool("yen",Property::Changeable::OnlyAtStart,false);
+	Pbool->Set_help("Japanese yen font use 7fh");
 	// for J-3100
 	Phex = secprop->Add_hex("j3textcolor",Property::Changeable::OnlyAtStart,0x1000000);
+	Phex->Set_help("J-3100 mode text color. RRGGBB (1000000=default color ffffff)");
 	Phex = secprop->Add_hex("j3backcolor",Property::Changeable::OnlyAtStart,0x1000000);
+	Phex->Set_help("J-3100 mode back color. RRGGBB (1000000=default color 000000)");
 	Pstring = secprop->Add_string("j3100",Property::Changeable::OnlyAtStart,"");
-	Pstring = secprop->Add_path("jfontsbcs16",Property::Changeable::OnlyAtStart,"");
-	Pstring = secprop->Add_path("jfontdbcs24",Property::Changeable::OnlyAtStart,"");
-	Pstring = secprop->Add_path("jfontsbcs24",Property::Changeable::OnlyAtStart,"");
-	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"‚l‚r ƒSƒVƒbƒN");
+	Pstring->Set_help("J-3100 machine type.");
 	// for DOS/V
-	Pstring = secprop->Add_path("vtext",Property::Changeable::OnlyAtStart,"");
+	Pstring = secprop->Add_path("vtext",Property::Changeable::OnlyAtStart,"svga");
+	Pstring->Set_help("V-text screen mode.");
+	Pstring = secprop->Add_path("vtext2",Property::Changeable::OnlyAtStart,"xga");
+	Pstring->Set_help("V-text screen mode 2.");
+
+	Pbool = secprop->Add_bool("im",Property::Changeable::OnlyAtStart,true);
+#if defined(LINUX)
+	Pbool->Set_help("XIM enabled.");
+#elif defined(WIN32)
+	Pbool->Set_help("Windows IME enabled.");
+#endif
 
 #if C_DEBUG	
 	LOG_StartUp();
@@ -826,7 +864,7 @@ void DOSBOX_Init(void) {
 	Pstring->Set_help("Enable automatic drive reloading.");
 
 	secprop->AddInitFunction(&DOS_KeyboardLayout_Init,true);
-	Pstring = secprop->Add_string("keyboardlayout",Property::Changeable::WhenIdle, "auto");
+	Pstring = secprop->Add_string("keyboardlayout",Property::Changeable::WhenIdle, "jp");
 	Pstring->Set_help("Language code of the keyboard layout (or none).");
 
 	// Mscdex
@@ -850,10 +888,11 @@ void DOSBOX_Init(void) {
 		"@ECHO OFF\n"
 		"ECHO.\n"
 		"MOUNT Y: .\n"
-		"IF EXIST Z:\\COMMAND.COM ECHO Drive Z is mounted as virtual internal drive.\n"
-		"ECHO.\n"
-		"Y:\\KEYBUF 1024\n"
-		"ECHO ON");
+		"IF EXIST Z:\\COMMAND.COM ECHO Drive Z is mounted as virtual internal drive.\n");
+// DOSVAXJ3
+//		"ECHO.\n"
+//		"Y:\\KEYBUF 1024\n"
+//		"ECHO ON");
 	MSG_Add("CONFIGFILE_INTRO",
 	        "# This is the configuration file for DOSBox %s. (Please use the latest version of DOSBox)\n"
 	        "# Lines starting with a # are comment lines and are ignored by DOSBox.\n"
