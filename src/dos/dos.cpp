@@ -117,17 +117,17 @@ static inline void overhead() {
 #endif
 
 typedef struct {
-	UINT16 size_of_structure;
-	UINT16 structure_version;
-	UINT32 sectors_per_cluster;
-	UINT32 bytes_per_sector;
-	UINT32 available_clusters_on_drive;
-	UINT32 total_clusters_on_drive;
-	UINT32 available_sectors_on_drive;
-	UINT32 total_sectors_on_drive;
-	UINT32 available_allocation_units;
-	UINT32 total_allocation_units;
-	UINT8 reserved[8];
+	Bit16u size_of_structure;
+	Bit16u structure_version;
+	Bit32u sectors_per_cluster;
+	Bit32u bytes_per_sector;
+	Bit32u available_clusters_on_drive;
+	Bit32u total_clusters_on_drive;
+	Bit32u available_sectors_on_drive;
+	Bit32u total_sectors_on_drive;
+	Bit32u available_allocation_units;
+	Bit32u total_allocation_units;
+	Bit8u reserved[8];
 } ext_space_info_t;
 
 #define DOSNAMEBUF 256
