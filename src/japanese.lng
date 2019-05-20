@@ -1,0 +1,254 @@
+:SHELL_ILLEGAL_PATH
+パスが見つかりません
+
+.
+:SHELL_ILLEGAL_SWITCH
+スイッチが無効です %s
+
+.
+:SHELL_MISSING_PARAMETER
+必要なパラメータがありません
+
+.
+:SHELL_CMD_CHDIR_ERROR
+ディレクトリを %s に変更できません
+
+.
+:SHELL_CMD_DATE_HELP
+日付を表示/変更します
+
+.
+:SHELL_CMD_DATE_ERROR
+日付の指定が無効です
+
+.
+:SHELL_CMD_DATE_DAYS
+2日月火水木金土
+.
+:SHELL_CMD_DATE_NOW
+現在の日付: 
+.
+:SHELL_CMD_DATE_SETHLP
+date 'YYYY-MM-DD' と入力すると日付を変更できます
+
+.
+:SHELL_CMD_DATE_FORMAT
+Y/M/D
+.
+:SHELL_CMD_DATE_HELP_LONG
+DATE [[/T] [/H] [/S] | YYYY-MM-DD]
+  YYYY-MM-DD: 新しい日付の設定
+  /T:         表示のみ行います
+  /H:         ホスト PC の日付に合わせます
+.
+:SHELL_CMD_TIME_HELP
+時刻を表示/変更します
+
+.
+:SHELL_CMD_TIME_NOW
+現在の時刻: 
+.
+:SHELL_CMD_TIME_HELP_LONG
+TIME [/T] [/H]
+  /T:         短い表記で表示します
+  /H:         ホスト PC の時刻に合わせます
+.
+:SHELL_CMD_MKDIR_ERROR
+%s を作成できません
+
+.
+:SHELL_CMD_RMDIR_ERROR
+%s を削除できません
+
+.
+:SHELL_CMD_DEL_ERROR
+%s を削除できません
+
+.
+:SHELL_SYNTAXERROR
+必要なパラメータがありません
+
+.
+:SHELL_CMD_SET_NOT_SET
+環境変数 %s がありません
+
+.
+:SHELL_CMD_SET_OUT_OF_SPACE
+環境変数の空きがありません
+
+.
+:SHELL_CMD_IF_EXIST_MISSING_FILENAME
+IF EXIST: ファイルが見つかりません
+
+.
+:SHELL_CMD_IF_ERRORLEVEL_MISSING_NUMBER
+IF ERRORLEVEL: 番号が見つかりません
+
+.
+:SHELL_CMD_IF_ERRORLEVEL_INVALID_NUMBER
+IF ERRORLEVEL: 番号が不正です
+
+.
+:SHELL_CMD_GOTO_MISSING_LABEL
+GOTO のラベル指定がありません
+
+.
+:SHELL_CMD_GOTO_LABEL_NOT_FOUND
+GOTO: ラベル %s がありません
+
+.
+:SHELL_CMD_FILE_NOT_FOUND
+ファイル %s が見つかりません
+
+.
+:SHELL_CMD_FILE_EXISTS
+ファイル %s は存在します
+
+.
+:SHELL_CMD_DIR_INTRO
+ディレクトリは %s
+
+.
+:SHELL_CMD_DIR_BYTES_USED
+%5d 個                %17s バイトのファイルがあります
+
+.
+:SHELL_CMD_DIR_BYTES_FREE
+%5d 個のディレクトリ  %17s バイトが使用可能です
+
+.
+:SHELL_EXECUTE_ILLEGAL_COMMAND
+%s が実行できません
+
+.
+:SHELL_CMD_PAUSE
+準備ができたらキーをどれか押してください．．．
+.
+:SHELL_CMD_COPY_FAILURE
+%s をコピーできません
+
+.
+:SHELL_CMD_COPY_SUCCESS
+%d 個のファイルをコピーしました
+
+.
+:SHELL_CMD_CHDIR_HELP
+現在のディレクトリを表示/変更します
+
+.
+
+:SHELL_CMD_CHDIR_HELP_LONG
+CHDIR [drive:][path]
+CHDIR [..]
+CD [drive:][path]
+CD [..]
+  ..   親ディレクトリに変更したい時に指定します
+CD ドライブ: と入力すると、指定したドライブの現行ディレクトリが表示されます
+CD と入力すると、カレントドライブの現行ディレクトリが表示されます
+.
+:SHELL_CMD_CLS_HELP
+画面を消去します
+
+.
+:SHELL_CMD_DIR_HELP
+ディレクトリ中のサブディレクトリやファイルの一覧表示をします
+
+.
+:SHELL_CMD_ECHO_HELP
+メッセージの表示、コマンドエコーの on/off の指定を行います
+
+.
+:SHELL_CMD_EXIT_HELP
+シェルから復帰します
+
+.
+:SHELL_CMD_HELP_HELP
+ヘルプを表示します
+
+.
+:SHELL_CMD_MKDIR_HELP
+ディレクトリを作成します
+
+.
+:SHELL_CMD_RMDIR_HELP
+ディレクトリを削除します
+
+.
+:SHELL_CMD_SET_HELP
+環境変数を設定します
+
+.
+:SHELL_CMD_TYPE_HELP
+テキストファイルの内容を表示します
+
+.
+:SHELL_CMD_NO_WILD
+ワイルドカードに対応していません
+
+.
+:SHELL_CMD_RENAME_HELP
+ファイルの名前を変更します
+
+.
+:SHELL_CMD_RENAME_HELP_LONG
+RENAME [drive:][path]ファイル名1 ファイル名2
+REN [drive:][path]ファイル1 ファイル2
+ファイル2 には新しいドライブ、パスを指定することはできませんので注意して下さい
+.
+:SHELL_CMD_DELETE_HELP
+ファイル(複数可)を削除します
+
+.
+:SHELL_CMD_COPY_HELP
+ファイルをコピーします
+
+.
+:SHELL_CMD_ATTRIB_HELP
+機能は実装されていません
+
+.
+:SHELL_CMD_PATH_HELP
+互換性のために提供されています
+
+.
+:SHELL_CMD_CHEV_HELP
+英語環境/日本語環境を切り替えます
+
+.
+:SHELL_CMD_CHEV_HELP_LONG
+CHEV [[JP][VT][J3][US]]
+  JP: 日本語環境 DOS/V,AX
+  VT: 日本語環境 DOS/V(V-Text)
+  J3: 日本語環境 J-3100
+  US: 英語環境
+
+.
+:SHELL_CMD_CHEV_STATUS
+現在 %s 日本語環境です
+現在のビデオモードは %02xh です
+
+.
+:SHELL_CMD_CHEV_CHANGE
+%s 日本語環境に切り替えました
+現在のビデオモードは %02xh です
+
+.
+:SHELL_EXECUTE_DRIVE_NOT_FOUND
+ドライブ %c は見つかりません
+マウントしてから使用して下さい
+.
+:SHELL_EXECUTE_AUTOMOUNT
+ドライブをマウントします
+.
+:SHELL_EXECUTE_DRIVE_ACCESS_REMOVABLE
+リムーバブルメディアのドライブ %c を使用しますか [Y/N]?
+.
+:SHELL_EXECUTE_DRIVE_ACCESS_NETWORK
+ネットワークドライブ %c を使用しますか [Y/N]?
+.
+:SHELL_EXECUTE_DRIVE_ACCESS_OPTICAL
+光学ドライブ %c を使用しますか [Y/N]?
+.
+:SHELL_EXECUTE_DRIVE_ACCESS_LOCAL
+ローカルドライブ %c を使用しますか [Y/N]?
+.
