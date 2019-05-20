@@ -26,7 +26,6 @@
 #ifndef DOSBOX_MEM_H
 #include "mem.h"
 #endif
-#include <windows.h>
 
 // disable this to reduce the size of the TLB
 // NOTE: does not work with the dynamic core (dynrec is fine)
