@@ -31,14 +31,15 @@
 #include "jfont.h"
 #include "dosv.h"
 
-static Bit16u dosv_text_seg;
+#define	VTEXT_MODE_COUNT	2
+
 static Bitu dosv_font_handler[DOSV_FONT_MAX];
 static Bit16u dosv_font_handler_offset[DOSV_FONT_MAX];
 static Bitu dosv_timer;
 static Bit8u dosv_cursor_stat;
 static Bitu dosv_cursor_x;
 static Bitu dosv_cursor_y;
-static bool dosv_svga_flag = false;
+static enum DOSV_VTEXT_MODE dosv_vtext_mode[VTEXT_MODE_COUNT];
 
 bool INT10_DOSV_SetCRTBIOSMode(Bitu mode)
 {
@@ -46,7 +47,7 @@ bool INT10_DOSV_SetCRTBIOSMode(Bitu mode)
 	if (mode == 0x03 || mode == 0x70) {
 		LOG(LOG_INT10, LOG_NORMAL)("DOS/V CRT BIOS has been set to JP mode.");
 		INT10_SetVideoMode(0x12);
-		INT10_SetDOSVMode(mode);
+		INT10_SetDOSVModeVtext(mode, DOSV_VGA);
 		return true;
 	}
 	return false;
@@ -111,12 +112,34 @@ static Bitu font24x24(void)
 	return CBRET_NONE;
 }
 
+static Bitu write_font16x16(void)
+{
+	if(SetGaijiData(reg_cx, PhysMake(SegValue(es), reg_si))) {
+		reg_al = 0x00;
+	} else {
+		reg_al = 0x06;
+	}
+	return CBRET_NONE;
+}
+
+static Bitu write_font24x24(void)
+{
+	if(SetGaijiData24(reg_cx, PhysMake(SegValue(es), reg_si))) {
+		reg_al = 0x00;
+	} else {
+		reg_al = 0x06;
+	}
+	return CBRET_NONE;
+}
+
 static CallBack_Handler font_handler_list[] = {
 	font8x16,
 	font8x19,
 	font16x16,
 	font12x24,
 	font24x24,
+	write_font16x16,
+	write_font24x24,
 };
 
 Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font)
@@ -128,6 +151,9 @@ Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font)
 }
 
 
+static Bitu dosv_cursor_24[] = {
+	0, 3, 8, 12, 15, 18, 21, 23
+};
 
 static Bitu dosv_cursor_19[] = {
 	0, 3, 6, 9, 11, 13, 16, 18
@@ -137,14 +163,166 @@ static Bitu dosv_cursor_16[] = {
 	0, 3, 5, 7, 9, 11, 13, 15
 };
 
+void DOSV_CursorXor24(Bitu x, Bitu y, Bitu start, Bitu end)
+{
+	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
+	IO_Write(0x3ce, 0x00); IO_Write(0x3cf, 0x0f);
+	IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
+
+	Bitu width = (real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) == 85) ? 128 : 160;
+	volatile Bit8u dummy;
+	Bitu off = (y + start) * width + (x * 12) / 8;
+	Bit8u select;
+	if(svgaCard == SVGA_TsengET4K) {
+		if(off >= 0x20000) {
+			select = 0x22;
+			off -= 0x20000;
+		} else if(off >= 0x10000) {
+			select = 0x11;
+			off -= 0x10000;
+		} else {
+			select = 0x00;
+		}
+		IO_Write(0x3cd, select);
+	}
+	while(start <= end) {
+		if(dosv_cursor_stat == 2) {
+			if(x & 1) {
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0x0f);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xf0);
+				off += width - 3;
+			} else {
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off += width - 2;
+			}
+		} else {
+			if(x & 1) {
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0x0f);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+			} else {
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xf0);
+			}
+			off += width - 1;
+		}
+		if(svgaCard == SVGA_TsengET4K) {
+			if(off >= 0x10000) {
+				if(select == 0x00) {
+					select = 0x11;
+				} else if(select == 0x11) {
+					select = 0x22;
+				}
+				IO_Write(0x3cd, select);
+				off -= 0x10000;
+			}
+		}
+		start++;
+	}
+	IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
+	if(svgaCard == SVGA_TsengET4K) {
+		IO_Write(0x3cd, 0);
+	}
+}
+
 void DOSV_CursorXor(Bitu x, Bitu y)
 {
 	Bitu end = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE);
 	Bitu start = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE + 1);
 
 	if(start != 0x20 && start <= end) {
+		Bitu width = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
 		Bit16u height = real_readw(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
-		if(height == 19) {
+		if(height == 24) {
+			if(start < 8) start = dosv_cursor_24[start];
+			if(end < 8) end = dosv_cursor_24[end];
+			DOSV_CursorXor24(x, y, start, end);
+			return;
+		} else if(height == 19) {
 			if(start < 8) start = dosv_cursor_19[start];
 			if(end < 8) end = dosv_cursor_19[end];
 		} else if(height == 16) {
@@ -156,19 +334,57 @@ void DOSV_CursorXor(Bitu x, Bitu y)
 		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
 
 		volatile Bit8u dummy;
-		Bitu width = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
 		Bitu off = (y + start) * width + x;
+		Bit8u select;
+		if(svgaCard == SVGA_TsengET4K) {
+			if(off >= 0x20000) {
+				select = 0x22;
+				off -= 0x20000;
+			} else if(off >= 0x10000) {
+				select = 0x11;
+				off -= 0x10000;
+			} else {
+				select = 0x00;
+			}
+			IO_Write(0x3cd, select);
+		}
 		while(start <= end) {
 			dummy = real_readb(0xa000, off);
 			real_writeb(0xa000, off, 0xff);
 			if(dosv_cursor_stat == 2) {
-				dummy = real_readb(0xa000, off + 1);
-				real_writeb(0xa000, off + 1, 0xff);
+				off++;
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+				dummy = real_readb(0xa000, off);
+				real_writeb(0xa000, off, 0xff);
+				off += width - 1;
+			} else {
+				off += width;
 			}
-			off += width;
+			if(svgaCard == SVGA_TsengET4K) {
+				if(off >= 0x10000) {
+					if(select == 0x00) {
+						select = 0x11;
+					} else if(select == 0x11) {
+						select = 0x22;
+					}
+					IO_Write(0x3cd, select);
+					off -= 0x10000;
+				}
+			}
 			start++;
 		}
 		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
+		if(svgaCard == SVGA_TsengET4K) {
+			IO_Write(0x3cd, 0);
+		}
 	}
 }
 
@@ -180,8 +396,12 @@ void DOSV_OffCursor()
 	}
 }
 
+extern void SetIMPosition();
+
 void INT8_DOSV()
 {
+	SetIMPosition();
+
 	if(!CheckAnotherDisplayDriver() && real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) != 0x72) {
 		if(dosv_cursor_stat == 0) {
 			Bitu x = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS);
@@ -202,17 +422,37 @@ void INT8_DOSV()
 	}
 }
 
-bool DOSV_CheckSVGA()
+enum DOSV_VTEXT_MODE DOSV_GetVtextMode(Bitu no)
 {
-	return dosv_svga_flag;
+	if(no < VTEXT_MODE_COUNT) {
+		return dosv_vtext_mode[no];
+	}
+	return dosv_vtext_mode[0];
 }
+
+enum DOSV_VTEXT_MODE DOSV_StringVtextMode(std::string vtext)
+{
+	if(vtext == "vga") {
+		return DOSV_VTEXT_VGA;
+	} else if(svgaCard == SVGA_TsengET4K) {
+		if(vtext == "xga") {
+			return DOSV_VTEXT_XGA;
+		} else if(vtext == "xga24") {
+			return DOSV_VTEXT_XGA_24;
+		} else if(vtext == "sxga") {
+			return DOSV_VTEXT_SXGA;
+		} else if(vtext == "sxga24") {
+			return DOSV_VTEXT_SXGA_24;
+		}
+	}
+	return DOSV_VTEXT_SVGA;
+}
+
 
 void DOSV_SetConfig(Section_prop *section)
 {
-	std::string vtext = section->Get_string("vtext");
-	if(vtext == "svga") {
-		dosv_svga_flag = true;
-	}
+	dosv_vtext_mode[0] = DOSV_StringVtextMode(section->Get_string("vtext"));
+	dosv_vtext_mode[1] = DOSV_StringVtextMode(section->Get_string("vtext2"));
 }
 
 void DOSV_Setup()
