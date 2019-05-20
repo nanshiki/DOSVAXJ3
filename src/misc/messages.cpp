@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dosbox.h"
-#include "cross.h"
 #include "support.h"
 #include "setup.h"
 #include "control.h"
@@ -82,13 +81,37 @@ void MSG_Replace(const char * _name, const char* _val) {
 	Lang.push_back(MessageBlock(_name,_val));
 }
 
+#if defined(LINUX)
+#include <limits.h>
+#endif
+
 static void LoadMessageFile(const char * fname, bool japan_flag = false) {
 	if (!fname) return;
 	if(*fname=='\0') return;//empty string=no languagefile
 	FILE * mfile=fopen(fname,"rt");
 	/* This should never happen and since other modules depend on this use a normal printf */
 	if (!mfile) {
-		E_Exit("MSG:Can't load messages: %s",fname);
+#if defined(LINUX)
+		if(japan_flag) {
+			char *start = strrchr((char *)fname, '/');
+			if(start != NULL) {
+				char cname[PATH_MAX + 1];
+				sprintf(cname, ".%s", start);
+				mfile=fopen(cname,"rt");
+			}
+		}
+		if(!mfile) {
+			if(!japan_flag) {
+				E_Exit("MSG:Can't load messages: %s",fname);
+			}
+			return;
+		}
+#else
+		if(!japan_flag) {
+			E_Exit("MSG:Can't load messages: %s",fname);
+		}
+		return;
+#endif
 	}
 	char linein[LINE_IN_MAXLEN];
 	char name[LINE_IN_MAXLEN];
@@ -132,11 +155,13 @@ static void LoadMessageFile(const char * fname, bool japan_flag = false) {
 }
 
 const char * MSG_Get(char const * msg) {
-	if(IS_DOS_JAPANESE) {
-		for(itmb tel=LangJ.begin();tel!=LangJ.end();tel++){	
-			if((*tel).name==msg)
-			{
-				return  (*tel).val.c_str();
+	if(dos.tables.country_seg != 0) {
+		if(IS_DOS_JAPANESE) {
+			for(itmb tel=LangJ.begin();tel!=LangJ.end();tel++){	
+				if((*tel).name==msg)
+				{
+					return  (*tel).val.c_str();
+				}
 			}
 		}
 	}
