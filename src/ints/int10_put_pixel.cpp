@@ -22,6 +22,7 @@
 #include "inout.h"
 #include "int10.h"
 #include "j3.h"
+#include "jfont.h"
 
 static Bit8u cga_masks[4]={0x3f,0xcf,0xf3,0xfc};
 static Bit8u cga_masks2[8]={0x7f,0xbf,0xdf,0xef,0xf7,0xfb,0xfd,0xfe};
@@ -143,12 +144,34 @@ void INT10_PutPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u color) {
 	}
 	break;
 	case M_LIN4:
-		if ((machine!=MCH_VGA) || (svgaCard!=SVGA_TsengET4K) ||
-				(CurMode->swidth>800)) {
-			// the ET4000 BIOS supports text output in 800x600 SVGA (Gateway 2)
-			// putpixel warining?
-			break;
+		if (svgaCard == SVGA_TsengET4K) {
+			IO_Write(0x3ce,5);IO_Write(0x3cf,0);
+			/* Set the correct bitmask for the pixel position */
+			IO_Write(0x3ce,0x8);Bit8u mask=128>>(x&7);IO_Write(0x3cf,mask);
+			/* Set the color to set/reset register */
+			IO_Write(0x3ce,0x0);IO_Write(0x3cf,color);
+			/* Enable all the set/resets */
+			IO_Write(0x3ce,0x1);IO_Write(0x3cf,0xf);
+			/* test for xorring */
+			if (color & 0x80) { IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x18); }
+			PhysPt off = y * 128 + (x >> 3);
+			if(off >= 0x10000) {
+				IO_Write(0x3cd, 0x11);
+				off -= 0x10000;
+			} else {
+				IO_Write(0x3cd, 0x00);
+			}
+			off += 0xa0000;
+			/* Bitmask and set/reset should do the rest */
+			mem_readb(off);
+			mem_writeb(off,0xff);
+			/* Restore bitmask */	
+			IO_Write(0x3ce,0x8);IO_Write(0x3cf,0xff);
+			IO_Write(0x3ce,0x1);IO_Write(0x3cf,0);
+			/* Restore write operating if changed */
+			if (color & 0x80) { IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x0); }
 		}
+		break;
 	case M_EGA:
 		{
 			/* Set the correct bitmask for the pixel position */
