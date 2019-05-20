@@ -8,7 +8,7 @@ SDLK_F13, SDLK_F14, SDLK_F15 に変換し、さらに KEYBOARD_AddKey() (keyboar
 で 93, 94, 95 というコードに変換します。あとは jp.kl(jp.key) の定義で各文字に
 割り振っています。
 　Linux の場合、^ や : は大丈夫なのですが @ [ ] のスキャンコードが英語キーボー
-ド相当になってしまっており、keyboardlayout=jp の場合は無理矢理スキャンコードを
+ド相当になってしまっており、keyboardlayout=jp の場合に無理矢理スキャンコードを
 変更する事で対処しています。
 
 ・MS-IME
