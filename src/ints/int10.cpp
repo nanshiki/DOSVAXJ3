@@ -35,6 +35,8 @@ Int10Data int10;
 static Bitu call_10;
 static bool warned_ff=false;
 
+Bit8u RealVtextMode;
+
 static Bitu INT10_Handler(void) {
 #if 0
 	switch (reg_ah) {
@@ -65,18 +67,27 @@ static Bitu INT10_Handler(void) {
 	switch (reg_ah) {
 	case 0x00:								/* Set VideoMode */
 		Mouse_BeforeNewVideoMode(true);
-		if(!IS_AX_ARCH && IS_DOS_JAPANESE && (reg_al == 0x03 || reg_al == 0x70 || reg_al == 0x72)) {
+		if(!IS_AX_ARCH && IS_DOS_JAPANESE && (reg_al == 0x03 || reg_al == 0x70 || reg_al == 0x72 || reg_al == 0x78)) {
 			Bit8u mode = reg_al;
 			if(reg_al == 0x03 || reg_al == 0x72) {
 				INT10_SetVideoMode(0x12);
-				INT10_SetDOSVMode(mode);
-			} else if(reg_al == 0x70) {
-				if(DOSV_CheckSVGA()) {
+				INT10_SetDOSVModeVtext(mode, DOSV_VGA);
+			} else if(reg_al == 0x70 || reg_al == 0x78) {
+				RealVtextMode = reg_al;
+				mode = 0x70;
+				enum DOSV_VTEXT_MODE vtext_mode = DOSV_GetVtextMode((reg_al == 0x70) ? 0 : 1);
+				if(vtext_mode == DOSV_VTEXT_XGA || vtext_mode == DOSV_VTEXT_XGA_24) {
+					INT10_SetVideoMode(0x37);
+					INT10_SetDOSVModeVtext(mode, vtext_mode);
+				} else if(vtext_mode == DOSV_VTEXT_SXGA || vtext_mode == DOSV_VTEXT_SXGA_24) {
+					INT10_SetVideoMode(0x3d);
+					INT10_SetDOSVModeVtext(mode, vtext_mode);
+				} else if(vtext_mode == DOSV_VTEXT_SVGA) {
 					INT10_SetVideoMode(0x6a);
-					INT10_SetDOSVMode_SVGA(mode);
+					INT10_SetDOSVModeVtext(mode, vtext_mode);
 				} else {
 					INT10_SetVideoMode(0x12);
-					INT10_SetDOSVMode(mode);
+					INT10_SetDOSVModeVtext(mode, DOSV_VTEXT_VGA);
 				}
 			}
 		} else {
@@ -505,35 +516,48 @@ graphics_chars:
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 			Bit8u *font;
 			Bitu size = 0;
-			if(reg_al == 0 && reg_bx == 0) {
-				if(reg_dh == 8) {
-					if(reg_dl == 16) {
-						font = GetSbcsFont(reg_cl);
-						size = 16;
-					} else if(reg_dl == 19) {
-						font = GetSbcs19Font(reg_cl);
-						size = 19;
-					}
-				} else if(reg_dh == 16 && reg_dl == 16) {
-					font = GetDbcsFont(reg_cx);
-					size = 2 * 16;
-				} else if(reg_dh == 12 && reg_dl == 24) {
-					font = GetSbcs24Font(reg_cl);
-					size = 2 * 24;
-				} else if(reg_dh == 24 && reg_dl == 24) {
-					font = GetDbcs24Font(reg_cx);
-					size = 3 * 24;
-				}
-			}
-			if(size > 0) {
-				Bit16u seg = SegValue(es);
-				Bit16u off = reg_si;
-				for(Bitu ct = 0 ; ct < size ; ct++) {
-					real_writeb(seg, off++, *font++);
-				}
-				reg_al = 0;
-			} else {
+			if(reg_al == 0) {
 				reg_al = 1;
+				if(reg_bx == 0) {
+					if(reg_dh == 8) {
+						if(reg_dl == 16) {
+							font = GetSbcsFont(reg_cl);
+							size = 16;
+						} else if(reg_dl == 19) {
+							font = GetSbcs19Font(reg_cl);
+							size = 19;
+						}
+					} else if(reg_dh == 16 && reg_dl == 16) {
+						font = GetDbcsFont(reg_cx);
+						size = 2 * 16;
+					} else if(reg_dh == 12 && reg_dl == 24) {
+						font = GetSbcs24Font(reg_cl);
+						size = 2 * 24;
+					} else if(reg_dh == 24 && reg_dl == 24) {
+						font = GetDbcs24Font(reg_cx);
+						size = 3 * 24;
+					}
+					if(size > 0) {
+						Bit16u seg = SegValue(es);
+						Bit16u off = reg_si;
+						for(Bitu ct = 0 ; ct < size ; ct++) {
+							real_writeb(seg, off++, *font++);
+						}
+						reg_al = 0;
+					}
+				}
+			} else if(reg_al == 1) {
+				if(reg_bx == 0) {
+					if(reg_dh == 16 && reg_dl == 16) {
+						if(SetGaijiData(reg_cx, PhysMake(SegValue(es), reg_si))) {
+							reg_al = 0;
+						}
+					} else if(reg_dh == 24 && reg_dl == 24) {
+						if(SetGaijiData24(reg_cx, PhysMake(SegValue(es), reg_si))) {
+							reg_al = 0;
+						}
+					}
+				}
 			}
 		}
 		break;
@@ -844,6 +868,7 @@ graphics_chars:
 					font = real_readb(buf_es, buf_bp + line + 16);
 					jfont_dbcs_16[chr * 32 + line * 2 + 1] = font;
 				}
+				jfont_cache_dbcs_16[chr] = 1;
 				reg_al = 0x00;
 			}
 			else
@@ -889,6 +914,7 @@ graphics_chars:
 				}
 			}
 			else if (w_chr == 16 && h_chr == 16) {
+				GetDbcsFont(chr);
 				reg_al = 0x00;
 				for (Bitu line = 0; line < 16; line++)
 				{
@@ -1010,7 +1036,7 @@ graphics_chars:
 		if(IS_J3_ARCH) {
 			// gaiji font table
 			reg_bx = 0x0000;
-			SegSet16(es, J3_GetGaijiSeg());
+			SegSet16(es, GetGaijiSeg());
 		}
 		break;
 	case 0xf0:
