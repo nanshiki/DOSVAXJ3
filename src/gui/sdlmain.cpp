@@ -53,11 +53,13 @@
 #include "control.h"
 #include "bios.h"
 #include "jega.h"
+#include "jfont.h"
+
 #if C_CLIPBOARD
 #include <curses.h>
 #endif
 
-#define MAPPERFILE "mapper-" VERSION ".map"
+#define MAPPERFILE "mapper-" VERSION "j.map"
 //#define DISABLE_JOYSTICK
 
 #if C_OPENGL
@@ -308,9 +310,9 @@ void GFX_SetTitle(Bit32s cycles,Bits frameskip,bool paused){
 	strcat(titlestr,")");
 	if (strlen(titlebar)<1) strcpy(titlestr,"");
 	if(CPU_CycleAutoAdjust) {
-		sprintf(title,"DOSBox %s, CPU speed: max %3d%% cycles, Frameskip %2d, Program: %8s",VERSION,internal_cycles,internal_frameskip,RunningProgram);
+		sprintf(title,"DOSBox %s, CPU speed: max %3d%% cycles, Frameskip %2d, Program: %8s",BUILD_VERSION,internal_cycles,internal_frameskip,RunningProgram);
 	} else {
-		sprintf(title,"DOSBox %s, CPU speed: %8d cycles, Frameskip %2d, Program: %8s",VERSION,internal_cycles,internal_frameskip,RunningProgram);
+		sprintf(title,"DOSBox %s, CPU speed: %8d cycles, Frameskip %2d, Program: %8s",BUILD_VERSION,internal_cycles,internal_frameskip,RunningProgram);
 	}
 
 	if(paused) strcat(title," PAUSED");
@@ -1765,6 +1767,33 @@ void GFX_Events() {
 		case SDL_VIDEOEXPOSE:
 			if (sdl.draw.callback) sdl.draw.callback( GFX_CallBackRedraw );
 			break;
+#if defined(LINUX)
+		case SDL_KEYDOWN:
+			if(event.key.keysym.unicode != 0) {
+				iconv_t ic;
+				unsigned char uni[4], sjis[4];
+				char *puni, *psjis;
+				size_t unisize, sjissize;
+				ic = iconv_open("Shift_JIS", "UTF-16BE");
+				uni[0] = event.key.keysym.unicode >> 8;
+				uni[1] = event.key.keysym.unicode & 0xff;
+				uni[2] = 0;
+				puni = (char *)uni;
+				psjis = (char *)sjis;
+				unisize = 2;
+				sjissize = 4;
+				iconv(ic, &puni, &unisize, &psjis, &sjissize);
+				iconv_close(ic);
+
+				if(isKanji1(sjis[0])) {
+					BIOS_AddKeyToBuffer(0xf000 | sjis[0]);
+					BIOS_AddKeyToBuffer(0xf100 | sjis[1]);
+				} else {
+					BIOS_AddKeyToBuffer(sjis[0]);
+				}
+				break;
+			}
+#endif
 #ifdef WIN32
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
@@ -1941,7 +1970,11 @@ void Config_Add_SDL() {
 	const char* clipboardmodifier[] = { "none", "alt", "lalt", "ralt", "disabled", 0};
 	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"none");
 	Pstring->Set_values(clipboardmodifier);
+#if defined(WIN32)
 	Pstring->Set_help("Change the keyboard modifier for the right mouse button clipboard copy/paste function.");
+#else
+	Pstring->Set_help("not used.");
+#endif
 }
 
 static void show_warning(char const * const message) {
@@ -2147,7 +2180,7 @@ int main(int argc, char* argv[]) {
 #ifdef _MSC_VER
 		if (control->cmdline->FindExist("-noconsole")) {
 #endif
-			FreeConsole();
+			//FreeConsole();
 			/* Redirect standard input and standard output */
 			if(freopen(STDOUT_FILE, "w", stdout) == NULL)
 				no_stdout = true; // No stdout so don't write messages
@@ -2155,7 +2188,7 @@ int main(int argc, char* argv[]) {
 			setvbuf(stdout, NULL, _IOLBF, BUFSIZ);	/* Line buffered */
 			setbuf(stderr, NULL);					/* No buffering */
 #ifdef _MSC_VER
-		} else {
+		} else if(control->cmdline->FindExist("-console")) {
 			if (AllocConsole()) {
 				fclose(stdin);
 				fclose(stdout);
@@ -2165,12 +2198,18 @@ int main(int argc, char* argv[]) {
 				freopen("CONOUT$","w",stderr);
 			}
 			SetConsoleTitle("DOSBox Status Window");
+		} else {
+			//FreeConsole();
+			no_stdout = true;
 		}
 #endif
 #endif  //defined(WIN32) && !(C_DEBUG)
 		if (control->cmdline->FindExist("-version") ||
 		    control->cmdline->FindExist("--version") ) {
-			printf("\nDOSVAXJ3 version %s, copyright DOSBox Team and Wengier and akm and takapyu.\n", VERSION);
+			printf("\nDOSVAXJ3 version %s, copyright DOSBox Team\n", VERSION);
+			printf("                       copyright Wengier.\n");
+			printf("                       copyright akm.\n");
+			printf("                       copyright takapyu.\n");
 			printf("DOSVAXJ3 is a modified version of DOSBox (See readme.txt))\n");
 			printf("DOSVAXJ3 comes with ABSOLUTELY NO WARRANTY.  This is free software,\n");
 			printf("and you are welcome to redistribute it under certain conditions;\n");
@@ -2199,7 +2238,7 @@ int main(int argc, char* argv[]) {
 	/* Display Welcometext in the console */
 	LOG_MSG("DOSVAXJ3 version %s",VERSION);
 	LOG_MSG("Copyright 2002-2017 DOSBox Team, published under GNU GPL.");
-	LOG_MSG("Copyright 2016 akm.");
+	LOG_MSG("Copyright 2016-2019 akm.");
 	LOG_MSG("Copyright 2019 takapyu.");
 	LOG_MSG("Long File Name (LFN), mouse copy/paste and other support, by Wengier,2014-2017.");
 	LOG_MSG("---");
@@ -2334,6 +2373,7 @@ int main(int argc, char* argv[]) {
 		/* Init the keyMapper */
 		MAPPER_Init();
 		if (control->cmdline->FindExist("-startmapper")) MAPPER_RunInternal();
+
 		/* Start up main machine */
 		control->StartUp();
 		/* Shutdown everything */
@@ -2364,6 +2404,11 @@ int main(int argc, char* argv[]) {
 #if defined (WIN32)
 	sticky_keys(true); //Might not be needed if the shutdown function switches to windowed mode, but it doesn't hurt
 #endif 
+	// DOSVAXJ3
+	SDL_SetIMValues(SDL_IM_ONOFF, 0, NULL);
+	SDL_SetIMValues(SDL_IM_ENABLE, 0, NULL);
+	QuitFont();
+
 	//Force visible mouse to end user. Somehow this sometimes doesn't happen
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
 	SDL_ShowCursor(SDL_ENABLE);
