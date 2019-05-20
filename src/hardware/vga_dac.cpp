@@ -194,7 +194,7 @@ void VGA_DAC_SetEntry(Bitu entry,Bit8u red,Bit8u green,Bit8u blue) {
 		if (vga.dac.combine[i]==entry)
 			VGA_DAC_SendColor( i, i );
 }
-#include <windows.h>
+
 void VGA_SetupDAC(void) {
 	vga.dac.first_changed=256;
 	vga.dac.bits=6;
