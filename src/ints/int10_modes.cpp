@@ -47,9 +47,27 @@ VideoModeBlock ModeList_DOSV[]={
 
 VideoModeBlock ModeList_DOSV_SVGA[]={
 /* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
-{ 0x003  ,M_EGA    ,640 ,480 ,80  ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000  ,100 ,525 ,80  ,480 ,0	},
 { 0x070  ,M_LIN4   ,800 ,600 ,100 ,37 ,8 ,16 ,1 ,0xA0000 ,0x10000 ,128 ,663 ,100 ,600 ,0	},
-{ 0x072  ,M_EGA    ,640 ,480 ,80  ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000  ,100 ,525 ,80  ,480 ,0	},
+};
+
+VideoModeBlock ModeList_DOSV_XGA[]={
+/* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
+{ 0x070  ,M_LIN4   ,1024,768 ,128 ,48 ,8 ,16 ,1 ,0xA0000 ,0xA000  ,128 ,800 ,128 ,768 ,0	},
+};
+
+VideoModeBlock ModeList_DOSV_XGA_24[]={
+/* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
+{ 0x070  ,M_LIN4   ,1024,768 ,85  ,32 ,12,24 ,1 ,0xA0000 ,0xA000  ,128 ,800 ,128 ,768 ,0	},
+};
+
+VideoModeBlock ModeList_DOSV_SXGA[]={
+/* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
+{ 0x070  ,M_LIN4  ,1280,1024,160  ,64 ,8 ,16 ,1 ,0xA0000 ,0xA000, 160 ,1152,160  ,1024,0	},
+};
+
+VideoModeBlock ModeList_DOSV_SXGA_24[]={
+/* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
+{ 0x070  ,M_LIN4  ,1280,1024,106  ,42 ,12,24 ,1 ,0xA0000 ,0xA000, 160 ,1152,160  ,1024,0	},
 };
 
 VideoModeBlock ModeList_VGA[]={
@@ -271,6 +289,7 @@ VideoModeBlock ModeList_JEGA[]={
 	{ 0x005  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK | _EGA_LINE_DOUBLE },
 	{ 0x006  ,M_CGA2   ,640 ,200 ,80 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,100 ,449 ,80 ,400 ,_EGA_LINE_DOUBLE },
 	{ 0x007  ,M_TEXT   ,720 ,400 ,80 ,25 ,9 ,16 ,8 ,0xB0000 ,0x1000 ,100 ,449 ,80 ,400 ,0 },
+	{ 0x010  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,100 ,449 ,80 ,350 ,0 },
 // JEGA modes for AX
 //{ 0x002  ,M_JEGA_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,96  ,525 ,80 ,480 ,0	},//AX-2 is not implemented;
 { 0x003  ,M_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,96  ,525 ,80 ,480 ,0	},
@@ -1669,21 +1688,19 @@ Bitu VideoModeMemSize(Bitu mode) {
 	return 0;
 }
 
-bool INT10_SetDOSVMode(Bit16u mode)
-{
-	if(SetCurMode(ModeList_DOSV, mode)) {
-		FinishSetMode(true);
-		INT10_SetCursorShape(6, 7);
-	} else {
-		LOG(LOG_INT10, LOG_ERROR)("DOS/V:Trying to set illegal mode %X", mode);
-		return false;
-	}
-	return true;
-}
+static VideoModeBlock *ModeListVtext[] = {
+	ModeList_DOSV,
+	ModeList_DOSV,
+	ModeList_DOSV_SVGA,
+	ModeList_DOSV_XGA,
+	ModeList_DOSV_XGA_24,
+	ModeList_DOSV_SXGA,
+	ModeList_DOSV_SXGA_24,
+};
 
-bool INT10_SetDOSVMode_SVGA(Bit16u mode)
+bool INT10_SetDOSVModeVtext(Bit16u mode, enum DOSV_VTEXT_MODE vtext_mode)
 {
-	if(SetCurMode(ModeList_DOSV_SVGA, mode)) {
+	if(SetCurMode(ModeListVtext[vtext_mode], mode)) {
 		FinishSetMode(true);
 		INT10_SetCursorShape(6, 7);
 	} else {
