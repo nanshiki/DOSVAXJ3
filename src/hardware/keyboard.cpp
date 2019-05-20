@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2002-2015  The DOSBox Team
- *  Copyright (C) 2016 akm
+ *  Copyright (C) 2016-2019 akm
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -71,20 +71,6 @@ static void KEYBOARD_TransferBuffer(Bitu val) {
 	KEYBOARD_SetPort60(keyb.buffer[keyb.pos]);
 	if (++keyb.pos>=KEYBUFSIZE) keyb.pos-=KEYBUFSIZE;
 	keyb.used--;
-}
-
-//for AX
-void KEYBOARD_TrimKana(void) {
-	if (keyb.kanaLocked) {
-		LOG(LOG_KEYBOARD, LOG_NORMAL)("Kana shift OFF");
-		keyb.kanaLocked = false;
-		mem_writeb(BIOS_KEYBOARD_AX_KBDSTATUS, 0x00);//Kana status LED=on and Shift=on
-	}
-	else {
-		LOG(LOG_KEYBOARD, LOG_NORMAL)("Kana shift ON");
-		keyb.kanaLocked = true;
-		mem_writeb(BIOS_KEYBOARD_AX_KBDSTATUS, 0x03);//Kana status LED=on and Shift=on
-	}
 }
 
 void KEYBOARD_ClrBuffer(void) {
@@ -285,9 +271,9 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 
 	case KBD_semicolon:ret=39;break;
 	case KBD_quote:ret=40;break;
-	case KBD_grave:ret=41;break;
+	case KBD_grave:ret=41;break;//29h `~—£
 	case KBD_leftshift:ret=42;break;
-	case KBD_backslash:ret=43;break;
+	case KBD_backslash:ret=43;break;//2bh \|∞
 	case KBD_z:ret=44;break;
 	case KBD_x:ret=45;break;
 	case KBD_c:ret=46;break;
@@ -333,7 +319,7 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_kp0:ret=82;break;
 	case KBD_kpperiod:ret=83;break;
 
-	case KBD_extra_lt_gt:ret=86;break;
+	case KBD_extra_lt_gt:ret=86;break;//56h \|€ underscore
 	case KBD_f11:ret=87;break;
 	case KBD_f12:ret=88;break;
 
@@ -342,27 +328,15 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_kpenter:extend=true;ret=28;break;
 	case KBD_rightctrl:
 	{
-		//I don't know how to transfer Kana status between master and kbd. maybe use I/O
-		//In here, it directly sets status.
-		if (pressed & (INT16_AX_GetKBDBIOSMode() == 0x51)) {
-			KEYBOARD_TrimKana();//âpêîÉJÉi keycode not assignged in AX
-		}
-		else {
-			extend = true;
-			ret = 29;
-		}
+		extend = true;
+		ret = 29;//0x1d
 		break;
 	}
 	case KBD_kpdivide:extend=true;ret=53;break;
 	case KBD_rightalt:
 	{
-		if (INT16_AX_GetKBDBIOSMode() == 0x51) {
-			ret = 0x3a;//äøéö
-		}
-		else {
-			extend = true;
-			ret = 56;
-		}
+		extend = true;
+		ret = 56;//0x38
 		break;
 	}
 	//case KBD_rightalt: ret = 0xA7; break; ax
@@ -389,22 +363,31 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 		return;
 	//case KBD_underscore:ret = 0x73; break;//for JP layout
 	//case KBD_yen:ret = 0x7d; break;//for JP layout
-	case KBD_underscore:ret = 0x2b; break;//for AX layout
-	case KBD_yen:ret = 0x56; break;//for AX layout
-	case KBD_conv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51)? 0xa7: 57; break;//for AX layout
-	case KBD_nconv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0xab: 57; break;//for AX layout
-	case KBD_ax:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0xd2: 0; break;//for AX layout
-		/*
-		Key         Sh Ct Al US mode
-		ñ≥ïœä∑ - AB AC AD AE Space
-		ïœä∑   - A7 A8 A9 AA Space
-		äøéö   - 3A 3A       RAlt
-		AX     - D2 D3 D4 D5 (ignored)
+	case KBD_underscore:ret = 86; break;//for AX layout
+	case KBD_yen:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 43 : 125;
+		break;
+	case KBD_conv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51)? 0x5b: 57; break;//for AX layout
+	case KBD_nconv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5a: 57; break;//for AX layout
+	case KBD_ax:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5c: 0; break;//for AX layout
+		/* System Scan Code for AX keys 
+		JP mode  Make    Break    US mode  Make    Break
+		ñ≥ïœä∑   5Ah     DAh      Space    39h(57) B9h
+		ïœä∑     5Bh     DBh      Space    39h(57) B9h
+		äøéö     E0h-38h E0h-B8h  RAlt     (status flag)
+		AX       5Ch     DCh      (unused)
+		*/
+		/* Character code in JP mode (implemented in KBD BIOS)
+		Key         Ch Sh Ct Al
+		5A ñ≥ïœä∑ - AB AC AD AE
+		5B ïœä∑   - A7 A8 A9 AA
+		38 äøéö   - 3A 3A
+		5c AX     - D2 D3 D4 D5
 		*/ 
 	// for Japanese keyboard
-	case KBD_f13:ret=90;break;
-	case KBD_f14:ret=91;break;
-	case KBD_f15:ret=92;break;
+	case KBD_f13:ret=93;break;
+	case KBD_f14:ret=94;break;
+	case KBD_f15:ret=95;break;
 
 	default:
 		E_Exit("Unsupported key press");
