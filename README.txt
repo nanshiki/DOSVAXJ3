@@ -42,6 +42,8 @@ jfontdbcs24    全角表示用 FONTX2 フォントファイルへのパス サ�
                ファイルの指定がないサイズは Windows のフォントから取得します。
                半角 8×19 は AX, DOS/V モード用で、J-3100 モードでは使用しませ
                ん。
+               Linux の場合、フォントファイルは ~/.dosbox に置いてください。
+
 gaijistart     外字領域の開始コードを指定します。未定義の場合 f040 となります。
 gaijiend       外字領域の終了コードを指定します。未定義の場合 f0fc となります
                最大 200 文字分までしか使用できません。
@@ -51,7 +53,8 @@ yen            半角フォントの 7fh に \ が入っている場合 true と
 im             IM の有効/無効を指定します。true で有効、false で無効です。
 
 languagejp     日本語メッセージ定義ファイルを指定します。
-               Linux 版の場合、/usr/local/share/dosbox に置いてください。
+               Linux 版の場合、こちらで作成したファイルを
+               /usr/local/share/dosbox に置いています。
 
 j3textcolor    J-3100 の文字色  RRGGBB でそれぞれ 0～ff まで指定できます。
 j3backcolor    J-3100 の背景色  RRGGBB でそれぞれ 0～ff まで指定できます。
