@@ -96,8 +96,12 @@ static void LoadMessageFile(const char * fname, bool japan_flag = false) {
 			char *start = strrchr((char *)fname, '/');
 			if(start != NULL) {
 				char cname[PATH_MAX + 1];
-				sprintf(cname, ".%s", start);
+				sprintf(cname, "/usr/local/share/dosbox/%s", start);
 				mfile=fopen(cname,"rt");
+				if(!mfile) {
+					sprintf(cname, "./%s", start);
+					mfile=fopen(cname,"rt");
+				}
 			}
 		}
 		if(!mfile) {
