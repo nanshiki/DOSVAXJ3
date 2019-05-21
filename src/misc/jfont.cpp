@@ -239,16 +239,24 @@ static XFontSet font_set24;
 void QuitFont()
 {
 #if defined(LINUX)
-	XFreeGC(font_display, font_gc);
-	XFreePixmap(font_display, font_pixmap);
-	if(font_set16) {
-		XFreeFontSet(font_display, font_set16);
+	if(font_display) {
+		if(font_gc) {
+			XFreeGC(font_display, font_gc);
+		}
+		if(font_pixmap) {
+			XFreePixmap(font_display, font_pixmap);
+		}
+		if(font_set16) {
+			XFreeFontSet(font_display, font_set16);
+		}
+		if(font_set24) {
+			XFreeFontSet(font_display, font_set24);
+		}
+		if(font_window) {
+			XDestroyWindow(font_display, font_window);
+		}
+		XCloseDisplay(font_display);
 	}
-	if(font_set24) {
-		XFreeFontSet(font_display, font_set24);
-	}
-	XDestroyWindow(font_display, font_window);
-	XCloseDisplay(font_display);
 #endif
 #if defined(WIN32)
 	if(jfont_16) {
@@ -267,22 +275,26 @@ void InitFontHandle()
 	char **missing_list;
 	char *def_string;
 
-	font_display = XOpenDisplay("");
-	if(!font_set16) {
-		font_set16 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--16-*-*-*", &missing_list, &missing_count, &def_string);
-		XFreeStringList(missing_list);
+	if(!font_display) {
+		font_display = XOpenDisplay("");
 	}
-	if(!font_set24) {
-		font_set24 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--24-*-*-*", &missing_list, &missing_count, &def_string);
-		XFreeStringList(missing_list);
-	}
-	if(!font_window) {
-		font_window = XCreateSimpleWindow(font_display, DefaultRootWindow(font_display), 0, 0, 32, 32, 0, BlackPixel(font_display, DefaultScreen(font_display)), WhitePixel(font_display, DefaultScreen(font_display)));
-		font_pixmap = XCreatePixmap(font_display, font_window, 32, 32, DefaultDepth(font_display, 0));
-		font_gc = XCreateGC(font_display, font_pixmap, 0, 0);
+	if(font_display) {
+		if(!font_set16) {
+			font_set16 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--16-*-*-*", &missing_list, &missing_count, &def_string);
+			XFreeStringList(missing_list);
+		}
+		if(!font_set24) {
+			font_set24 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--24-*-*-*", &missing_list, &missing_count, &def_string);
+			XFreeStringList(missing_list);
+		}
+		if(!font_window) {
+			font_window = XCreateSimpleWindow(font_display, DefaultRootWindow(font_display), 0, 0, 32, 32, 0, BlackPixel(font_display, DefaultScreen(font_display)), WhitePixel(font_display, DefaultScreen(font_display)));
+			font_pixmap = XCreatePixmap(font_display, font_window, 32, 32, DefaultDepth(font_display, 0));
+			font_gc = XCreateGC(font_display, font_pixmap, 0, 0);
+		}
 	}
 #endif
-#if defined(WIN32)
+#if defined(WIN32)	
 	if(jfont_name.empty()) {
 		// MS Gothic
 		jfont_name = "\x082\x06c\x082\x072\x020\x083\x053\x083\x056\x083\x062\x083\x04e";
