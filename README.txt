@@ -7,11 +7,13 @@
 ントファイル、Visual C++ のランタイム等は不要です。フォントファイルを使用して
 画面を実機に近づける事も可能です。
 　日本語キーボードに対応しています。
-　Windows の IME、Linux XIM を使用して日本語入力ができます。
+　Windows の IME、Linux の XIM を使用して日本語入力ができます。
 　Wengier Wu 氏による DOSBox-lfn の修正を取り込み、ロングファイルネームや画面
 上の文字のクリップボードへのコピー等に対応しています。
 
 ●dosbox.conf の設定
+　Linux 版の場合 ~/.dosbox/dosbox-0.74j.conf となります。
+
 ・[sdl] セクション
 clipboardmodifier  クリップボードのコピー・ペーストの指定をします。
                    none の場合、右クリックでペースト、右ドラッグで選択開始し、
@@ -49,6 +51,7 @@ yen            半角フォントの 7fh に \ が入っている場合 true と
 im             IM の有効/無効を指定します。true で有効、false で無効です。
 
 languagejp     日本語メッセージ定義ファイルを指定します。
+               Linux 版の場合、/usr/local/share/dosbox に置いてください。
 
 j3textcolor    J-3100 の文字色  RRGGBB でそれぞれ 0～ff まで指定できます。
 j3backcolor    J-3100 の背景色  RRGGBB でそれぞれ 0～ff まで指定できます。
@@ -75,11 +78,15 @@ vtext2         chev vt2 で切り替わる V-text モードを指定します。
                sxga    解像度 1280×1024  文字 160×64
                xga24   解像度 1024× 768  文字  85×32 24ドットフォント
                sxga24  解像度 1280×1024  文字 106×42 24ドットフォント
+               Windows フォントで 24 ドットフォントを代用する場合、あまり綺麗
+               ではありませんので、FONTX2 ファイルを使用することを推薦します。
                J-3100 モードの場合 xga, sxga, xga24, sxga24 は指定できません。
 
 ・[dos] セクション
 keyboardlayout 日本語キーボードの場合 jp、英語キーボードの場合 none としてくだ
-               さい。
+               さい。jp と設定した場合、ファイル jp.kl を読み込みます。
+               jp.kl は Linux 版の場合、/usr/local/share/dosbox に置いてありま
+               す。
 
 ver            DOS のバージョンを指定します。指定がない場合 7.10 となります。
                起動後に ver set コマンドで変更できます。
@@ -101,7 +108,7 @@ autoreload     オートリロード(ディレクトリキャッシュ更新)の
                実行時、all で両方のタイミングでディレクトリキャッシュの更新を
                行います。false で更新は行いません。
 
-　付属の dosbox.conf の DOSVAXJ3 関連の初期設定値は下記の通りです。
+　DOSVAXJ3 関連の初期設定値は下記の通りです。
 [sdl]
 clipboardmodifier=alt
 
@@ -127,8 +134,6 @@ autoreload=cmd
 
 オプションなし  ステータスウインドウ非表示
 -console        ステータスウインドウ表示
--noconsole      ステータスウインドウ非表示
-                stdout.txt, stderr.txt ファイルに出力
 
 ●注意事項
 　英語/日本語/日本語(V-Text)/J-3100 の各モードに切り替えるには内蔵コマンドの
