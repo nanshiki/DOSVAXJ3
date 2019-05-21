@@ -271,6 +271,12 @@ Bitu keyboard_layout::read_keyboard_file(const char* keyboard_file_name, Bit32s 
 	read_buf_size = 0;
 	sprintf(nbuf, "%s.kl", keyboard_file_name);
 	FILE* tempfile = OpenDosboxFile(nbuf);
+#if defined(LINUX)
+	if(tempfile == NULL) {
+		sprintf(nbuf, "/usr/local/share/dosbox/%s.kl", keyboard_file_name);
+		tempfile = OpenDosboxFile(nbuf);
+	}
+#endif
 	if (tempfile==NULL) {
 		// try keyboard layout libraries next
 		if ((start_pos=read_kcl_file("keyboard.sys",keyboard_file_name,true))) {
