@@ -268,13 +268,19 @@ void InitFontHandle()
 	char *def_string;
 
 	font_display = XOpenDisplay("");
-	font_set16 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--16-*-*-*", &missing_list, &missing_count, &def_string);
-	XFreeStringList(missing_list);
-	font_set24 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--24-*-*-*", &missing_list, &missing_count, &def_string);
-	XFreeStringList(missing_list);
-	font_window = XCreateSimpleWindow(font_display, DefaultRootWindow(font_display), 0, 0, 32, 32, 0, BlackPixel(font_display, DefaultScreen(font_display)), WhitePixel(font_display, DefaultScreen(font_display)));
-	font_pixmap = XCreatePixmap(font_display, font_window, 32, 32, DefaultDepth(font_display, 0));
-	font_gc = XCreateGC(font_display, font_pixmap, 0, 0);
+	if(!font_set16) {
+		font_set16 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--16-*-*-*", &missing_list, &missing_count, &def_string);
+		XFreeStringList(missing_list);
+	}
+	if(!font_set24) {
+		font_set24 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--24-*-*-*", &missing_list, &missing_count, &def_string);
+		XFreeStringList(missing_list);
+	}
+	if(!font_window) {
+		font_window = XCreateSimpleWindow(font_display, DefaultRootWindow(font_display), 0, 0, 32, 32, 0, BlackPixel(font_display, DefaultScreen(font_display)), WhitePixel(font_display, DefaultScreen(font_display)));
+		font_pixmap = XCreatePixmap(font_display, font_window, 32, 32, DefaultDepth(font_display, 0));
+		font_gc = XCreateGC(font_display, font_pixmap, 0, 0);
+	}
 #endif
 #if defined(WIN32)
 	if(jfont_name.empty()) {
