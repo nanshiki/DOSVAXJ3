@@ -16,10 +16,12 @@ DOSBox [README](https://github.com/nanshiki/DOSVAXJ3/blob/master/README_DOSBox.t
 Visual Studio Professional 2015 で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
 
 ### Linux  
-$ .configure  
+$ ./autogen.sh  
+$ ./configure  
 $ make  
 $ sudo make install  
-SDL-IM-plus を make ; sudo make install しておく必要があります。  
+SDL-IM-plus をビルド、インストールしておく必要があります。  
+Debian 系の場合、他に apt-get で automake libsdl-sound1.2 libsdl-net1.2 あたりをインストールしておいてください。  
 
 ## ライセンス
 GPL v2
