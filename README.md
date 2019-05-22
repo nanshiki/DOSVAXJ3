@@ -22,6 +22,7 @@ $ make
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
 Debian 系の場合、他に apt-get で automake libsdl-sound1.2 libsdl-net1.2 あたりをインストールしておいてください。  
+実行ファイル名は dosboxj に変更になっています。  
 
 ## ライセンス
 GPL v2
