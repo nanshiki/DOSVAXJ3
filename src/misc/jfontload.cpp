@@ -77,6 +77,7 @@ void readfontxtbl(fontxTbl *table, Bitu size, FILE *fp)
 
 #if defined(LINUX)
 #include <limits.h>
+extern Bit8u int10_font_16[];
 #endif
 
 static bool LoadFontxFile(const char *fname, int height = 16) {
@@ -95,7 +96,7 @@ static bool LoadFontxFile(const char *fname, int height = 16) {
 			sprintf(cname, ".%s", start);
 			mfile=fopen(cname, "rb");
 			if (!mfile) {
-				LOG_MSG("MSG: Can't open FONTX2 file: %s",cname);
+				LOG_MSG("MSG: Can't open FONTX2 file: %s",fname);
 				return false;
 			}
 		}
@@ -189,6 +190,11 @@ void JFONT_Init(Section_prop * section) {
 		if(!LoadFontxFile(pathprop->realpath.c_str(), 19)) {
 			if(!MakeSbcs19Font()) {
 				LOG_MSG("MSG: SBCS 8x19 font file path is not specified.\n");
+#if defined(LINUX)
+				for(Bitu ct = 0 ; ct < 0x100 ; ct++) {
+					memcpy(&jfont_sbcs_19[ct * 19 + 1], &int10_font_16[ct * 16], 16);
+				}
+#endif
 			}
 		} else if(yen_flag) {
 			if(!CheckEmptyData(&jfont_sbcs_19[0x7f * 19], 19)) {
@@ -210,6 +216,9 @@ void JFONT_Init(Section_prop * section) {
 			if(!LoadFontxFile(pathprop->realpath.c_str())) {
 				if(!MakeSbcs16Font()) {
 					LOG_MSG("MSG: SBCS 8x16 font file path is not specified.\n");
+#if defined(LINUX)
+					memcpy(jfont_sbcs_16, int10_font_16, 256 * 16);
+#endif
 				}
 			} else if(yen_flag) {
 				if(!CheckEmptyData(&jfont_sbcs_16[0x7f * 16], 16)) {
