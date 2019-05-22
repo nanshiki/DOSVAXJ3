@@ -1969,8 +1969,8 @@ void Config_Add_SDL() {
 
 	const char* clipboardmodifier[] = { "none", "alt", "lalt", "ralt", "disabled", 0};
 	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"none");
-	Pstring->Set_values(clipboardmodifier);
 #if defined(WIN32)
+	Pstring->Set_values(clipboardmodifier);
 	Pstring->Set_help("Change the keyboard modifier for the right mouse button clipboard copy/paste function.");
 #else
 	Pstring->Set_help("not used.");
