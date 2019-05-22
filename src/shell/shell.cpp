@@ -688,36 +688,36 @@ void SHELL_Init() {
 		"\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\033[0m\n");
 	//for AX (machine selected EGA and VGA)
 	MSG_Add("SHELL_STARTUP_AX_JEGA", 
-		"\033[44;1m„¡„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„¢\n"
-		"„  \033[32mWelcome to DOSVAX build %-8s\033[37m                                   „ \n"
-		"„                                                                     „ \n"
-		"„  \033[36m    //  ///  ////\033[37m   This is a modified DOSBox emulates AX machine. „ \n"
-		"„  \033[36m   ////  /// //  \033[37m   You need not have the AX version of MS-DOS,    „ \n"
-		"„  \033[36m  / ////  ///    \033[37m  but some applications won't run. If you need,   „ \n"
-		"„  \033[36m //  ////  ///   \033[37m  set \033[31mmachine=ega\033[37m and use the real MS-DOS.        „ \n"
-		"„  \033[36m////  /////////  \033[37m   You can map AX special keys \033[31mctrl-F1\033[37m.           „ \n"
-		"„                                                                     „ \n"
-		"„  \033[32mHAVE FUN!\033[37m                                                          „ \n"
-		"„  \033[32makm \033[33mhttp://diarywind.com\033[37m                                           „ \n"
-		"„¤„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„£\033[0m\n");
+		"\033[44;1m\x084\x0a1\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a2\n"
+		"\x084\x0a0 \033[32mWelcome to DOSVAX build %-8s\033[37m                                   \x084\x0a0\n"
+		"\x084\x0a0                                                                    \x084\x0a0\n"
+		"\x084\x0a0 \033[36m    //  ///  ////\033[37m   This is a modified DOSBox emulates AX machine. \x084\x0a0\n"
+		"\x084\x0a0 \033[36m   ////  /// //  \033[37m   You need not have the AX version of MS-DOS,    \x084\x0a0\n"
+		"\x084\x0a0 \033[36m  / ////  ///    \033[37m  but some applications won't run. If you need,   \x084\x0a0\n"
+		"\x084\x0a0 \033[36m //  ////  ///   \033[37m  set \033[31mmachine=ega\033[37m and use the real MS-DOS.        \x084\x0a0\n"
+		"\x084\x0a0 \033[36m////  /////////  \033[37m   You can map AX special keys \033[31mctrl-F1\033[37m.           \x084\x0a0\n"
+		"\x084\x0a0                                                                    \x084\x0a0\n"
+		"\x084\x0a0 \033[32mHAVE FUN!\033[37m                                                          \x084\x0a0\n"
+		"\x084\x0a0 \033[32makm \033[33mhttp://diarywind.com\033[37m                                           \x084\x0a0\n"
+		"\x084\x0a4\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a3\033[0m\n");
 	MSG_Add("SHELL_STARTUP_J3",
-		"„¡„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„¢\n"
-		"„  Welcome to DOSVAXJ3 build %-8s                                 „ \n"
-		"„                                                                     „ \n"
-		"„                  This is a modified DOSBox emulates J-3100 machine. „ \n"
-		"„                                   J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dcga „ \n"
-		"„                                    DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dosv „ \n"
-		"„                \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-text/J-3100 \x090\x0d8\x091\x0d6 chev [us][jp][vt][j3] „ \n"
-		"„¤„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„£\n");
+		"\x084\x0a1\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a2\n"
+		"\x084\x0a0 Welcome to DOSVAXJ3 build %-8s                                 \x084\x0a0\n"
+		"\x084\x0a0                                                                    \x084\x0a0\n"
+		"\x084\x0a0                 This is a modified DOSBox emulates J-3100 machine. \x084\x0a0\n"
+		"\x084\x0a0                                  J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dcga \x084\x0a0\n"
+		"\x084\x0a0                                   DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae machine=dosv \x084\x0a0\n"
+		"\x084\x0a0               \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-text/J-3100 \x090\x0d8\x091\x0d6 chev [us][jp][vt][j3] \x084\x0a0\n"
+		"\x084\x0a4\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a3\n");
 	MSG_Add("SHELL_STARTUP_DOSV",
-		"\033[44;1m„¡„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„¢\n"
-		"„  Welcome to DOSVAXJ3 build %-8s                                 „ \n"
-		"„                                                                     „ \n"
-		"„                   This is a modified DOSBox emulates DOS/V machine. „ \n"
-		"„                                   J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dcga\033[37m „ \n"
-		"„                                    DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dosv\033[37m „ \n"
-		"„                      \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-Text \x090\x0d8\x091\x0d6 \033[33mchev [us][jp][vt][vt2]\033[37m „ \n"
-		"„¤„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„£\033[0m\n");
+		"\033[44;1m\x084\x0a1\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a2\n"
+		"\x084\x0a0 Welcome to DOSVAXJ3 build %-8s                                 \x084\x0a0\n"
+		"\x084\x0a0                                                                    \x084\x0a0\n"
+		"\x084\x0a0                  This is a modified DOSBox emulates DOS/V machine. \x084\x0a0\n"
+		"\x084\x0a0                                  J-3100\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dcga\033[37m \x084\x0a0\n"
+		"\x084\x0a0                                   DOS/V\x083\x082\x081\x05b\x083\x068\x082\x0c5\x082\x0cc\x08b\x04e\x093\x0ae \033[31mmachine=dosv\033[37m \x084\x0a0\n"
+		"\x084\x0a0                     \x089\x070\x08c\x0ea/\x093\x0fa\x096\x07b\x08c\x0ea/V-Text \x090\x0d8\x091\x0d6 \033[33mchev [us][jp][vt][vt2]\033[37m \x084\x0a0\n"
+		"\x084\x0a4\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x09f\x084\x0a3\033[0m\n");
 	MSG_Add("SHELL_STARTUP_SUB","\n\n\033[32;1mDOSBox %s Command Shell\033[0m\n\n");
 	MSG_Add("SHELL_CMD_CHDIR_HELP","Displays/changes the current directory.\n");
 	MSG_Add("SHELL_CMD_CHDIR_HELP_LONG","CHDIR [drive:][path]\n"
