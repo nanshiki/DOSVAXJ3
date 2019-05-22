@@ -273,7 +273,7 @@ Bitu keyboard_layout::read_keyboard_file(const char* keyboard_file_name, Bit32s 
 	FILE* tempfile = OpenDosboxFile(nbuf);
 #if defined(LINUX)
 	if(tempfile == NULL) {
-		sprintf(nbuf, "/usr/local/share/dosbox/%s.kl", keyboard_file_name);
+		sprintf(nbuf, "/usr/local/share/dosboxj/%s.kl", keyboard_file_name);
 		tempfile = OpenDosboxFile(nbuf);
 	}
 #endif
