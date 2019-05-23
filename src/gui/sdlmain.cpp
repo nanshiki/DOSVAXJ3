@@ -1664,6 +1664,10 @@ static bool CheckEnableImmOnKey(SDL_KeyboardEvent key)
 	return false;
 }
 
+#if defined(LINUX)
+extern bool debug_flag;
+#endif
+
 void GFX_Events() {
 	SDL_Event event;
 #if defined (REDUCE_JOYSTICK_POLLING)
@@ -1792,6 +1796,9 @@ void GFX_Events() {
 					BIOS_AddKeyToBuffer(sjis[0]);
 				}
 				break;
+			}
+			if(debug_flag) {
+				printf("scan=%x, sym=%x, mod=%x\n", event.key.keysym.scancode, event.key.keysym.sym, event.key.keysym.mod);
 			}
 #endif
 #ifdef WIN32
@@ -2122,10 +2129,10 @@ static void printconfiglocation() {
 }
 
 static void eraseconfigfile() {
-	FILE* f = fopen("dosbox.conf","r");
+	FILE* f = fopen("dosboxj.conf","r");
 	if(f) {
 		fclose(f);
-		show_warning("Warning: dosbox.conf exists in current working directory.\nThis will override the configuration file at runtime.\n");
+		show_warning("Warning: dosboxj.conf exists in current working directory.\nThis will override the configuration file at runtime.\n");
 	}
 	std::string path,file;
 	Cross::GetPlatformConfigDir(path);
@@ -2139,11 +2146,11 @@ static void eraseconfigfile() {
 }
 
 static void erasemapperfile() {
-	FILE* g = fopen("dosbox.conf","r");
+	FILE* g = fopen("dosboxj.conf","r");
 	if(g) {
 		fclose(g);
-		show_warning("Warning: dosbox.conf exists in current working directory.\nKeymapping might not be properly reset.\n"
-		             "Please reset configuration as well and delete the dosbox.conf.\n");
+		show_warning("Warning: dosboxj.conf exists in current working directory.\nKeymapping might not be properly reset.\n"
+		             "Please reset configuration as well and delete the dosboxj.conf.\n");
 	}
 
 	std::string path,file=MAPPERFILE;
@@ -2329,7 +2336,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	// if none found => parse localdir conf
-	if(!control->configfiles.size()) control->ParseConfigFile("dosbox.conf");
+	if(!control->configfiles.size()) control->ParseConfigFile("dosboxj.conf");
 
 	// if none found => parse userlevel conf
 	if(!control->configfiles.size()) {
