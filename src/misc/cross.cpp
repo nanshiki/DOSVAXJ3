@@ -41,8 +41,9 @@
 static void W32_ConfDir(std::string& in,bool create) {
 	int c = create?1:0;
 	char result[MAX_PATH] = { 0 };
-	BOOL r = SHGetSpecialFolderPath(NULL,result,CSIDL_LOCAL_APPDATA,c);
-	if(!r || result[0] == 0) r = SHGetSpecialFolderPath(NULL,result,CSIDL_APPDATA,c);
+//	BOOL r = SHGetSpecialFolderPath(NULL,result,CSIDL_LOCAL_APPDATA,c);
+//	if(!r || result[0] == 0) r = SHGetSpecialFolderPath(NULL,result,CSIDL_APPDATA,c);
+	BOOL r = SHGetSpecialFolderPath(NULL, result, CSIDL_APPDATA, c);
 	if(!r || result[0] == 0) {
 		char const * windir = getenv("windir");
 		if(!windir) windir = "c:\\windows";
@@ -59,7 +60,7 @@ static void W32_ConfDir(std::string& in,bool create) {
 void Cross::GetPlatformConfigDir(std::string& in) {
 #ifdef WIN32
 	W32_ConfDir(in,false);
-	in += "\\DOSBox";
+	in += "\\DOSBoxJ";
 #elif defined(MACOSX)
 	in = "~/Library/Preferences";
 	ResolveHomedir(in);
@@ -72,7 +73,7 @@ void Cross::GetPlatformConfigDir(std::string& in) {
 
 void Cross::GetPlatformConfigName(std::string& in) {
 #ifdef WIN32
-#define DEFAULT_CONFIG_FILE "dosboxj-" VERSION ".conf"
+#define DEFAULT_CONFIG_FILE "dosboxj.conf"
 #elif defined(MACOSX)
 #define DEFAULT_CONFIG_FILE "DOSBoxJ " VERSION " Preferences"
 #else /*linux freebsd*/
@@ -84,7 +85,7 @@ void Cross::GetPlatformConfigName(std::string& in) {
 void Cross::CreatePlatformConfigDir(std::string& in) {
 #ifdef WIN32
 	W32_ConfDir(in,true);
-	in += "\\DOSBox";
+	in += "\\DOSBoxJ";
 	mkdir(in.c_str());
 #elif defined(MACOSX)
 	in = "~/Library/Preferences/";
