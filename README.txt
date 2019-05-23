@@ -11,9 +11,11 @@
 　Wengier Wu 氏による DOSBox-lfn の修正を取り込み、ロングファイルネームや画面
 上の文字のクリップボードへのコピー等に対応しています。
 
-●dosbox.conf の設定
-●dosbox.conf の設定
-　Linux 版の場合 ~/.dosboxj/dosboxj-0.74.conf となります。
+●dosboxj.conf の設定
+　Windows の場合、dosboxj.exe と同じフォルダの dosboxj.conf を読み込みますが、
+存在しない場合 %APPDATA%\DOSBoxJ\dosboxj.conf を作成し、それを使用します。
+　Linux の場合 ~/.dosboxj/dosboxj.conf を読み込みますが、存在しない場合、
+~/.dosboxj/dosboxj-0.74.conf を作成し、それを使用します。
 
 ・[sdl] セクション
 clipboardmodifier  クリップボードのコピー・ペーストの指定をします。
@@ -43,6 +45,8 @@ jfontdbcs24    全角表示用 FONTX2 フォントファイルへのパス サ�
                ファイルの指定がないサイズは Windows のフォントから取得します。
                半角 8×19 は AX, DOS/V モード用で、J-3100 モードでは使用しませ
                ん。
+               Windows の場合フォントファイルは dosboxj.exe と同じフォルダに
+               置いてください。
                Linux の場合、フォントファイルは ~/.dosboxj に置いてください。
 
 gaijistart     外字領域の開始コードを指定します。未定義の場合 f040 となります。
@@ -54,8 +58,10 @@ yen            半角フォントの 7fh に \ が入っている場合 true と
 im             IM の有効/無効を指定します。true で有効、false で無効です。
 
 languagejp     日本語メッセージ定義ファイルを指定します。
-               Linux 版の場合、こちらで作成したファイルを
-               /usr/local/share/dosboxj に置いています。
+               Windows の場合、dosboxj.exe と同じフォルダのファイルが読み込ま
+               れます。japanese.lng が添付されています。
+               Linux の場合、make install で /usr/local/share/dosboxj に
+               japanese.lng がコピーされ、それを使用します。
 
 j3textcolor    J-3100 の文字色  RRGGBB でそれぞれ 0～ff まで指定できます。
 j3backcolor    J-3100 の背景色  RRGGBB でそれぞれ 0～ff まで指定できます。
@@ -89,8 +95,10 @@ vtext2         chev vt2 で切り替わる V-text モードを指定します。
 ・[dos] セクション
 keyboardlayout 日本語キーボードの場合 jp、英語キーボードの場合 none としてくだ
                さい。jp と設定した場合、ファイル jp.kl を読み込みます。
-               jp.kl は Linux 版の場合、/usr/local/share/dosboxj に置いてあり
-               ます。
+               Windows の場合、dosboxj.exe と同じフォルダのファイルが読み込ま
+               れます。jp.kl が添付されています。
+               Linux の場合、make install で /usr/local/share/dosboxj に jp.kl
+               がコピーされ、それを使用します。
 
 ver            DOS のバージョンを指定します。指定がない場合 7.10 となります。
                起動後に ver set コマンドで変更できます。
@@ -122,7 +130,6 @@ machine=dosv
 jfontname=ＭＳ 明朝
 yen=false
 im=true
-j3100=sxw
 vtext=svga
 vtext2=xga
 
@@ -251,6 +258,13 @@ bit 7 OFF で IME OFF となります。
 　設定項目に IM の有効無効を追加しました。
 　Linux でビルド、実行できるようにしました。Ubuntu 18.04 で動作確認しています。
 　DOSVAX build 4000AX12 の修正を取り込みました。
+
+・build JP190523 (2019/5/23)
+　Windows で MS-IME を使用していると、終了時に固まる場合があったのを修正しまし
+た。また、MS-IME によるキー入力不具合が多少は軽減されたかもしれません。
+　ロングファイルネームのファイルが、ショートファイルネームを指定しないとオープ
+ンできなくなっていたのを修正しました。JP190510 の複数検索対応によって発生して
+いた不具合です。
 
 ●ライセンス
 　GPL v2
