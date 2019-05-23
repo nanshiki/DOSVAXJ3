@@ -70,6 +70,7 @@
     <IncludePath>$(ProjectDir)..\..\Lib\SDL-1.2.15\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <TargetName>$(ProjectName)j</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release (Debugger)|Win32'">
     <OutDir>.\Release_debug\</OutDir>
@@ -77,7 +78,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir)..\..\Lib\SDL-1.2.15\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
-    <TargetName>$(ProjectName)_debug</TargetName>
+    <TargetName>$(ProjectName)j_debug</TargetName>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -152,7 +153,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;zlib.lib;libpng.lib;sdl_net.lib;sdlmain.lib;sdl.lib;pdcurses.lib;odbc32.lib;odbccp32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>.\Release/dosbox.exe</OutputFile>
+      <OutputFile>.\Release/dosboxj.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile />
@@ -204,7 +205,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;zlib.lib;libpng.lib;sdl_net.lib;sdlmain.lib;sdl.lib;pdcurses.lib;odbc32.lib;odbccp32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>.\Release_debug\dosbox_debug.exe</OutputFile>
+      <OutputFile>.\Release_debug\dosboxj_debug.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile>
