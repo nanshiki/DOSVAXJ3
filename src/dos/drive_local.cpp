@@ -319,26 +319,7 @@ again:
 
 	if(strlen(dir_entcopy)<DOS_NAMELENGTH_ASCII){
 		strcpy(find_name,dir_entcopy);
-#if defined(LINUX)
-		{
-			bool flag = false;
-			Bit8u *pt = (Bit8u *)find_name;
-			while(*pt != '\0') {
-				if(flag) {
-					flag = false;
-				} else {
-					if(isKanji1(*pt)) {
-						flag = true;
-					} else {
-						*pt = toupper(*pt);
-					}
-				}
-				pt++;
-			}
-		}
-#else
 		upcase(find_name);
-#endif
 	} 
 	strcpy(lfind_name,ldir_entcopy);
 	lfind_name[LFN_NAMELENGTH]=0;
