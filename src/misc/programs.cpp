@@ -370,8 +370,8 @@ void CONFIG::Run(void) {
 				// write config to startup directory
 				writeconf(pvars[0], false);
 			} else {
-				// -wcp without parameter: write dosbox.conf to startup directory
-				if (control->configfiles.size()) writeconf(std::string("dosbox.conf"), false);
+				// -wcp without parameter: write dosboxj.conf to startup directory
+				if (control->configfiles.size()) writeconf(std::string("dosboxj.conf"), false);
 				else WriteOut(MSG_Get("PROGRAM_CONFIG_NOCONFIGFILE"));
 			}
 			break;
@@ -776,7 +776,7 @@ void PROGRAMS_Init(Section* /*sec*/) {
 		"-writeconf or -wc with filename: write file to config directory.\n"\
 		"Use -writelang or -wl filename to write the current language strings.\n"\
 		"-r [parameters]\n Restart DOSBox, either using the previous parameters or any that are appended.\n"\
-		"-wcp [filename]\n Write config file to the program directory, dosbox.conf or the specified \n filename.\n"\
+		"-wcp [filename]\n Write config file to the program directory, dosboxj.conf or the specified \n filename.\n"\
 		"-wcd\n Write to the default config file in the config directory.\n"\
 		"-l lists configuration parameters.\n"\
 		"-h, -help, -? sections / sectionname / propertyname\n"\
