@@ -34,6 +34,7 @@
 #include "support.h"
 #include "video.h"
 #include "cross.h"
+#include "jega.h"
 
 
 void upcase(std::string &str) {
@@ -82,12 +83,40 @@ char *trim(char *str) {
 }
 
 char * upcase(char * str) {
-    for (char* idx = str; *idx ; idx++) *idx = toupper(*reinterpret_cast<unsigned char*>(idx));
+    //for (char* idx = str; *idx ; idx++) *idx = toupper(*reinterpret_cast<unsigned char*>(idx));
+	bool flag = false;
+	Bit8u *pt = (Bit8u *)str;
+	while(*pt != '\0') {
+		if(flag) {
+			flag = false;
+		} else {
+			if(isKanji1(*pt)) {
+				flag = true;
+			} else {
+				*pt = toupper(*pt);
+			}
+		}
+		pt++;
+	}
     return str;
 }
 
 char * lowcase(char * str) {
-	for(char* idx = str; *idx ; idx++)  *idx = tolower(*reinterpret_cast<unsigned char*>(idx));
+	//for(char* idx = str; *idx ; idx++)  *idx = tolower(*reinterpret_cast<unsigned char*>(idx));
+	bool flag = false;
+	Bit8u *pt = (Bit8u *)str;
+	while(*pt != '\0') {
+		if(flag) {
+			flag = false;
+		} else {
+			if(isKanji1(*pt)) {
+				flag = true;
+			} else {
+				*pt = tolower(*pt);
+			}
+		}
+		pt++;
+	}
 	return str;
 }
 
