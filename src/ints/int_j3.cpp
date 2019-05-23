@@ -320,10 +320,11 @@ void SetIMPosition()
 #if defined(LINUX)
 		y++;
 #endif
-		if(real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) == 24) {
+		Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
+		if(height == 24) {
 			SDL_SetIMPosition(x * 12, y * 24 + 4);
 		} else {
-			SDL_SetIMPosition(x * 8, y * real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) - 2);
+			SDL_SetIMPosition(x * 8, y * height - ((height == 16) ? 2 : 1));
 		}
 	}
 }
