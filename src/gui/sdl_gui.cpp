@@ -477,7 +477,7 @@ public:
 		ToplevelWindow(parent, x, y, 400, 150, title) {
 		new GUI::Label(this, 5, 10, "Enter filename for configuration file:");
 		name = new GUI::Input(this, 5, 30, 350);
-		name->setText("dosbox.conf");
+		name->setText("dosboxj.conf");
 		(new GUI::Button(this, 120, 70, "Cancel", 70))->addActionHandler(this);
 		(new GUI::Button(this, 210, 70, "OK", 70))->addActionHandler(this);
 	}
