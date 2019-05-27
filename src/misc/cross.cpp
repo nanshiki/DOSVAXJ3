@@ -75,9 +75,9 @@ void Cross::GetPlatformConfigName(std::string& in) {
 #ifdef WIN32
 #define DEFAULT_CONFIG_FILE "dosboxj.conf"
 #elif defined(MACOSX)
-#define DEFAULT_CONFIG_FILE "DOSBoxJ " VERSION " Preferences"
+#define DEFAULT_CONFIG_FILE "DOSBoxJ Preferences"
 #else /*linux freebsd*/
-#define DEFAULT_CONFIG_FILE "dosboxj-" VERSION ".conf"
+#define DEFAULT_CONFIG_FILE "dosboxj.conf"
 #endif
 	in = DEFAULT_CONFIG_FILE;
 }
