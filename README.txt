@@ -14,8 +14,8 @@
 ●dosboxj.conf の設定
 　Windows の場合、dosboxj.exe と同じフォルダの dosboxj.conf を読み込みますが、
 存在しない場合 %APPDATA%\DOSBoxJ\dosboxj.conf を作成し、それを使用します。
-　Linux の場合 ~/.dosboxj/dosboxj.conf を読み込みますが、存在しない場合、
-~/.dosboxj/dosboxj-0.74.conf を作成し、それを使用します。
+　Linux の場合 ~/.dosboxj/dosboxj.conf を読み込みます。存在しない場合は
+~/.dosboxj/dosboxj.conf を作成し、それを使用します。
 
 ・[sdl] セクション
 clipboardmodifier  クリップボードのコピー・ペーストの指定をします。
@@ -26,7 +26,7 @@ clipboardmodifier  クリップボードのコピー・ペーストの指定を�
                    となります。lalt は左 ALT のみ、ralt は右 ALT のみとなりま
                    す。
                    disable の場合は使用しません。
-                   Linux では使用できません。
+                   Linux の場合、xclip をインストールしておけば使用可能です。
 
 ・[dosbox] セクション
 machine        dcga を指定すると J-3100 モードで起動します。
@@ -90,7 +90,6 @@ vtext2         chev vt2 で切り替わる V-text モードを指定します。
                sxga24  解像度 1280×1024  文字 106×42 24ドットフォント
                Windows フォントで 24 ドットフォントを代用する場合、あまり綺麗
                ではありませんので、FONTX2 ファイルを使用することを推薦します。
-               J-3100 モードの場合 xga, sxga, xga24, sxga24 は指定できません。
 
 ・[dos] セクション
 keyboardlayout 日本語キーボードの場合 jp、英語キーボードの場合 none としてくだ
@@ -156,12 +155,11 @@ chev を使用します。
 す。日本語メッセージはファイル japanese.lng で定義しています。定義されていな
 いメッセージは英語のままです。
 
-　MS-DOS 用の FEP を入手するのは困難と思われましたので、Windows の IME/ Linux
+　MS-DOS 用の FEP を入手するのは困難と思われましたので、Windows の IME, Linux
 の XIM を使用可能としています。逆に MS-DOS 用の FEP を組み込んだ場合の動作は
 想定していません。
-　Windows の MS-IME の場合、入力中にキーが入りっぱなしになってしまったり、終
-了時に固まったりする事がありますので、他の IME (ATOK や Google 日本語入力) を
-使用してください。
+　Windows で MS-IME 使用の場合、$IAS.SYS のファンクションによる FEP 制御がで
+きない場合があります。
 　Linux の XIM の場合、変換文字列や候補が通常とは異なる表示にはなりますが、入
 力自体は可能です。
 
@@ -265,6 +263,16 @@ bit 7 OFF で IME OFF となります。
 　ロングファイルネームのファイルが、ショートファイルネームを指定しないとオープ
 ンできなくなっていたのを修正しました。JP190510 の複数検索対応によって発生して
 いた不具合です。
+
+・build JP190527 (2019/5/27)
+　Windows で MS-IME を使用している場合に、キー入力が入りっぱなしになってしまう
+現象の対策を行いました。
+　J-3100 モードで起動した場合でも XGA, SXGA の V-Text モードを使用可能としまし
+た。
+　Linux でのクリップボードコピーに対応しました。ただし xclip をインストールし
+ておく必要があります。
+　Linux で Wayland を使用している場合にカーソルキーが正しく入力できなかったの
+を修正しました。
 
 ●ライセンス
 　GPL v2
