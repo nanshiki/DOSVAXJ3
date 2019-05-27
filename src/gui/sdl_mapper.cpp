@@ -2560,7 +2560,7 @@ void MAPPER_StartUp(Section * sec) {
 					if(keycodes) {
 #if defined(LINUX)
 						if(debug_flag) {
-							printf("keyboard type %s",keycodes);
+							printf("keyboard type %s\n",keycodes);
 						}
 #endif
 						LOG(LOG_MISC,LOG_NORMAL)("keyboard type %s",keycodes);
