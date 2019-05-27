@@ -56,10 +56,12 @@
 #include "jfont.h"
 
 #if C_CLIPBOARD
-#include <curses.h>
+ #if !defined(C_NOPDCLIP)
+  #include <curses.h>
+ #endif
 #endif
 
-#define MAPPERFILE "mapper-" VERSION "j.map"
+#define MAPPERFILE "mapperj.map"
 //#define DISABLE_JOYSTICK
 
 #if C_OPENGL
@@ -1475,13 +1477,17 @@ void ClipboardPaste(bool pressed) {
 	char *text = NULL;
 	long len = 0;
 #if C_NOPDCLIP && (defined(MACOSX) || defined(LINUX) || defined(BSD))
-#if defined (MACOSX)
+ #if defined (MACOSX)
 	std::string result=exec("pbpaste",true);
-#else
+ #else
 	std::string result=exec("xclip -o -selection \"clipboard\"",true);
-#endif
-	text=new char[result.length()+1];
+ #endif
+	text = new char[result.length() + 1];
+ #if defined(LINUX)
+	utf8_to_sjis_copy(text, result.c_str(), result.length() + 1);
+ #else
 	strcpy(text, result.c_str());
+ #endif
 	{
 #elif C_NOPDCLIP && defined(WIN32)
 	if (OpenClipboard(NULL)) {
@@ -1504,6 +1510,10 @@ void ClipboardPaste(bool pressed) {
 	CloseClipboard();
 #elif !(C_NOPDCLIP && (defined(MACOSX) || defined(LINUX) || defined(BSD)))
 	PDC_freeclipboard(text);
+#else
+	if(text != NULL) {
+		delete [] text;
+	}
 #endif
 }
 
@@ -1523,7 +1533,17 @@ void ClipboardCopy(void) {
 	}
 #elif C_NOPDCLIP && (defined(MACOSX) || defined(LINUX) || defined(BSD))
 	std::string cmd="echo \"";
+#if defined(LINUX)
+	{
+		int len = strlen(text) / 2 * 3 + 1;
+		char *utf8_text = new char[len];
+		sjis_to_utf8_copy(utf8_text, text, len);
+		cmd += utf8_text;
+		delete [] utf8_text;
+	}
+#else
 	cmd += text;
+#endif
 #if defined (MACOSX)
 	cmd += "\" | pbcopy";
 #else
@@ -1772,33 +1792,38 @@ void GFX_Events() {
 			if (sdl.draw.callback) sdl.draw.callback( GFX_CallBackRedraw );
 			break;
 #if defined(LINUX)
+		case SDL_KEYUP:
 		case SDL_KEYDOWN:
-			if(event.key.keysym.unicode != 0) {
-				iconv_t ic;
-				unsigned char uni[4], sjis[4];
-				char *puni, *psjis;
-				size_t unisize, sjissize;
-				ic = iconv_open("Shift_JIS", "UTF-16BE");
-				uni[0] = event.key.keysym.unicode >> 8;
-				uni[1] = event.key.keysym.unicode & 0xff;
-				uni[2] = 0;
-				puni = (char *)uni;
-				psjis = (char *)sjis;
-				unisize = 2;
-				sjissize = 4;
-				iconv(ic, &puni, &unisize, &psjis, &sjissize);
-				iconv_close(ic);
+			if (event.key.keysym.sym==SDLK_LALT) sdl.laltstate = event.key.type;
+			if (event.key.keysym.sym==SDLK_RALT) sdl.raltstate = event.key.type;
+			if(event.type == SDL_KEYDOWN) {
+				if(event.key.keysym.unicode != 0) {
+					iconv_t ic;
+					unsigned char uni[4], sjis[4];
+					char *puni, *psjis;
+					size_t unisize, sjissize;
+					ic = iconv_open("Shift_JIS", "UTF-16BE");
+					uni[0] = event.key.keysym.unicode >> 8;
+					uni[1] = event.key.keysym.unicode & 0xff;
+					uni[2] = 0;
+					puni = (char *)uni;
+					psjis = (char *)sjis;
+					unisize = 2;
+					sjissize = 4;
+					iconv(ic, &puni, &unisize, &psjis, &sjissize);
+					iconv_close(ic);
 
-				if(isKanji1(sjis[0])) {
-					BIOS_AddKeyToBuffer(0xf000 | sjis[0]);
-					BIOS_AddKeyToBuffer(0xf100 | sjis[1]);
-				} else {
-					BIOS_AddKeyToBuffer(sjis[0]);
+					if(isKanji1(sjis[0])) {
+						BIOS_AddKeyToBuffer(0xf000 | sjis[0]);
+						BIOS_AddKeyToBuffer(0xf100 | sjis[1]);
+					} else {
+						BIOS_AddKeyToBuffer(sjis[0]);
+					}
+					break;
 				}
-				break;
-			}
-			if(debug_flag) {
-				printf("scan=%x, sym=%x, mod=%x\n", event.key.keysym.scancode, event.key.keysym.sym, event.key.keysym.mod);
+				if(debug_flag) {
+					printf("scan=%x, sym=%x, mod=%x\n", event.key.keysym.scancode, event.key.keysym.sym, event.key.keysym.mod);
+				}
 			}
 #endif
 #ifdef WIN32
@@ -1813,7 +1838,6 @@ void GFX_Events() {
 			if (((event.key.keysym.sym == SDLK_TAB )) && (event.key.keysym.mod & KMOD_ALT)) break;
 			// ignore tab events that arrive just after regaining focus. (likely the result of alt-tab)
 			if ((event.key.keysym.sym == SDLK_TAB) && (GetTicks() - sdl.focus_ticks < 2)) break;
-
 			int onoff;
 			if(SDL_GetIMValues(SDL_IM_ONOFF, &onoff, NULL) == NULL) {
 				if(onoff != 0 && event.type == SDL_KEYDOWN) {
@@ -1976,12 +2000,8 @@ void Config_Add_SDL() {
 
 	const char* clipboardmodifier[] = { "none", "alt", "lalt", "ralt", "disabled", 0};
 	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"none");
-#if defined(WIN32)
 	Pstring->Set_values(clipboardmodifier);
 	Pstring->Set_help("Change the keyboard modifier for the right mouse button clipboard copy/paste function.");
-#else
-	Pstring->Set_help("not used.");
-#endif
 }
 
 static void show_warning(char const * const message) {
