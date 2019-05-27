@@ -386,7 +386,7 @@ static void DOSBOX_RealInit(Section * sec) {
 	else if (mtype == "hercules") { machine = MCH_HERC; }
 	else if (mtype == "ega")      { machine = MCH_EGA; }
 	else if (mtype == "jega") { machine = MCH_EGA; dos.set_ax_enabled = true; }
-	else if (mtype == "dcga") { machine = MCH_DCGA; }
+	else if (mtype == "dcga") { machine = MCH_DCGA; svgaCard = SVGA_TsengET4K; }
 	else if (mtype == "dosv") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }
 	else if (mtype == "dosv_et4000") { dos.set_dosv_enabled = true; svgaCard = SVGA_TsengET4K; }
 	else if (mtype == "dosv_s3") { dos.set_dosv_enabled = true; svgaCard = SVGA_S3Trio; }
