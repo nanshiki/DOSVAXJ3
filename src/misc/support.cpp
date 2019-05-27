@@ -234,13 +234,13 @@ void E_Exit(const char * format,...) {
 #if defined(LINUX)
 #include <iconv.h>
 
-void utf8_to_sjis_copy(char *dst, char *src, int len)
+void utf8_to_sjis_copy(char *dst, const char *src, int len)
 {
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
 	ic = iconv_open("Shift_JIS", "UTF-8");
-	psrc = src;
+	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
 	dstsize = len;
@@ -249,13 +249,13 @@ void utf8_to_sjis_copy(char *dst, char *src, int len)
 	*pdst = 0;
 }
 
-void sjis_to_utf8_copy(char *dst, char *src, int len)
+void sjis_to_utf8_copy(char *dst, const char *src, int len)
 {
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
 	ic = iconv_open("UTF-8", "Shift_JIS");
-	psrc = src;
+	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
 	dstsize = len;
@@ -264,13 +264,13 @@ void sjis_to_utf8_copy(char *dst, char *src, int len)
 	*pdst = 0;
 }
 
-void sjis_to_utf16_copy(char *dst, char *src, int len)
+void sjis_to_utf16_copy(char *dst, const char *src, int len)
 {
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
 	ic = iconv_open("UTF-16LE", "Shift_JIS");
-	psrc = src;
+	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
 	dstsize = len;
