@@ -60,9 +60,9 @@ void upcase(std::string &str);
 void lowcase(std::string &str);
 
 #if defined(LINUX)
-void utf8_to_sjis_copy(char *dst, char *src, int len);
-void sjis_to_utf8_copy(char *dst, char *src, int len);
-void sjis_to_utf16_copy(char *dst, char *src, int len);
+void utf8_to_sjis_copy(char *dst, const char *src, int len);
+void sjis_to_utf8_copy(char *dst, const char *src, int len);
+void sjis_to_utf16_copy(char *dst, const char *src, int len);
 void ChangeUtf8FileName(char *fullname);
 #endif
 
