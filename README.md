@@ -22,7 +22,8 @@ $ make
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
 Debian 系の場合、他に apt-get で automake libsdl-sound1.2 libsdl-net1.2 あたりをインストールしておいてください。  
-実行ファイル名は dosboxj に変更になっています。  
+CentOS、Fedora 等で日本語が表示されない場合、xorg-x11-fonts-misc をインストールしてください。  
+実行ファイル名は dosboxj に、設定ファイル名も dosboxj-conf に変更になっています。  
 
 ## ライセンス
 GPL v2
