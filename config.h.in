@@ -32,6 +32,10 @@
 /* Determines if the compilers supports fastcall attribute. */
 #undef C_ATTRIBUTE_FASTCALL
 
+/* Define to 1 to enable clipboard copy/paste, may require pdcurses unless
+   C_NOPDCLIP is set below */
+#undef C_CLIPBOARD
+
 /* Define to 1 to use inlined memory functions in cpu core */
 #undef C_CORE_INLINE
 
@@ -73,6 +77,10 @@
 
 /* Define to 1 to enable internal modem support, requires SDL_net */
 #undef C_MODEM
+
+/* Define to 1 to not use pdcurses for the clipboard feature (xclip will be
+   required for Linux/BSD) */
+#undef C_NOPDCLIP
 
 /* Define to 1 to use opengl display output support */
 #undef C_OPENGL
