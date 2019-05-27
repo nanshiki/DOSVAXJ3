@@ -1999,7 +1999,7 @@ void Config_Add_SDL() {
 	Pstring->Set_help("Change the string displayed in the DOSBox title bar.");
 
 	const char* clipboardmodifier[] = { "none", "alt", "lalt", "ralt", "disabled", 0};
-	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"none");
+	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"alt");
 	Pstring->Set_values(clipboardmodifier);
 	Pstring->Set_help("Change the keyboard modifier for the right mouse button clipboard copy/paste function.");
 }
