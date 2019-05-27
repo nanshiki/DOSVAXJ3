@@ -2505,10 +2505,6 @@ void MAPPER_Init(void) {
 	}
 }
 //Somehow including them at the top conflicts with something in setup.h
-#if defined(LINUX)
-extern bool debug_flag;
-#endif
-
 #ifdef C_X11_XKB
 #include "SDL_syswm.h"
 #include <X11/XKBlib.h>
@@ -2559,9 +2555,7 @@ void MAPPER_StartUp(Section * sec) {
 //					const char* geom = XGetAtomName(info.info.x11.display, desc->names->geometry);
 					if(keycodes) {
 #if defined(LINUX)
-						if(debug_flag) {
-							printf("keyboard type %s\n",keycodes);
-						}
+						printf("keyboard type %s\n",keycodes);
 #endif
 						LOG(LOG_MISC,LOG_NORMAL)("keyboard type %s",keycodes);
 						if (strncmp(keycodes,"evdev",5) == 0) evdev_input = true;
