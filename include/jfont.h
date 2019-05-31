@@ -20,7 +20,6 @@ Bit8u *GetSbcsFont(Bitu code);
 Bit8u *GetSbcs19Font(Bitu code);
 Bit8u *GetSbcs24Font(Bitu code);
 void SetFontName(const char *name);
-void GetDbcsFrameFont(Bitu code, Bit8u *buff);
 Bit8u *GetDbcsFont(Bitu code);
 Bit8u *GetDbcs24Font(Bitu code);
 bool CheckStayVz();
