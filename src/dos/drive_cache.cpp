@@ -513,10 +513,10 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 		len = (Bits)strlen(tmpName);
 	}
 #if defined(LINUX)
+	char sjis[CROSS_LEN];
+	utf8_to_sjis_copy(sjis, tmpNameBuffer, CROSS_LEN);
 	if(!createShort) {
-		char sjis[CROSS_LEN];
 		char *spos;
-		utf8_to_sjis_copy(sjis, tmpNameBuffer, CROSS_LEN);
 		if ((spos = strchr(sjis, '.')) != NULL) {
 			len = (Bits)(spos - sjis);
 		} else {
@@ -540,9 +540,9 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 		// Copy first letters
 		Bits tocopy = 0;
 		size_t buflen = strlen(buffer);
+#if defined(WIN32)
 		if (len+buflen+1>8)	tocopy = (Bits)(8 - buflen - 1);
 		else				tocopy = len;
-		//safe_strncpy(info->shortname,tmpName,tocopy+1);
 		// Shift-JIS
 		bool kanji_flag = false;
 		Bits ct = 0;
@@ -561,6 +561,31 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 			ct++;
 		}
 		info->shortname[ct] = 0;
+#elif defined(LINUX)
+		if (len+buflen+1>8)	tocopy = (Bits)(6 - buflen - 1);
+		else				tocopy = len;
+		bool kanji_flag = false;
+		char temp_name[CROSS_LEN];
+		Bits ct = 0;
+		while(ct < tocopy) {
+			if(kanji_flag) {
+				kanji_flag = false;
+			} else {
+				if(isKanji1((unsigned char)sjis[ct])) {
+					if(ct >= tocopy - 1) {
+						break;
+					}
+					kanji_flag = true;
+				}
+			}
+			temp_name[ct] = sjis[ct];
+			ct++;
+		}
+		temp_name[ct] = 0;
+		sjis_to_utf8_copy(info->shortname, temp_name, DOS_FCBNAME);
+#else
+		safe_strncpy(info->shortname,tmpName,tocopy+1);
+#endif
 		// Copy number
 		strcat(info->shortname,"~");
 		strcat(info->shortname,buffer);
