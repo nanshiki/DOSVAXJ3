@@ -322,9 +322,9 @@ void SetIMPosition()
 #endif
 		Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
 		if(height == 24) {
-			SDL_SetIMPosition(x * 12, y * 24 + 4);
+			SDL_SetIMPosition(x * 12, y * 24);
 		} else {
-			SDL_SetIMPosition(x * 8, y * height - ((height == 16) ? 2 : 1));
+			SDL_SetIMPosition(x * 8, y * height + ((height == 16) ? 0 : 1));
 		}
 	}
 }
