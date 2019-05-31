@@ -29,6 +29,7 @@
 #include "j3.h"
 #include "jfont.h"
 #include "render.h"
+#include "SDL_events.h"
 
 #define _EGA_HALF_CLOCK		0x0001
 #define _EGA_LINE_DOUBLE	0x0002
@@ -1706,6 +1707,13 @@ bool INT10_SetDOSVModeVtext(Bit16u mode, enum DOSV_VTEXT_MODE vtext_mode)
 	if(SetCurMode(ModeListVtext[vtext_mode], mode)) {
 		FinishSetMode(true);
 		INT10_SetCursorShape(6, 7);
+#if defined(WIN32)
+		int cheight = CurMode->cheight;
+		if(cheight == 19) {
+			cheight = 16;
+		}
+		SDL_SetIMValues(SDL_IM_FONT_SIZE, cheight, NULL);
+#endif
 	} else {
 		LOG(LOG_INT10, LOG_ERROR)("DOS/V:Trying to set illegal mode %X", mode);
 		return false;
