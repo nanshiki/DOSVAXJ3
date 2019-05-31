@@ -23,6 +23,7 @@
 #include "dos_inc.h"
 #include "support.h"
 #include "cross.h"
+#include "jega.h"
 
 // STL stuff
 #include <vector>
@@ -541,7 +542,25 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 		size_t buflen = strlen(buffer);
 		if (len+buflen+1>8)	tocopy = (Bits)(8 - buflen - 1);
 		else				tocopy = len;
-		safe_strncpy(info->shortname,tmpName,tocopy+1);
+		//safe_strncpy(info->shortname,tmpName,tocopy+1);
+		// Shift-JIS
+		bool kanji_flag = false;
+		Bits ct = 0;
+		while(ct < tocopy) {
+			if(kanji_flag) {
+				kanji_flag = false;
+			} else {
+				if(isKanji1((unsigned char)tmpName[ct])) {
+					if(ct >= tocopy - 1) {
+						break;
+					}
+					kanji_flag = true;
+				}
+			}
+			info->shortname[ct] = tmpName[ct];
+			ct++;
+		}
+		info->shortname[ct] = 0;
 		// Copy number
 		strcat(info->shortname,"~");
 		strcat(info->shortname,buffer);
