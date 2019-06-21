@@ -72,11 +72,19 @@ enum BC_Types {
 #define MAXBUTTON 32
 #define MAXBUTTON_CAP 16
 
+#define	SDLK_KANA		(SDLKey)(SDLK_LAST)		//323
+#define	SDLK_HENKAN		(SDLKey)(SDLK_LAST+1)	//324
+#define	SDLK_MUHENKAN	(SDLKey)(SDLK_LAST+2)	//325
+#define	SDLK_HANZEN		(SDLKey)(SDLK_LAST+3)	//326
+#define	SDLK_LAST_J		(SDLKey)(SDLK_LAST+4)	//327
+
 class CEvent;
 class CHandlerEvent;
 class CButton;
 class CBind;
 class CBindGroup;
+
+extern bool keyboard_jp_flag;
 
 static void SetActiveEvent(CEvent * event);
 static void SetActiveBind(CBind * _bind);
@@ -301,7 +309,7 @@ protected:
 };
 
 
-#define MAX_SDLKEYS 323
+#define MAX_SDLKEYS SDLK_LAST_J
 
 static bool usescancodes;
 static Bit8u scancode_map[MAX_SDLKEYS];
@@ -389,11 +397,11 @@ static SDLKey sdlkey_map[MAX_SCANCODES]={SDLK_UNKNOWN,SDLK_ESCAPE,
 	/* 0x60: */
 	Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
 	/* 0x70: */
-	Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
+	SDLK_KANA,Z,Z,SDLK_UNDERSCORE, Z,Z,Z,Z, Z,SDLK_HENKAN,Z,SDLK_MUHENKAN, Z,Z,Z,Z,
 	/* 0x80: */
 	Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
 	/* 0x90: */
-	SDLK_F13,SDLK_F14,SDLK_F15,Z, Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
+	Z,Z,Z,Z, SDLK_HANZEN,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
 	/* 0xA0: */
 	Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z, Z,Z,Z,Z,
 	/* 0xB0: */
@@ -421,10 +429,6 @@ SDLKey MapSDLCode(Bitu skey) {
 	} else return (SDLKey)skey;
 }
 
-#if defined(LINUX)
-extern bool keyboard_jp_flag;
-#endif
-
 Bitu GetKeyCode(SDL_keysym keysym) {
 //	LOG_MSG("GetKeyCode %X %X %X",keysym.scancode,keysym.sym,keysym.mod);
 	if (usescancodes) {
@@ -446,10 +450,15 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 			key -= 8;
 #if defined(LINUX)
 			if(keyboard_jp_flag) {
-				if(key == 0x1a) key = 0x91;
-				else if(key == 0x1b) key = 0x1a;
-				else if(key == 0x2b) key = 0x1b;
-				else if(key == 0x59) key = 0x2b;
+				if(key == 0x59) {
+					key = 0x73;
+				} else if(key == 0x5e) {
+					key = 0x7b;
+				} else if(key == 0x5c) {
+					key = 0x79;
+				} else if(key == 0x5d) {
+					key = 0x70;
+				}
 			}
 #endif
 		}
@@ -476,6 +485,21 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 				if (GFX_SDLUsingWinDIB()) key=scancode_map[(Bitu)keysym.sym];
 				break;
 		}
+		if(keyboard_jp_flag) {
+			if(key == 0x1a) {
+				key = 0x1b;
+			} else if(key == 0x1b) {
+				key = 0x2b;
+			} else if(key == 0x2b) {
+				key = 0x73;
+			} else if(key == 0x90) {
+				key = 0x0d;
+			} else if(key == 0x91) {
+				key = 0x1a;
+			} else if(key == 0x92) {
+				key = 0x28;
+			}
+		}
 #endif
 		return key;
 	} else {
@@ -488,9 +512,23 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 		/* Linux */
 #if defined(LINUX)
 		if(keyboard_jp_flag) {
-			if(keysym.sym == 0x5e) return SDLK_F13;
-			if(keysym.sym == 0x40) return SDLK_F14;
-			if(keysym.sym == 0x3a) return SDLK_F15;
+			if(keysym.sym == 0x5c) {
+				if(keysym.scancode == 0x61) {
+					return SDLK_UNDERSCORE;
+				} else {
+					return SDLK_WORLD_5;
+				}
+			} else if(keysym.sym == 0x5e) {
+				return SDLK_EQUALS;
+			} else if(keysym.sym == 0x40) {
+				return SDLK_LEFTBRACKET;
+			} else if(keysym.sym == 0x5b) {
+				return SDLK_RIGHTBRACKET;
+			} else if(keysym.sym == 0x5d) {
+				return SDLK_BACKSLASH;
+			} if(keysym.sym == 0x3a) {
+				return SDLK_QUOTE;
+			}
 		}
 #endif
 		if ((keysym.sym == SDLK_BACKSLASH) && (keysym.scancode == (0x7d + 8)))
@@ -517,7 +555,32 @@ public:
 		key = _key;
 	}
 	void BindName(char * buf) {
-		sprintf(buf,"Key %s",SDL_GetKeyName(MapSDLCode((Bitu)key)));
+		const char *name = SDL_GetKeyName(MapSDLCode((Bitu)key));
+		if(keyboard_jp_flag) {
+			if(key == 0x0d) {
+				name = "^";
+			} else if(key == 0x7c || key == 0x7d) {
+				name = "\\";
+			} else if(key == 0x1a) {
+				name = "@";
+			} else if(key == 0x1b) {
+				name = "[";
+			} else if(key == 0x28) {
+				name = ":";
+			} else if(key == 0x2b) {
+				name = "]";
+			} else if(key == 0x70) {
+				name = "Katakana/Hiragana";
+			} else if(key == 0x79) {
+				name = "Henkan";
+			} else if(key == 0x7b) {
+				name = "Muhennkan";
+			} else if(key == 0x94) {
+				name = "Hankaku/Zenkaku";
+			}
+		}
+		sprintf(buf,"Key %s", name);
+		//sprintf(buf,"Key %s",SDL_GetKeyName(MapSDLCode((Bitu)key)));
 	}
 	void ConfigName(char * buf) {
 		sprintf(buf,"key %d",MapSDLCode((Bitu)key));
@@ -1797,16 +1860,15 @@ static KeyBlock combo_f[12]={
 	{"F10","f10",KBD_f10},	{"F11","f11",KBD_f11},	{"F12","f12",KBD_f12},
 };
 
-static KeyBlock combo_1[15]={
+static KeyBlock combo_1[14]={
 	{"`~","grave",KBD_grave},	{"1!","1",KBD_1},	{"2@","2",KBD_2},
 	{"3#","3",KBD_3},			{"4$","4",KBD_4},	{"5%","5",KBD_5},
 	{"6^","6",KBD_6},			{"7&","7",KBD_7},	{"8*","8",KBD_8},
 	{"9(","9",KBD_9},			{"0)","0",KBD_0},	{"-_","minus",KBD_minus},
-	{"=+","equals",KBD_equals},{ "\\","yen",KBD_yen },{ "\x1B","bspace",KBD_backspace },
+	{"=+","equals",KBD_equals},{ "\x1B","bspace",KBD_backspace },
 };
 
 static KeyBlock combo_1_ax[15]={
-/*	{"`~","grave",KBD_grave},*/	
 	{"ESC","esc",KBD_esc},		{"1!","1",KBD_1},	{"2@","2",KBD_2},
 	{"3#","3",KBD_3},			{"4$","4",KBD_4},	{"5%","5",KBD_5},
 	{"6^","6",KBD_6},			{"7&","7",KBD_7},	{"8*","8",KBD_8},
@@ -1814,20 +1876,35 @@ static KeyBlock combo_1_ax[15]={
 	{"=+","equals",KBD_equals},{ "\\","yen",KBD_yen },{ "\x1B","bspace",KBD_backspace },
 };
 
-static KeyBlock combo_2[12]={
+static KeyBlock combo_1_jp[14]={
+								{"1!","1",KBD_1},	{"2\"","2",KBD_2},
+	{"3#","3",KBD_3},			{"4$","4",KBD_4},	{"5%","5",KBD_5},
+	{"6&","6",KBD_6},			{"7'","7",KBD_7},	{"8(","8",KBD_8},
+	{"9)","9",KBD_9},			{"0 ","0",KBD_0},	{"-=","minus",KBD_minus},
+	{"^~","hat_jp",KBD_equals},		{ "\\|","yen",KBD_yen },{ "\x1B","bspace",KBD_backspace },
+};
+
+static KeyBlock combo_2[13]={
 	{"Q","q",KBD_q},			{"W","w",KBD_w},	{"E","e",KBD_e},
 	{"R","r",KBD_r},			{"T","t",KBD_t},	{"Y","y",KBD_y},
 	{"U","u",KBD_u},			{"I","i",KBD_i},	{"O","o",KBD_o},
 	{"P","p",KBD_p},			{"[{","lbracket",KBD_leftbracket},
-	{"]}","rbracket",KBD_rightbracket},	
+	{"]}","rbracket",KBD_rightbracket},{"\\|","backslash",KBD_backslash},
 };
 
-static KeyBlock combo_3[12]={
+static KeyBlock combo_2_jp[12]={
+	{"Q","q",KBD_q},			{"W","w",KBD_w},	{"E","e",KBD_e},
+	{"R","r",KBD_r},			{"T","t",KBD_t},	{"Y","y",KBD_y},
+	{"U","u",KBD_u},			{"I","i",KBD_i},	{"O","o",KBD_o},
+	{"P","p",KBD_p},			{"@`","at_jp",KBD_leftbracket },
+	{"[{","lb_jp",KBD_rightbracket},	
+};
+
+static KeyBlock combo_3[11]={
 	{"A","a",KBD_a},			{"S","s",KBD_s},	{"D","d",KBD_d},
 	{"F","f",KBD_f},			{"G","g",KBD_g},	{"H","h",KBD_h},
 	{"J","j",KBD_j},			{"K","k",KBD_k},	{"L","l",KBD_l},
 	{";:","semicolon",KBD_semicolon},				{"'\"","quote",KBD_quote},
-	{"\\|","backslash",KBD_backslash},
 };
 
 static KeyBlock combo_3_ax[12]={
@@ -1839,12 +1916,28 @@ static KeyBlock combo_3_ax[12]={
 //	{"`~","grave",KBD_grave},
 };
 
-static KeyBlock combo_4[12]={
+static KeyBlock combo_3_jp[12]={
+	{"A","a",KBD_a},			{"S","s",KBD_s},	{"D","d",KBD_d},
+	{"F","f",KBD_f},			{"G","g",KBD_g},	{"H","h",KBD_h},
+	{"J","j",KBD_j},			{"K","k",KBD_k},	{"L","l",KBD_l},
+	{";+","semicolon",KBD_semicolon},				{":*","colon_jp",KBD_quote},
+	{"]}","rb_jp",KBD_backslash},
+};
+
+static KeyBlock combo_4[11]={
 	{"<>","lessthan",KBD_extra_lt_gt},
 	{"Z","z",KBD_z},			{"X","x",KBD_x},	{"C","c",KBD_c},
 	{"V","v",KBD_v},			{"B","b",KBD_b},	{"N","n",KBD_n},
 	{"M","m",KBD_m},			{",<","comma",KBD_comma},
-	{".","period",KBD_period},{ "/","slash",KBD_slash },{ "\\","underscore",KBD_underscore },
+	{".>","period",KBD_period},{ "/","slash",KBD_slash },
+};
+
+static KeyBlock combo_4_jp[12]={
+//	{"<>","lessthan",KBD_extra_lt_gt},
+	{"Z","z",KBD_z},			{"X","x",KBD_x},	{"C","c",KBD_c},
+	{"V","v",KBD_v},			{"B","b",KBD_b},	{"N","n",KBD_n},
+	{"M","m",KBD_m},			{",<","comma",KBD_comma},
+	{".>","period",KBD_period},{ "/","slash",KBD_slash },{ "\\_","underscore",KBD_underscore },
 };
 
 static CKeyEvent * caps_lock_event=NULL;
@@ -1865,38 +1958,80 @@ static void CreateLayout(void) {
 		AddKeyButtonEvent(PX(0),PY(0),BW,BH,"ESC","esc",KBD_esc);
 	}
 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(0),BW,BH,combo_f[i].title,combo_f[i].entry,combo_f[i].key);
-	for (i = 0; i<sizeof(combo_1) / sizeof(combo_1[0]); i++) {
-		if(IS_AX_ARCH) {
-			AddKeyButtonEvent(PX(i), PY(1), BW, BH, combo_1_ax[i].title, combo_1_ax[i].entry, combo_1_ax[i].key);
-		} else {
-			AddKeyButtonEvent(PX(i), PY(1), BW, BH, combo_1[i].title, combo_1[i].entry, combo_1[i].key);
+	if(keyboard_jp_flag) {
+		AddKeyButtonEvent(PX(0),PY(1), BW, BH, "H/Z", "hanzen", KBD_hanzen);
+	}
+	if(IS_AX_ARCH) {
+		for (i = 0 ; i < 15 ; i++) {
+			AddKeyButtonEvent(PX(1+i), PY(1), BW, BH, combo_1_ax[i].title, combo_1_ax[i].entry, combo_1_ax[i].key);
+		}
+	} else {
+		for (i = 0 ; i < 14 ; i++) {
+			if(keyboard_jp_flag) {
+				AddKeyButtonEvent(PX(1+i), PY(1), BW, BH, combo_1_jp[i].title, combo_1_jp[i].entry, combo_1_jp[i].key);
+			} else {
+				AddKeyButtonEvent(PX(1+i), PY(1), BW, BH, combo_1[i].title, combo_1[i].entry, combo_1[i].key);
+			}
 		}
 	}
 	AddKeyButtonEvent(PX(0),PY(2),BW*2,BH,"TAB","tab",KBD_tab);
-	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(2),BW,BH,combo_2[i].title,combo_2[i].entry,combo_2[i].key);
+	if(keyboard_jp_flag) {
+		for (i = 0 ; i < 12 ; i++) {
+			AddKeyButtonEvent(PX(2+i),PY(2),BW,BH,combo_2_jp[i].title,combo_2_jp[i].entry,combo_2_jp[i].key);
+		}
+	} else {
+		for (i = 0 ; i < 13 ; i++) {
+			AddKeyButtonEvent(PX(2+i),PY(2),BW,BH,combo_2[i].title,combo_2[i].entry,combo_2[i].key);
+		}
+	}
 
-	AddKeyButtonEvent(PX(14),PY(2),BW*2,BH*2,"ENTER","enter",KBD_enter);
-	
+	if(keyboard_jp_flag) {
+		AddKeyButtonEvent(PX(14),PY(2),BW*2,BH*2,"ENTER","enter",KBD_enter);
+	} else {
+		AddKeyButtonEvent(PX(13),PY(3),BW*2,BH,"ENTER","enter",KBD_enter);
+	}
 	caps_lock_event=AddKeyButtonEvent(PX(0),PY(3),BW*2,BH,"CLCK","capslock",KBD_capslock);
-	for (i=0;i<12;i++) {
+	if(keyboard_jp_flag) {
+		for (i = 0 ; i < 12 ; i++) {
+			AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3_jp[i].title,combo_3_jp[i].entry,combo_3_jp[i].key);
+		}
+	} else {
 		if(IS_AX_ARCH) {
-			AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3_ax[i].title,combo_3_ax[i].entry,combo_3_ax[i].key);
+			for (i = 0;i < 12 ; i++) {
+				AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3_ax[i].title,combo_3_ax[i].entry,combo_3_ax[i].key);
+			}
 		} else {
-			AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3[i].title,combo_3[i].entry,combo_3[i].key);
+			for (i = 0 ; i < 11 ; i++) {
+				AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3[i].title,combo_3[i].entry,combo_3[i].key);
+			}
 		}
 	}
 	AddKeyButtonEvent(PX(0),PY(4),BW*2,BH,"SHIFT","lshift",KBD_leftshift);
-	for (i = 0; i<sizeof(combo_4) / sizeof(combo_4[0]); i++) AddKeyButtonEvent(PX(2 + i), PY(4), BW, BH, combo_4[i].title, combo_4[i].entry, combo_4[i].key);
-	AddKeyButtonEvent(PX(14),PY(4),BW*2,BH,"SHIFT","rshift",KBD_rightshift);
+	for (i = 0 ; i < 11 ; i++) {
+		if(keyboard_jp_flag) {
+			AddKeyButtonEvent(PX(2 + i), PY(4), BW, BH, combo_4_jp[i].title, combo_4_jp[i].entry, combo_4_jp[i].key);
+		} else {
+			AddKeyButtonEvent(PX(2 + i), PY(4), BW, BH, combo_4[i].title, combo_4[i].entry, combo_4[i].key);
+		}
+	}
+	AddKeyButtonEvent(PX(13),PY(4),BW*2,BH,"SHIFT","rshift",KBD_rightshift);
 
 	/* Last Row */
 	AddKeyButtonEvent(PX(0) ,PY(5),BW*2,BH,"CTRL","lctrl",KBD_leftctrl);
-	AddKeyButtonEvent(PX(3) ,PY(5),BW*1,BH,"ALT","lalt",KBD_leftalt);
-	AddKeyButtonEvent(PX(4), PY(5),BW*2,BH,"NCONV","Noconv",KBD_nconv);//for AX
-	AddKeyButtonEvent(PX(6) ,PY(5),BW*3,BH,"SPACE","space",KBD_space);
-	AddKeyButtonEvent(PX(9), PY(5),BW*2,BH,"CONV","conv", KBD_conv);//for AX
-	AddKeyButtonEvent(PX(11),PY(5),BW*1,BH,"ALT","ralt",KBD_rightalt);
-	AddKeyButtonEvent(PX(14),PY(5),BW*2,BH,"CTRL","rctrl",KBD_rightctrl);
+	if(keyboard_jp_flag) {
+		AddKeyButtonEvent(PX(2) ,PY(5),BW*1,BH,"ALT","lalt",KBD_leftalt);
+		AddKeyButtonEvent(PX(5) ,PY(5),BW*3,BH,"SPACE","space",KBD_space);
+		AddKeyButtonEvent(PX(3), PY(5),BW*2,BH,"NCONV","Noconv",KBD_nconv);//for AX
+		AddKeyButtonEvent(PX(8), PY(5),BW*2,BH,"CONV","conv", KBD_conv);//for AX
+		AddKeyButtonEvent(PX(10),PY(5),BW*2,BH,"Kana", "Kana", KBD_kana);
+		AddKeyButtonEvent(PX(12),PY(5),BW*1,BH,"ALT","ralt",KBD_rightalt);
+		AddKeyButtonEvent(PX(13),PY(5),BW*2,BH,"CTRL","rctrl",KBD_rightctrl);
+	} else {
+		AddKeyButtonEvent(PX(3) ,PY(5),BW*2,BH,"ALT","lalt",KBD_leftalt);
+		AddKeyButtonEvent(PX(5) ,PY(5),BW*5,BH,"SPACE","space",KBD_space);
+		AddKeyButtonEvent(PX(10),PY(5),BW*2,BH,"ALT","ralt",KBD_rightalt);
+		AddKeyButtonEvent(PX(13),PY(5),BW*2,BH,"CTRL","rctrl",KBD_rightctrl);
+	}
 
 
 	/* Arrow Keys */
@@ -1940,10 +2075,9 @@ static void CreateLayout(void) {
 	AddKeyButtonEvent(PX(XO+2),PY(YO+4),BW,BH,".","kp_period",KBD_kpperiod);
 
 	// for Japanese keyboard
-	AddKeyButtonEvent(PX(XO+5),PY(YO), BW, BH, "^j", "f13", KBD_f13);
-	AddKeyButtonEvent(PX(XO+5),PY(YO+1), BW, BH, "@j", "f14", KBD_f14);
-	AddKeyButtonEvent(PX(XO+5),PY(YO+2), BW, BH, ":j", "f15", KBD_f15);
-
+	if(IS_J3_ARCH) {
+		AddKeyButtonEvent(PX(XO+5),PY(YO), BW*2, BH, " Kanji", "Kanji", KBD_kanji);
+	}
 
 #undef XO
 #undef YO
@@ -2103,7 +2237,7 @@ static void CreateStringBind(char * line) {
 			goto foundevent;
 		}
 	}
-	LOG_MSG("Can't find matching event for %s",eventname);
+	//LOG_MSG("Can't find matching event for %s",eventname);
 	return ;
 foundevent:
 	CBind * bind;
@@ -2165,9 +2299,14 @@ static struct {
 #endif
 	{ "yen",SDLK_WORLD_5 },{ "underscore",SDLK_UNDERSCORE },
 	{ "conv",SDLK_MENU },//for AX
-	{ "f13", SDLK_F13}, // for Japanese keyboard
-	{ "f14", SDLK_F14},
-	{ "f15", SDLK_F15},
+	{ "Noconv", SDLK_MUHENKAN },
+	{ "hat_jp", SDLK_EQUALS }, // for Japanese keyboard
+	{ "colon_jp", SDLK_QUOTE },
+	{ "at_jp", SDLK_LEFTBRACKET },
+	{ "lb_jp", SDLK_RIGHTBRACKET },
+	{ "rb_jp", SDLK_BACKSLASH },
+	{ "hanzen", SDLK_HANZEN },
+	{ "kana", SDLK_KANA },
 	{0,0}
 };
 
@@ -2175,7 +2314,14 @@ static void CreateDefaultBinds(void) {
 	char buffer[512];
 	Bitu i=0;
 	while (DefaultKeys[i].eventend) {
-		sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,DefaultKeys[i].key);
+//		if(!keyboard_jp_flag && !strcmp(DefaultKeys[i].eventend, "hat_jp")) {
+//			break;
+//		}
+		if(DefaultKeys[i].key == SDLK_MENU && !IS_AX_ARCH) {
+			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,SDLK_HENKAN);
+		} else {
+			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,DefaultKeys[i].key);
+		}
 		CreateStringBind(buffer);
 		i++;
 	}
@@ -2360,7 +2506,7 @@ static void InitializeJoysticks(void) {
 
 static void CreateBindGroups(void) {
 	bindgroups.clear();
-	new CKeyBindGroup(SDLK_LAST);
+	new CKeyBindGroup(SDLK_LAST_J);
 	if (joytype != JOY_NONE) {
 #if defined (REDUCE_JOYSTICK_POLLING)
 		// direct access to the SDL joystick, thus removed from the event handling
