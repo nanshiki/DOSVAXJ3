@@ -40,6 +40,8 @@
 #include "control.h"
 #include "inout.h"
 #include "dma.h"
+#include "j3.h"
+#include "jfont.h"
 
 
 #if defined(OS2)
@@ -57,6 +59,10 @@
 #if C_DEBUG
 Bitu DEBUG_EnableDebugger(void);
 #endif
+
+bool image_boot_flag = false;
+extern Bit16u int10_offset;
+extern Bit16u int60_offset;
 
 void MSCDEX_SetCDInterface(int intNr, int forceCD);
 static Bitu ZDRIVE_NUM = 25;
@@ -845,15 +851,31 @@ public:
 			disable_umb_ems_xms();
 			void RemoveEMSPageFrame(void);
 			RemoveEMSPageFrame();
-			WriteOut(MSG_Get("PROGRAM_BOOT_BOOT"), drive);
-			for(i=0;i<512;i++) real_writeb(0, 0x7c00 + i, bootarea.rawdata[i]);
 
+			WriteOut(MSG_Get("PROGRAM_BOOT_BOOT"), drive);
+			for(i=0;i<512;i++) {
+				real_writeb(0, 0x7c00 + i, bootarea.rawdata[i]);
+			}
 			/* create appearance of floppy drive DMA usage (Demon's Forge) */
 			if (!IS_TANDY_ARCH && floppysize!=0) GetDMAChannel(2)->tcount=true;
 
 			/* revector some dos-allocated interrupts */
 			real_writed(0,0x01*4,0xf000ff53);
 			real_writed(0,0x03*4,0xf000ff53);
+
+			// J-3100 work clear
+			if(IS_J3_ARCH) {
+				real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_SEG, 0);
+				real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_OFFSET, 0);
+				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, 0);
+				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT, 0);
+			}
+			// motor ON
+			image_boot_flag = true;
+			int10_offset = mem_readw(0x0040);
+			int60_offset = mem_readw(0x0180);
+			mem_writeb(BIOS_DISK_MOTOR_TIMEOUT, 10);
+			mem_writeb(BIOS_DRIVE_RUNNING, 0x01);
 
 			SegSet16(cs, 0);
 			reg_ip = 0x7c00;
