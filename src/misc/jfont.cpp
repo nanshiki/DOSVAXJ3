@@ -607,13 +607,27 @@ Bit8u *GetDbcs24Font(Bitu code)
 	if(jfont_cache_dbcs_24[code] == 0) {
 		if(code >= 0x809e && code < 0x80fe) {
 			if(GetWindowsFont(code - 0x807e, jfont_dbcs, 12, 24)) {
-				memcpy(&jfont_dbcs_24[code * 72], jfont_dbcs, 72);
+				Bitu no, pos;
+				pos = code * 72;
+				for(no = 0 ; no < 24 ; no++) {
+					jfont_dbcs_24[pos + no * 3] = jfont_dbcs[no * 2];
+					jfont_dbcs_24[pos + no * 3 + 1] = jfont_dbcs[no * 2 + 1] | (jfont_dbcs[no * 2] >> 4);
+					jfont_dbcs_24[pos + no * 3 + 2] = (jfont_dbcs[no * 2] << 4) | (jfont_dbcs[no * 2 + 1] >> 4);
+				}
 				jfont_cache_dbcs_24[code] = 1;
+				return &jfont_dbcs_24[pos];
 			}
-		} else if(code >= 0x8540 && code < 0x857e) {
+		} else if(code >= 0x8540 && code <= 0x857e) {
 			if(GetWindowsFont(code - 0x8540 + 0xa1, jfont_dbcs, 12, 24)) {
-				memcpy(&jfont_dbcs_24[code * 72], jfont_dbcs, 72);
+				Bitu no, pos;
+				pos = code * 72;
+				for(no = 0 ; no < 24 ; no++) {
+					jfont_dbcs_24[pos + no * 3] = jfont_dbcs[no * 2];
+					jfont_dbcs_24[pos + no * 3 + 1] = jfont_dbcs[no * 2 + 1] | (jfont_dbcs[no * 2] >> 4);
+					jfont_dbcs_24[pos + no * 3 + 2] = (jfont_dbcs[no * 2] << 4) | (jfont_dbcs[no * 2 + 1] >> 4);
+				}
 				jfont_cache_dbcs_24[code] = 1;
+				return &jfont_dbcs_24[pos];
 			}
 		} else if(code >= 0x849f && code <= 0x84be) {
 			GetDbcs24FrameFont(code, jfont_dbcs);
