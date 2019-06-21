@@ -43,6 +43,13 @@
 #include <sys/timeb.h>
 #endif
 
+Bit16u int10_offset;
+Bit16u int60_offset;
+
+extern void SetIMPosition();
+extern bool image_boot_flag;
+extern bool debug_flag;
+
 /* if mem_systems 0 then size_extended is reported as the real size else 
  * zero is reported. ems and xms can increase or decrease the other_memsystems
  * counter using the BIOS_ZeroExtendedSize call */
@@ -535,8 +542,6 @@ static void BIOS_HostTimeSync() {
 	mem_writed(BIOS_TIMER,ticks);
 }
 
-extern void SetIMPosition();
-
 static Bitu INT8_Handler(void) {
 	/* Increase the bios tick counter */
 	Bit32u value = mem_readd(BIOS_TIMER) + 1;
@@ -568,18 +573,55 @@ static Bitu INT8_Handler(void) {
 #endif
 	mem_writed(BIOS_TIMER,value);
 
-	if(IS_J3_ARCH && J3_IsJapanese()) {
-		INT8_J3();
-	} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
-		INT8_DOSV();
-	} else if(IS_AX_ARCH) {
-		SetIMPosition();
+	if(image_boot_flag) {
+		if(IS_AX_ARCH || IS_J3_ARCH || IS_DOSV) {
+			SetIMPosition();
+		}
+	} else {
+		if(IS_J3_ARCH && J3_IsJapanese()) {
+			INT8_J3();
+		} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+			INT8_DOSV();
+		} else if(IS_AX_ARCH) {
+			SetIMPosition();
+		}
 	}
 	/* decrease floppy motor timer */
 	Bit8u val = mem_readb(BIOS_DISK_MOTOR_TIMEOUT);
-	if (val) mem_writeb(BIOS_DISK_MOTOR_TIMEOUT,val-1);
-	/* and running drive */
-	mem_writeb(BIOS_DRIVE_RUNNING,mem_readb(BIOS_DRIVE_RUNNING) & 0xF0);
+	if (val > 0) {
+		val--;
+		mem_writeb(BIOS_DISK_MOTOR_TIMEOUT,val);
+		/* and running drive */
+		if(val == 0) {
+			mem_writeb(BIOS_DRIVE_RUNNING,mem_readb(BIOS_DRIVE_RUNNING) & 0xF0);
+		}
+	}
+	if(debug_flag) {
+		if(mem_readw(0x42) != 0xf000) {
+			Bit16u temp_es = SegValue(es);
+			Bit16u temp_ax = reg_ax;
+			Bit16u temp_bx = reg_bx;
+			char buff[100]; 
+			reg_ax = 0x1000;
+			CALLBACK_RunRealInt(0x60);
+			sprintf(buff, "font address %04x", reg_bx);
+#if defined(LINUX)
+			printf("%s\n", buff);
+#else
+			MessageBox(0,buff,buff,0);
+#endif
+			SegSet16(es, temp_es);
+			reg_bx = temp_bx;
+			reg_ax = temp_ax;
+
+			mem_writew(0x40, int10_offset);
+			mem_writew(0x42, 0xf000);
+		}
+		if(mem_readw(0x182) != 0xf000) {
+			mem_writew(0x180, int60_offset);
+			mem_writew(0x182, 0xf000);
+		}
+	}
 	return CBRET_NONE;
 }
 #undef DOSBOX_CLOCKSYNC
