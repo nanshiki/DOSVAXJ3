@@ -522,9 +522,15 @@ static Bitu read_p92(Bitu port,Bitu iolen) {
 }
 
 void RemoveEMSPageFrame(void) {
-	/* Setup rom at 0xe0000-0xf0000 */
-	for (Bitu ct=0xe0;ct<0xf0;ct++) {
-		memory.phandlers[ct] = &rom_page_handler;
+	if(IS_J3_ARCH) {
+		for (Bitu ct=0xd0;ct<0xe0;ct++) {
+			memory.phandlers[ct] = &rom_page_handler;
+		}
+	} else {
+		/* Setup rom at 0xe0000-0xf0000 */
+		for (Bitu ct=0xe0;ct<0xf0;ct++) {
+			memory.phandlers[ct] = &rom_page_handler;
+		}
 	}
 }
 
