@@ -361,15 +361,21 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 		KEYBOARD_AddBuffer(0xe0);
 		KEYBOARD_AddBuffer(55|(pressed?0:0x80));
 		return;
-	//case KBD_underscore:ret = 0x73; break;//for JP layout
-	//case KBD_yen:ret = 0x7d; break;//for JP layout
-	case KBD_underscore:ret = 86; break;//for AX layout
-	case KBD_yen:
-		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 43 : 125;
+	case KBD_underscore:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 86 : 0x73;
 		break;
-	case KBD_conv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51)? 0x5b: 57; break;//for AX layout
-	case KBD_nconv:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5a: 57; break;//for AX layout
-	case KBD_ax:ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5c: 0; break;//for AX layout
+	case KBD_yen:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 43 : 0x7d;
+		break;
+	case KBD_conv:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51)? 0x5b: 0x79;
+		break;
+	case KBD_nconv:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5a: 0x7b;
+		break;
+	case KBD_ax:
+		ret = (INT16_AX_GetKBDBIOSMode() == 0x51) ? 0x5c: 0;
+		break;
 		/* System Scan Code for AX keys 
 		JP mode  Make    Break    US mode  Make    Break
 		–³•ÏŠ·   5Ah     DAh      Space    39h(57) B9h
@@ -384,10 +390,20 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 		38 Š¿Žš   - 3A 3A
 		5c AX     - D2 D3 D4 D5
 		*/ 
-	// for Japanese keyboard
-	case KBD_f13:ret=93;break;
-	case KBD_f14:ret=94;break;
-	case KBD_f15:ret=95;break;
+	case KBD_kanji:
+		if(INT16_AX_GetKBDBIOSMode() == 0x51) {
+			extend = true;
+			ret = 0x3a;
+		} else {
+			ret = 86;
+		}
+		break;
+	case KBD_kana:
+		ret = 0x70;
+		break;
+	case KBD_hanzen:
+		ret = 41;
+		break;
 
 	default:
 		E_Exit("Unsupported key press");
