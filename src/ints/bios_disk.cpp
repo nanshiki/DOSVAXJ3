@@ -231,6 +231,20 @@ imageDisk::imageDisk(FILE *imgFile, Bit8u *imgName, Bit32u imgSizeK, bool isHard
 				sectors = DiskGeometryList[i].secttrack;
 				break;
 			}
+			if(DiskGeometryList[i].ksize == 1200 && (imgSizeK > 1200 && imgSizeK <= 1440)) {
+				char buff[0x20];
+				fread(buff, 0x20, 1, diskimg);
+				fseek(diskimg,0,SEEK_SET);
+				if(buff[0x18] == DiskGeometryList[i].secttrack) {
+					founddisk = true;
+					active = true;
+					floppytype = i;
+					heads = DiskGeometryList[i].headscyl;
+					cylinders = DiskGeometryList[i].cylcount;
+					sectors = DiskGeometryList[i].secttrack;
+					break;
+				}
+			}
 			i++;
 		}
 		if(!founddisk) {
