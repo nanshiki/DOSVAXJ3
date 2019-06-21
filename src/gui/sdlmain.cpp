@@ -1855,9 +1855,6 @@ void GFX_Events() {
 				}
 			}
 			sdl.ime_ticks = 0;
-			if(event.key.keysym.mod == 0x100) {
-				break;
-			}
 			if(event.key.keysym.scancode == 0 && event.key.keysym.sym == 0) {
 				int len;
 				if(len = SDL_FlushIMString(NULL)) {
@@ -1893,8 +1890,19 @@ void GFX_Events() {
 			} 
 #endif
 		default:
+#if defined(WIN32)
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94) {
+				event.type = SDL_KEYDOWN;
+			}
+#endif
 			void MAPPER_CheckEvent(SDL_Event * event);
 			MAPPER_CheckEvent(&event);
+#if defined(WIN32)
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94) {
+				event.type = SDL_KEYUP;
+				MAPPER_CheckEvent(&event);
+			}
+#endif
 		}
 	}
 }
