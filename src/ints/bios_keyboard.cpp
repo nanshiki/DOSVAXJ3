@@ -28,7 +28,6 @@
 #include "dos_inc.h"
 #include "SDL.h"
 #include "j3.h"
-#include "jfont.h"
 
 /* SDL by default treats numlock and scrolllock different from all other keys.
  * In recent versions this can disabled by a environment variable which we set in sdlmain.cpp
