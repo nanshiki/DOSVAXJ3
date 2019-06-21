@@ -43,11 +43,14 @@ static Bitu j3_cursor_y;
 static Bitu j3_text_color;
 static Bitu j3_back_color;
 static Bit16u j3_machine_code;
-static Bit16u j3_font_seg;
+static Bit16u j3_font_offset;
 
 static Bit8u jfont_yen[32];
 static Bit8u jfont_kana[32*64];
 static Bit8u jfont_kanji[96];
+
+extern Bit8u jfont_dbcs_16[];
+extern Bit8u jfont_dbcs_24[];
 
 bool INT10_J3_SetCRTBIOSMode(Bitu mode)
 {
@@ -126,7 +129,7 @@ Bitu INT60_Handler(void)
 					*dest++ = *src++;
 					dest++;
 				}
-				reg_si = 0x8000;
+				reg_si = 0x0000;
 			} else {
 				// yen
 				if(code == 0x80da) {
@@ -139,7 +142,7 @@ Bitu INT60_Handler(void)
 					for(Bitu y = 0 ; y < 16 ; y++) {
 						*dest++ = *src++;
 					}
-					reg_si = 0x8000;
+					reg_si = 0x0000;
 				}
 			}
 			reg_al = 0;
@@ -170,8 +173,8 @@ Bitu INT60_Handler(void)
 		break;
 	case 0x10:
 		if(reg_al == 0x00) {
-			SegSet16(es, j3_font_seg);
-			reg_bx = 0;
+			SegSet16(es, 0xf000);
+			reg_bx = j3_font_offset;
 		}
 		break;
 	default:
@@ -208,28 +211,138 @@ Bitu INT6F_Handler(void)
 	return CBRET_NONE;
 }
 
+struct KANJI_ADDRESS {
+	Bit8u bank;
+	Bitu start;
+	Bitu end;
+	Bit16u code;
+};
+
 class KanjiRomPageHandler : public PageHandler {
+private:
+	Bit8u bank;
+	Bitu GetKanji16(Bitu addr) {
+		Bitu total = bank * 0x10000 + addr;
+		Bit16u code, offset;
+		if(total < 0x10420) {
+			total -= 0x10000;
+			offset = 0x3a60;
+		} else if(total < 0x20000) {
+			total -= 0x10420;
+			offset = 0x3b21;
+		} else if(total < 0x30000) {
+			total -= 0x20000;
+			offset = 0x5020;
+		} else if(total < 0x30820) {
+			total -= 0x30000;
+			offset = 0x6540;
+		} else if(total < 0x40000) {
+			total -= 0x30820;
+			offset = 0x6621;
+		} else if(total < 0x40420) {
+			total -= 0x40000;
+			offset = 0x7a60;
+		} else if(total < 0x41be0) {
+			total -= 0x40420;
+			offset = 0x7b21;
+		} else {
+			return 0;
+		}
+		code = offset + (total / 0xc00) * 0x100 + ((total % 0xc00) / 32);
+		code = jis2shift(code);
+		GetDbcsFont(code);
+		return code * 32 + (total % 32);
+	}
+	Bitu GetKanji24(Bitu addr) {
+		Bitu total = bank * 0x10000 + addr;
+		Bitu rest;
+		Bit16u code, offset;
+		if(total >= 0x40060 && total < 0x42460) {
+			total -= 0x40060;
+			offset = 0x2021;
+		} else if(total < 0x54460) {
+			total -= 0x42460;
+			offset = 0x2121;
+		} else if(total < 0x55c00) {
+			total -= 0x54460;
+			offset = 0x2921;
+		} else if(total < 0x100000) {
+			total -= 0x58060;
+			offset = 0x3021;
+		} else {
+			return 0;
+		}
+		code = offset + (total / 0x2400) * 0x100 + (total % 0x2400) / 96;
+		code = jis2shift(code);
+		GetDbcs24Font(code);
+		rest = total % 4;
+		if(rest != 3) {
+			return code * 72 + ((total % 96) / 4) * 3 + rest;
+		}
+		return 0;
+	}
 public:
 	KanjiRomPageHandler() {
-		flags=PFLAG_HASROM;
+		flags = PFLAG_HASROM;
+		bank = 0;
 	}
 	Bitu readb(PhysPt addr) {
-		if(addr >= 0xe0780 && addr < 0xe07a0) {
-			return jfont_yen[addr - 0xe0780];
-		} else if(addr >= 0xe6c20 && addr < 0xe7400) {
-			return jfont_kana[addr - 0xe6c20];
-		} else if(addr >= 0xe8000 && addr < 0xe8060) {
-			return jfont_kanji[addr - 0xe8000];
+		Bit16u code;
+		Bitu offset;
+		if(bank == 0) {
+			if(addr >= 0xe0000 && addr < 0xe0060) {
+				return jfont_kanji[addr - 0xe0000];
+			} else if(addr >= 0xe0780 && addr < 0xe07a0) {
+				return jfont_yen[addr - 0xe0780];
+			} else if(addr >= 0xe0c20 && addr < 0xe6be0) {
+				offset = addr - 0xe0c20;
+				code = 0x2121 + (offset / 0xc00) * 0x100 + ((offset % 0xc00) / 32);
+				code = jis2shift(code);
+				GetDbcsFont(code);
+				return jfont_dbcs_16[code * 32 + (addr % 32)];
+			} else if(addr >= 0xe6c20 && addr < 0xe7400) {
+				return jfont_kana[addr - 0xe6c20];
+			} else {
+				offset = addr - 0xe8020;
+				code = 0x3021 + (offset / 0xc00) * 0x100 + ((offset % 0xc00) / 32);
+				code = jis2shift(code);
+				GetDbcsFont(code);
+				return jfont_dbcs_16[code * 32 + (addr % 32)];
+			}
+		} else if((bank >= 1 && bank <= 3) || (bank == 4 && addr < 0xe0060)) {
+			return jfont_dbcs_16[GetKanji16(addr - 0xe0000)];
+		} else {
+			return jfont_dbcs_24[GetKanji24(addr - 0xe0000)];
 		}
 		return 0;
 	}
 	Bitu readw(PhysPt addr) {
-		if(addr >= 0xe0780 && addr < 0xe07a0) {
-			return *(Bit16u *)&jfont_yen[addr - 0xe0780];
-		} else if(addr >= 0xe6c20 && addr < 0xe7400) {
-			return *(Bit16u *)&jfont_kana[addr - 0xe6c20];
-		} else if(addr >= 0xe8000 && addr < 0xe8060) {
-			return *(Bit16u *)&jfont_kanji[addr - 0xe8000];
+		Bit16u code;
+		Bitu offset;
+		if(bank == 0) {
+			if(addr >= 0xe0000 && addr < 0xe0060) {
+				return *(Bit16u *)&jfont_kanji[addr - 0xe0000];
+			} else if(addr >= 0xe0780 && addr < 0xe07a0) {
+				return *(Bit16u *)&jfont_yen[addr - 0xe0780];
+			} else if(addr >= 0xe0c20 && addr < 0xe6be0) {
+				offset = addr - 0xe0c20;
+				code = 0x2121 + (offset / 0xc00) * 0x100 + ((offset % 0xc00) / 32);
+				code = jis2shift(code);
+				GetDbcsFont(code);
+				return *(Bit16u *)&jfont_dbcs_16[code * 32 + (addr % 32)];
+			} else if(addr >= 0xe6c20 && addr < 0xe7400) {
+				return *(Bit16u *)&jfont_kana[addr - 0xe6c20];
+			} else {
+				offset = addr - 0xe8020;
+				code = 0x3021 + (offset / 0xc00) * 0x100 + ((offset % 0xc00) / 32);
+				code = jis2shift(code);
+				GetDbcsFont(code);
+				return *(Bit16u *)&jfont_dbcs_16[code * 32 + (addr % 32)];
+			}
+		} else if((bank >= 1 && bank <= 3) || (bank == 4 && addr < 0xe1be0)) {
+			return *(Bit16u *)&jfont_dbcs_16[GetKanji16(addr - 0xe0000)];
+		} else {
+			return *(Bit16u *)&jfont_dbcs_24[GetKanji24(addr - 0xe0000)];
 		}
 		return 0;
 	}
@@ -237,6 +350,9 @@ public:
 		return 0;
 	}
 	void writeb(PhysPt addr,Bitu val){
+		if((val & 0x80) && val != 0xff) {
+			bank = val & 0x7f;
+		}
 	}
 	void writew(PhysPt addr,Bitu val){
 	}
@@ -250,19 +366,18 @@ void INT60_J3_Setup()
 	Bitu code;
 
 	SetTextSeg();
-	j3_font_seg = DOS_GetMemory(0x100);
 
 	PhysPt fontdata = Real2Phys(int10.rom.font_16);
 	for(code = 0 ; code < 256 ; code++) {
 		for(int y = 0 ; y < 16 ; y++) {
 			if(code >= 0x20 && code < 0x80) {
-				real_writeb(j3_font_seg, code * 16 + y, jfont_sbcs_16[code * 16 + y]);
+				phys_writeb(0xf0000 + j3_font_offset + code * 16 + y, jfont_sbcs_16[code * 16 + y]);
 				if(code == 0x5c) {
 					jfont_yen[y * 2] = jfont_sbcs_16[code * 16 + y];
 					jfont_yen[y * 2 + 1] = jfont_sbcs_16[code * 16 + y];
 				}
 			} else {
-				real_writeb(j3_font_seg, code * 16 + y, mem_readb(fontdata + code * 16 + y));
+				phys_writeb(0xf0000 + j3_font_offset + code * 16 + y, mem_readb(fontdata + code * 16 + y));
 				if(code >= 0xa1 && code <= 0xdf) {
 					jfont_kana[(code - 0xa1) * 32 + y * 2] = jfont_sbcs_16[code * 16 + y];
 					jfont_kana[(code - 0xa1) * 32 + y * 2 + 1] = jfont_sbcs_16[code * 16 + y];
@@ -324,7 +439,11 @@ void SetIMPosition()
 		if(height == 24) {
 			SDL_SetIMPosition(x * 12, y * 24);
 		} else {
-			SDL_SetIMPosition(x * 8, y * height + ((height == 16) ? 0 : 1));
+			if(J3_IsJapanese()) {
+				SDL_SetIMPosition(x * 8, y * height - 2);
+			} else {
+				SDL_SetIMPosition(x * 8, y * height + ((height == 16) ? 0 : 1));
+			}
 		}
 	}
 }
@@ -413,6 +532,7 @@ void J3_SetConfig(Section_prop *section)
 	if(j3_machine_code == 0) {
 		j3_machine_code = 0x6a74;
 	}
+	j3_font_offset = section->Get_hex("j3sbcsaddress");
 	enum J3_COLOR j3_color = colorNormal;
 	for(Bitu count = 0 ; j3_machine_list[count].name != NULL ; count++) {
 		if(j3100 == j3_machine_list[count].name) {
