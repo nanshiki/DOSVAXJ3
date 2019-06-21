@@ -46,7 +46,7 @@ enum KBD_KEYS {
 	KBD_yen, KBD_underscore,//JP layout
 	KBD_ax,KBD_conv,KBD_nconv, // for AX
 
-	KBD_f13,KBD_f14,KBD_f15,
+	KBD_kana,KBD_hanzen,KBD_kanji,
 
 	KBD_LAST
 };
