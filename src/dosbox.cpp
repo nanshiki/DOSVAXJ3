@@ -351,9 +351,7 @@ static void DOSBOX_UnlockSpeed( bool pressed ) {
 	}
 }
 
-#if defined(LINUX)
 bool debug_flag;
-#endif
 
 static void DOSBOX_RealInit(Section * sec) {
 	Section_prop * section=static_cast<Section_prop *>(sec);
@@ -416,9 +414,7 @@ static void DOSBOX_RealInit(Section * sec) {
 		} else {
 			SDL_SetIMValues(SDL_IM_ENABLE, 0, NULL);
 		}
-#if defined(LINUX)
 		debug_flag = section->Get_bool("debug");
-#endif
 	}
 }
 
@@ -499,6 +495,8 @@ void DOSBOX_Init(void) {
 	Phex->Set_help("J-3100 mode back color. RRGGBB (1000000=default color 000000)");
 	Pstring = secprop->Add_string("j3100",Property::Changeable::OnlyAtStart,"");
 	Pstring->Set_help("J-3100 machine type.");
+	Phex = secprop->Add_hex("j3sbcsaddress",Property::Changeable::OnlyAtStart,0xca00);
+	Phex->Set_help("J-3100 SBCS font address");
 	// for DOS/V
 	Pstring = secprop->Add_path("vtext",Property::Changeable::OnlyAtStart,"svga");
 	Pstring->Set_help("V-text screen mode.");
@@ -512,10 +510,8 @@ void DOSBOX_Init(void) {
 	Pbool->Set_help("Windows IME enabled.");
 #endif
 
-#if defined(LINUX)
 	Pbool = secprop->Add_bool("debug",Property::Changeable::OnlyAtStart,false);
 	Pbool->Set_help("debug flag");
-#endif
 
 #if C_DEBUG	
 	LOG_StartUp();
