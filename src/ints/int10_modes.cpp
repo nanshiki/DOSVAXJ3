@@ -39,6 +39,8 @@
 #define GFX_REGS 0x09
 #define ATT_REGS 0x15
 
+extern bool image_boot_flag;
+
 VideoModeBlock ModeList_DOSV[]={
 /* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
 { 0x003  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0	},
@@ -1612,15 +1614,17 @@ dac_text16:
 
 	if(IS_J3_ARCH) {
 		if(mode == 0x74) {
-			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, 0x01);
-			if(real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT) == 0) {
-				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT, 25);		// line count
+			if(!image_boot_flag) {
+				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, 0x01);
+				if(real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT) == 0) {
+					real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT, 25);		// line count
+				}
+				real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_SEG, GetTextSeg());
+				real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_OFFSET, 0);
+				real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK, 0x00);
+				real_writew(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE, 0x0f0f);
 			}
 			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL, 0x01);		// soft scroll
-			real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_SEG, GetTextSeg());
-			real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_CODE_OFFSET, 0);
-			real_writew(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK, 0x00);
-			real_writew(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE, 0x0f0f);
 
 			Bit8u r, g, b;
 			J3_GetPalette(0, r, g, b);
