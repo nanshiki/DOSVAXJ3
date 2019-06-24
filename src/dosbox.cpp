@@ -130,6 +130,7 @@ void INT10_Init(Section*);
 static LoopHandler * loop;
 
 bool SDLNetInited;
+bool im_enable_flag;
 
 static Bit32u ticksRemain;
 static Bit32u ticksLast;
@@ -410,8 +411,10 @@ static void DOSBOX_RealInit(Section * sec) {
 			DOSV_SetConfig(section);
 		}
 		if(section->Get_bool("im")) {
+			im_enable_flag = true;
 			SDL_SetIMValues(SDL_IM_ENABLE, 1, NULL);
 		} else {
+			im_enable_flag = false;
 			SDL_SetIMValues(SDL_IM_ENABLE, 0, NULL);
 		}
 		debug_flag = section->Get_bool("debug");
