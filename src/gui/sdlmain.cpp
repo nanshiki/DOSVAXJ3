@@ -293,6 +293,7 @@ SDL_Surface* SDL_SetVideoMode_Wrap(int width,int height,int bpp,Bit32u flags){
 	return s;
 }
 
+extern bool im_enable_flag;
 extern const char* RunningProgram;
 extern bool CPU_CycleAutoAdjust;
 //Globals for keyboard initialisation
@@ -1892,6 +1893,9 @@ void GFX_Events() {
 		default:
 #if defined(WIN32)
 			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94) {
+				if(event.key.keysym.scancode == 0x94 && im_enable_flag) {
+					break;
+				}
 				event.type = SDL_KEYDOWN;
 			}
 #endif
