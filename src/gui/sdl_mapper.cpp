@@ -2314,9 +2314,6 @@ static void CreateDefaultBinds(void) {
 	char buffer[512];
 	Bitu i=0;
 	while (DefaultKeys[i].eventend) {
-//		if(!keyboard_jp_flag && !strcmp(DefaultKeys[i].eventend, "hat_jp")) {
-//			break;
-//		}
 		if(DefaultKeys[i].key == SDLK_MENU && !IS_AX_ARCH) {
 			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,SDLK_HENKAN);
 		} else {
