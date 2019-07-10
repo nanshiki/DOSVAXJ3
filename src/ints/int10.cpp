@@ -1064,13 +1064,13 @@ graphics_chars:
 		}
 		break;
 	case 0xfe:
-		if(IS_J3_ARCH || IS_DOSV) {
+		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 			reg_di = 0x0000;
 			SegSet16(es, GetTextSeg());
 		}
 		break;
 	case 0xff:
-		if(IS_J3_ARCH || IS_DOSV) {
+		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
 			WriteCharTopView(reg_di, reg_cx);
 		} else {
 			if (!warned_ff) LOG(LOG_INT10,LOG_NORMAL)("INT10:FF:Weird NC call");
