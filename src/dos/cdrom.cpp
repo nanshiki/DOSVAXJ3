@@ -30,6 +30,10 @@
 #include "support.h"
 #include "cdrom.h"
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#define	stat	_stat64
+#endif
+
 CDROM_Interface_SDL::CDROM_Interface_SDL(void) {
 	driveID		= 0;
 	oldLeadOut	= 0;
