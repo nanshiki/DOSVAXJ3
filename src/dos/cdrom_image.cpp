@@ -36,6 +36,9 @@
 #include <libgen.h>
 #else
 #include <string.h>
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#define	stat	_stat64
+#endif
 #endif
 
 using namespace std;
