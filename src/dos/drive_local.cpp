@@ -271,7 +271,11 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 bool localDrive::FindNext(DOS_DTA & dta) {
 
 	char *dir_ent, *ldir_ent;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	struct _stat64 stat_block;
+#else
 	struct stat stat_block;
+#endif
 	char full_name[CROSS_LEN];
 	char dir_entcopy[CROSS_LEN], ldir_entcopy[CROSS_LEN];
 
@@ -305,7 +309,11 @@ again:
 	strcpy(dir_entcopy,dir_ent);
 	strcpy(ldir_entcopy,ldir_ent);
 #endif
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	if (_stat64(dirCache.GetExpandName(full_name),&stat_block)!=0) { 
+#else
 	if (stat(dirCache.GetExpandName(full_name),&stat_block)!=0) { 
+#endif
 		goto again;//No symlinks and such
 	}	
 
@@ -346,8 +354,13 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 #if defined(LINUX)
 	ChangeUtf8FileName(newname);
 #endif
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	struct _stat64 status;
+	if (_stat64(newname,&status)==0) {
+#else
 	struct stat status;
 	if (stat(newname,&status)==0) {
+#endif
 		*attr=DOS_ATTR_ARCHIVE;
 		if(status.st_mode & S_IFDIR) *attr|=DOS_ATTR_DIRECTORY;
 		return true;
@@ -365,7 +378,24 @@ bool localDrive::GetFileAttrEx(char* name, struct stat *status) {
 	ChangeUtf8FileName(newname);
 #endif
 	dirCache.ExpandName(newname);
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	struct _stat64 status64;
+	int flag = _stat64(newname,&status64);
+	status->st_dev = status64.st_dev;
+	status->st_ino = status64.st_ino;
+	status->st_mode = status64.st_mode;
+	status->st_nlink = status64.st_nlink;
+	status->st_uid = status64.st_uid;
+	status->st_gid = status64.st_gid;
+	status->st_rdev = status64.st_rdev;
+	status->st_size = (_off_t)status64.st_size;
+	status->st_atime = (time_t)status64.st_atime;
+	status->st_mtime = (time_t)status64.st_mtime;
+	status->st_ctime = (time_t)status64.st_ctime;
+    return !flag;
+#else
 	return !stat(newname,status);
+#endif
 }
 
 DWORD localDrive::GetCompressedSize(char* name)
