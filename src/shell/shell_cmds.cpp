@@ -637,7 +637,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 				} else {
 					FormatNumber(size,numformat);
 					if(IS_DOS_JAPANESE) {
-						WriteOut("%-8s %-3s   %16s %04d-%02d-%02d %2d:%02d %s\n",name,ext,numformat,year,month,month,hour,minute,uselfn?lname:"");
+						WriteOut("%-8s %-3s   %16s %04d-%02d-%02d %2d:%02d %s\n",name,ext,numformat,year,month,day,hour,minute,uselfn?lname:"");
 					} else {
 						WriteOut("%-8s %-3s   %16s %02d-%02d-%04d %2d:%02d %s\n",name,ext,numformat,day,month,year,hour,minute,uselfn?lname:"");
 					}
