@@ -181,10 +181,18 @@ void DOS_SetupTables(void) {
 	//host_writed(country_info + 0x12, CALLBACK_RealPointer(call_casemap));
 	//dos.tables.country=country_info;
 	dos.tables.country_seg = DOS_GetMemory(3);
-	real_writew(dos.tables.country_seg, 1, 7 + 34);
-	real_writew(dos.tables.country_seg, 3, 1);
-	real_writew(dos.tables.country_seg, 5, dos.loaded_codepage);
 	PhysPt dest = (dos.tables.country_seg << 4) + 7;
 	MEM_BlockWrite(dest, country_info, sizeof(country_info));
+	real_writew(dos.tables.country_seg, 1, 0x26);
+	real_writew(dos.tables.country_seg, 5, dos.loaded_codepage);
 	real_writed(dos.tables.country_seg, 7 + 0x12, CALLBACK_RealPointer(call_casemap));
+	if (IS_AX_ARCH || IS_J3_ARCH || IS_DOSV) {
+		real_writew(dos.tables.country_seg, 0x03, 81);
+		real_writew(dos.tables.country_seg, 0x07, 2);
+		real_writeb(dos.tables.country_seg, 0x09, 0x5c);
+		real_writeb(dos.tables.country_seg, 0x17, 0);
+		real_writeb(dos.tables.country_seg, 0x18, 1);
+	} else {
+		real_writew(dos.tables.country_seg, 0x03, 1);
+	}
 }
