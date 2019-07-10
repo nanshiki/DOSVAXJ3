@@ -1128,20 +1128,15 @@ static Bitu DOS_21Handler(void) {
 			PhysPt data=SegPhys(es)+reg_di;
 			switch (reg_al) {
 			case 0x01:
-				/*
-				mem_writeb(data + 0x00,reg_al);
-				mem_writew(data + 0x01,0x26);
-				mem_writew(data + 0x03,1);
-				if(reg_cx > 0x06 ) mem_writew(data+0x05,dos.loaded_codepage);
-				if(reg_cx > 0x08 ) {
-					Bitu amount = (reg_cx>=0x29)?0x22:(reg_cx-7);
-					MEM_BlockWrite(data + 0x07,dos.tables.country,amount);
-					reg_cx=(reg_cx>=0x29)?0x29:reg_cx;
+				{
+					PhysPt src = (dos.tables.country_seg << 4);
+					len = (reg_cx < 0x1f) ? reg_cx : 0x1f;
+					MEM_BlockCopy(data, src, len);
+					mem_writeb(data, reg_al);
+					if(IS_DOS_JAPANESE) {
+						mem_writeb(data + 0x07, 2);
+					}
 				}
-				*/
-				reg_cx = 7 + 34;
-				SegSet16(es, dos.tables.country_seg);
-				reg_di = 0;
 				CALLBACK_SCF(false);
 				break;
 			case 0x05: // Get pointer to filename terminator table
