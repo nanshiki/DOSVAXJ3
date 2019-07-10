@@ -54,6 +54,9 @@
 #ifndef S_ISDIR
 #define S_ISDIR(m) (((m)&S_IFMT)==S_IFDIR)
 #endif
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#define	stat	_stat64
+#endif
 #endif
 
 #if C_DEBUG
