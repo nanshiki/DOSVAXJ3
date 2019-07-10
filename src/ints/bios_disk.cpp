@@ -557,18 +557,24 @@ static Bitu INT13_DiskHandler(void) {
 		CALLBACK_SCF(false);//CF=0
 		break;
 	case 0x16: /* Detect media changed : DOSVAX */
-		if (driveInactive(drivenum)) {
-			reg_ah = 0x01;//drive not present
+		if(drivenum <= 1) {
+			if (driveInactive(drivenum)) {
+				reg_ah = 0x01;//drive not present
+				CALLBACK_SCF(true);
+				return CBRET_NONE;
+			}
+			if (getSwapRequest()) {
+				reg_ah = 0x06;//change detection
+				CALLBACK_SCF(true);
+			}
+			else {
+				reg_ah = 0x00;
+				CALLBACK_SCF(false);
+			}
+		} else {
+			LOG(LOG_BIOS,LOG_ERROR)("INT13: Function %x called on drive %x (dos drive %d)", reg_ah,  reg_dl, drivenum);
+			reg_ah=0xff;
 			CALLBACK_SCF(true);
-			return CBRET_NONE;
-		}
-		if (getSwapRequest()) {
-			reg_ah = 0x06;//change detection
-			CALLBACK_SCF(true);
-		}
-		else {
-			reg_ah = 0x00;
-			CALLBACK_SCF(false);
 		}
 		break;
 	case 0x17: /* Set disk type for format */
@@ -579,27 +585,33 @@ static Bitu INT13_DiskHandler(void) {
 		CALLBACK_SCF(false);
 		break;
 	case 0x18: /* Set media type for format : DOSVAX */
-		if (driveInactive(drivenum)) {
-			reg_ah = 0x80;//drive not present
-			CALLBACK_SCF(true);
-			return CBRET_NONE;
-		}
-		LOG(LOG_BIOS, LOG_ERROR)("INT13: Function %x called on drive %x (dos drive %d) reg_cx %x", reg_ah, reg_dl, drivenum, reg_cx);
-		//Bit32u tmpheads, tmpcyl, tmpsect, tmpsize;
-		Bit16u reqcyl, reqsec;
-		reqcyl = reg_cl & 0xC0;
-		reqcyl <<= 2;
-		reqcyl |= reg_ch;
-		reqcyl++; //AX DOS 3.21 requests max_cyl - 1
-		reqsec = reg_cl & 0x3F;
-		imageDiskList[drivenum]->Get_Geometry(&tmpheads, &tmpcyl, &tmpsect, &tmpsize);
-		if (reqcyl == tmpcyl && reqsec == tmpsect) {
-			LOG(LOG_BIOS, LOG_ERROR)("INT13: Function 18 returned 0x00 (accepted)");
-			reg_ah = 0x00;
-			CALLBACK_SCF(false);
+		if(drivenum <= 1) {
+			if (driveInactive(drivenum)) {
+				reg_ah = 0x80;//drive not present
+				CALLBACK_SCF(true);
+				return CBRET_NONE;
+			}
+			LOG(LOG_BIOS, LOG_ERROR)("INT13: Function %x called on drive %x (dos drive %d) reg_cx %x", reg_ah, reg_dl, drivenum, reg_cx);
+			//Bit32u tmpheads, tmpcyl, tmpsect, tmpsize;
+			Bit16u reqcyl, reqsec;
+			reqcyl = reg_cl & 0xC0;
+			reqcyl <<= 2;
+			reqcyl |= reg_ch;
+			reqcyl++; //AX DOS 3.21 requests max_cyl - 1
+			reqsec = reg_cl & 0x3F;
+			imageDiskList[drivenum]->Get_Geometry(&tmpheads, &tmpcyl, &tmpsect, &tmpsize);
+			if (reqcyl == tmpcyl && reqsec == tmpsect) {
+				LOG(LOG_BIOS, LOG_ERROR)("INT13: Function 18 returned 0x00 (accepted)");
+				reg_ah = 0x00;
+				CALLBACK_SCF(false);
+			} else {
+				LOG(LOG_BIOS, LOG_ERROR)("INT13: Function 18 returned 0x0C (denied)");
+				reg_ah = 0x0C;
+				CALLBACK_SCF(true);
+			}
 		} else {
-			LOG(LOG_BIOS, LOG_ERROR)("INT13: Function 18 returned 0x0C (denied)");
-			reg_ah = 0x0C;
+			LOG(LOG_BIOS,LOG_ERROR)("INT13: Function %x called on drive %x (dos drive %d)", reg_ah,  reg_dl, drivenum);
+			reg_ah=0xff;
 			CALLBACK_SCF(true);
 		}
 		break;
