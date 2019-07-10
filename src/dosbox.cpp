@@ -448,7 +448,7 @@ void DOSBOX_Init(void) {
 	/* Setup all the different modules making up DOSBox */
 	const char* machines[] = {
 		"hercules", "cga", "tandy", "pcjr", "ega", "jega", //for AX
-		"dcga", "dosv", "dosv_s3", "dosv_et4000",
+		"vga", "dcga", "dosv", "dosv_s3", "dosv_et4000",
 		"vgaonly", "svga_s3", "svga_et3000", "svga_et4000",
 		"svga_paradise", "vesa_nolfb", "vesa_oldvbe", 0 };
 	secprop=control->AddSection_prop("dosbox",&DOSBOX_RealInit);
