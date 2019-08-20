@@ -53,6 +53,8 @@
 #if defined(WIN32)
 #ifndef S_ISDIR
 #define S_ISDIR(m) (((m)&S_IFMT)==S_IFDIR)
+#define	fseek	_fseeki64
+#define	ftell	_ftelli64
 #endif
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 #define	stat	_stat64
@@ -537,8 +539,8 @@ private:
 
 			// get file size
 			fseek(tmpfile,0L, SEEK_END);
-			*ksize = (ftell(tmpfile) / 1024);
-			*bsize = ftell(tmpfile);
+			*ksize = (Bit32u)(ftell(tmpfile) / 1024);
+			*bsize = (Bit32u)ftell(tmpfile);
 			fclose(tmpfile);
 
 			tmpfile = ldp->GetSystemFilePtr(fullname, "rb+");
@@ -575,8 +577,8 @@ private:
 //				if(tryload) error = 2;
 				WriteOut(MSG_Get("PROGRAM_BOOT_WRITE_PROTECTED"));
 				fseek(tmpfile,0L, SEEK_END);
-				*ksize = (ftell(tmpfile) / 1024);
-				*bsize = ftell(tmpfile);
+				*ksize = (Bit32u)(ftell(tmpfile) / 1024);
+				*bsize = (Bit32u)ftell(tmpfile);
 				return tmpfile;
 			}
 			// Give the delayed errormessages from the mounted variant (or from above)
@@ -585,8 +587,8 @@ private:
 			return NULL;
 		}
 		fseek(tmpfile,0L, SEEK_END);
-		*ksize = (ftell(tmpfile) / 1024);
-		*bsize = ftell(tmpfile);
+		*ksize = (Bit32u)(ftell(tmpfile) / 1024);
+		*bsize = (Bit32u)ftell(tmpfile);
 		return tmpfile;
 	}
 
@@ -1308,12 +1310,19 @@ public:
 						WriteOut(MSG_Get("PROGRAM_IMGMOUNT_INVALID_GEOMETRY"));
 						return;
 					}
-					Bitu sectors=(Bitu)(fcsize/(16*63));
-					if (sectors*16*63!=fcsize) {
-						WriteOut(MSG_Get("PROGRAM_IMGMOUNT_INVALID_GEOMETRY"));
-						return;
+					if(buf[0x1c2] == 0x06) {
+						sizes[0] = 512;
+						sizes[1] = buf[0x1c4] & 0x3f;						// sector
+						sizes[2] = buf[0x1c3];								// head
+						sizes[3] = ((buf[0x1c4] & 0xc0) << 2) | buf[0x1c5];	// cylinder
+					} else {
+						Bitu sectors=(Bitu)(fcsize/(16*63));
+						if (sectors*16*63!=fcsize) {
+							WriteOut(MSG_Get("PROGRAM_IMGMOUNT_INVALID_GEOMETRY"));
+							return;
+						}
+						sizes[0]=512;	sizes[1]=63;	sizes[2]=16;	sizes[3]=sectors;
 					}
-					sizes[0]=512;	sizes[1]=63;	sizes[2]=16;	sizes[3]=sectors;
 					LOG_MSG("autosized image file: %d:%d:%d:%d",sizes[0],sizes[1],sizes[2],sizes[3]);
 				}
 
@@ -1440,7 +1449,12 @@ public:
 					return;
 				}
 				fseek(newDisk,0L, SEEK_END);
-				imagesize = (ftell(newDisk) / 1024);
+				imagesize = (Bit32u)(ftell(newDisk) / 1024);
+
+				while(sizes[3] > 1023) {
+					sizes[3] /= 2;
+					sizes[2] *= 2;
+				}
 
 				newImage = new imageDisk(newDisk, (Bit8u *)temp_line.c_str(), imagesize, (imagesize > 2880));
 				if(imagesize>2880) newImage->Set_Geometry(sizes[2],sizes[3],sizes[1],sizes[0]);
