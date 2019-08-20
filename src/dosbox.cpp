@@ -487,7 +487,7 @@ void DOSBOX_Init(void) {
 	// gaiji
 	Phex = secprop->Add_hex("gaijistart",Property::Changeable::OnlyAtStart,0xf040);
 	Phex->Set_help("Japanese gaiji font code start");
-	Phex = secprop->Add_hex("gaijiend",Property::Changeable::OnlyAtStart,0xf0fc);
+	Phex = secprop->Add_hex("gaijiend",Property::Changeable::OnlyAtStart,0xf0a3);
 	Phex->Set_help("Japanese gaiji font code end");
 	Pbool = secprop->Add_bool("yen",Property::Changeable::OnlyAtStart,false);
 	Pbool->Set_help("Japanese yen font use 7fh");
