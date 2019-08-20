@@ -31,8 +31,7 @@
 #include <X11/Xutil.h>
 #endif
 
-#define	GAIJI_MAX		200
-#define	J3_GAIJI_MAX	100
+#define	GAIJI_MAX		100
 
 extern Bit8u jfont_sbcs_19[];
 extern Bit8u jfont_dbcs_16[];
@@ -714,16 +713,15 @@ Bit16u GetGaijiSeg()
 
 void SetGaijiConfig(Section_prop *section)
 {
-	Bitu count, count_max;
+	Bitu count;
 
 	gaiji_start = section->Get_hex("gaijistart");
 	gaiji_end = section->Get_hex("gaijiend");
 
 	count = gaiji_end - gaiji_start + 1;
-	count_max = IS_J3_ARCH ? J3_GAIJI_MAX : GAIJI_MAX;
-	if(count >= count_max) {
-		count = count_max;
-		gaiji_end = gaiji_start + count_max - 1;
+	if(count >= GAIJI_MAX) {
+		count = GAIJI_MAX;
+		gaiji_end = gaiji_start + GAIJI_MAX - 1;
 	}
 	gaiji_seg = DOS_GetMemory(count * 2);
 }
