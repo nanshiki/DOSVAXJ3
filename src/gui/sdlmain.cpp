@@ -1892,7 +1892,7 @@ void GFX_Events() {
 #endif
 		default:
 #if defined(WIN32)
-			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94) {
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x3a) {
 				if(event.key.keysym.scancode == 0x94 && im_enable_flag) {
 					break;
 				}
@@ -1902,7 +1902,7 @@ void GFX_Events() {
 			void MAPPER_CheckEvent(SDL_Event * event);
 			MAPPER_CheckEvent(&event);
 #if defined(WIN32)
-			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94) {
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x3a) {
 				event.type = SDL_KEYUP;
 				MAPPER_CheckEvent(&event);
 			}
@@ -2335,6 +2335,18 @@ int main(int argc, char* argv[]) {
 #endif
 	sdl.num_joysticks=SDL_NumJoysticks();
 
+#if defined (WIN32)
+	BYTE keystate[256];
+	unsigned short mod = 0;
+	GetKeyboardState(keystate);
+	if(keystate[VK_NUMLOCK] & 1) {
+		mod |= KMOD_NUM;
+	}
+	if(keystate[VK_CAPITAL] & 1) {
+		mod |= KMOD_CAPS;
+	}
+	SDL_SetModState((SDLMod)mod);
+#endif
 	/* Parse configuration files */
 	std::string config_file,config_path;
 	Cross::GetPlatformConfigDir(config_path);
