@@ -1269,6 +1269,7 @@ static Bitu DOS_21Handler(void) {
 				CALLBACK_SCF(true); //Check this! What needs this ? See default case
 				break;
 			}
+			dos.save_dta();
 			switch(reg_al)		{
 			case 0x39:		/* LFN MKDIR */
 				MEM_StrCopy(SegPhys(ds)+reg_dx,name1+1,DOSNAMEBUF);
@@ -1769,6 +1770,7 @@ static Bitu DOS_21Handler(void) {
 				reg_ax=0x7100;
 				CALLBACK_SCF(true); //Check this! What needs this ? See default case
 			}
+			dos.restore_dta();
 		break;
 	case 0x73:
 		if (reg_al==3)
