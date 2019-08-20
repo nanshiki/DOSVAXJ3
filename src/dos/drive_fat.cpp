@@ -31,6 +31,11 @@
 #include "bios.h"
 #include "bios_disk.h"
 
+#if defined(WIN32)
+#define	fseek	_fseeki64
+#define	ftell	_ftelli64
+#endif
+
 #define IMGTYPE_FLOPPY 0
 #define IMGTYPE_ISO    1
 #define IMGTYPE_HDD	   2
