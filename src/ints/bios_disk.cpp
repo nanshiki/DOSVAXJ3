@@ -27,6 +27,10 @@
 #include "../dos/drives.h"
 #include "mapper.h"
 
+#if defined(WIN32)
+#define	fseek	_fseeki64
+#endif
+
 #define MAX_DISK_IMAGES 4
 
 diskGeo DiskGeometryList[] = {
