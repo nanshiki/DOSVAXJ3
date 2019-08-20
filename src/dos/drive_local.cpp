@@ -33,6 +33,11 @@
 #include "inout.h"
 #include "jega.h"
 
+#if defined(WIN32)
+#define	fseek	_fseeki64
+#define	ftell	_ftelli64
+#endif
+
 class localFile : public DOS_File {
 public:
 	localFile(const char* name, FILE * handle);
@@ -626,7 +631,7 @@ bool localFile::Write(Bit8u * data,Bit16u * size) {
 	if (last_action==READ) fseek(fhandle,ftell(fhandle),SEEK_SET);
 	last_action=WRITE;
 	if(*size==0){  
-        return (!ftruncate(fileno(fhandle),ftell(fhandle)));
+        return (!ftruncate(fileno(fhandle),(Bit32u)ftell(fhandle)));
     }
     else 
     {
