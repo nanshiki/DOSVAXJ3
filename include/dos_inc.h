@@ -630,8 +630,19 @@ struct DOS_Block {
 	void psp(Bit16u _seg){ DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).SetPSP(_seg);};
 	Bit16u env;
 	RealPt cpmentry;
-	RealPt dta(){return DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).GetDTA();};
-	void dta(RealPt _dta){DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).SetDTA(_dta);};
+	RealPt dta(){
+		return DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).GetDTA();
+	}
+	void dta(RealPt _dta){
+		DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).SetDTA(_dta);
+	}
+	void save_dta() {
+		lfn_dta = dta();
+		dta(RealMake(lfn_dta_seg, 0));
+	}
+	void restore_dta() {
+		dta(lfn_dta);
+	}
 	Bit8u return_code,return_mode;
 	
 	Bit8u current_drive;
@@ -652,6 +663,9 @@ struct DOS_Block {
 		Bit16u country_seg;
 	} tables;
 	Bit16u loaded_codepage;
+
+	Bit16u lfn_dta_seg;
+	RealPt lfn_dta;
 
 	//for AX
 	bool set_ax_enabled;
