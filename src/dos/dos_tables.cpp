@@ -195,4 +195,6 @@ void DOS_SetupTables(void) {
 	} else {
 		real_writew(dos.tables.country_seg, 0x03, 1);
 	}
+
+	dos.lfn_dta_seg = DOS_GetMemory(3);
 }
