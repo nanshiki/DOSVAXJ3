@@ -64,8 +64,8 @@ void DOS_SetDefaultDrive(Bit8u drive) {
 
 static bool DBCS_LeadByte(Bit8u c) {
 	int i;
-	Bit16u pair;
 	for (i = 0;; i++) {
+		Bit16u pair;
 		Bit8u cstart, cend;
 		pair = mem_readw(Real2Phys(dos.tables.dbcs) + 0x02 + i*2);
 		if (!pair) break;
