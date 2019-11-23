@@ -927,8 +927,6 @@ char * DOS_Shell::Which(char * name) {
 	/* Check if name is already ok but just misses an extension */
 
 	if (DOS_FileExists(name)) return name;
-	upcase(name);
-	if (DOS_FileExists(name)) return name;
 	/* try to find .com .exe .bat */
 	strcpy(which_ret,name);
 	strcat(which_ret,com_ext);
