@@ -62,6 +62,20 @@ void DOS_SetDefaultDrive(Bit8u drive) {
 	if (drive<=DOS_DRIVES && ((drive<2) || Drives[drive])) {dos.current_drive = drive; DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).SetDrive(drive);}
 }
 
+static bool DBCS_LeadByte(Bit8u c) {
+	int i;
+	for (i = 0;; i++) {
+		Bit16u pair;
+		Bit8u cstart, cend;
+		pair = mem_readw(Real2Phys(dos.tables.dbcs) + 0x02 + i*2);
+		if (!pair) break;
+		cstart = pair;
+		cend = pair >> 8;
+		if ((cstart <= c) && (c <= cend)) return true;
+	}
+	return false;
+}
+
 bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 	if(!name || *name == 0 || *name == ' ') {
 		/* Both \0 and space are seperators and
@@ -106,11 +120,15 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 	r=0;w=0;
 	while (name_int[r]!=0 && (r<DOS_PATHLENGTH)) {
 		c=name_int[r++];
-		//if ((c>='a') && (c<='z')) c-=32;
+		if ((c>='a') && (c<='z')) c-=32;
 		if (c=='"') {q++;continue;}
 		else if (c=='/') c='\\';
 		else if (c==' ' && q/2*2 == q) break; /* should be separator */
 		upname[w++]=c;
+		if (DBCS_LeadByte(c)) {
+			// skip DBCS 2nd byte
+			upname[w++] = name_int[r++];
+		}
 	}
 	while (r>0 && name_int[r-1]==' ') r--;
 	if (r>=DOS_PATHLENGTH) { DOS_SetError(DOSERR_PATH_NOT_FOUND);return false; }
