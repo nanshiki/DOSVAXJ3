@@ -35,8 +35,6 @@ Int10Data int10;
 static Bitu call_10;
 static bool warned_ff=false;
 
-Bit8u RealVtextMode;
-
 static Bitu INT10_Handler(void) {
 #if 0
 	switch (reg_ah) {
@@ -57,7 +55,7 @@ static Bitu INT10_Handler(void) {
 #endif
 	if(IS_J3_ARCH && J3_IsJapanese()) {
 		J3_OffCursor();
-	} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		if(reg_ah != 0x03) {
 			DOSV_OffCursor();
 		}
@@ -67,13 +65,13 @@ static Bitu INT10_Handler(void) {
 	switch (reg_ah) {
 	case 0x00:								/* Set VideoMode */
 		Mouse_BeforeNewVideoMode(true);
+		SetTrueVideoMode(reg_al);
 		if(!IS_AX_ARCH && IS_DOS_JAPANESE && (reg_al == 0x03 || reg_al == 0x70 || reg_al == 0x72 || reg_al == 0x78)) {
 			Bit8u mode = reg_al;
 			if(reg_al == 0x03 || reg_al == 0x72) {
 				INT10_SetVideoMode(0x12);
 				INT10_SetDOSVModeVtext(mode, DOSV_VGA);
 			} else if(reg_al == 0x70 || reg_al == 0x78) {
-				RealVtextMode = reg_al;
 				mode = 0x70;
 				enum DOSV_VTEXT_MODE vtext_mode = DOSV_GetVtextMode((reg_al == 0x70) ? 0 : 1);
 				if(vtext_mode == DOSV_VTEXT_XGA || vtext_mode == DOSV_VTEXT_XGA_24) {
@@ -92,6 +90,11 @@ static Bitu INT10_Handler(void) {
 			}
 		} else {
 			if(!IS_J3_ARCH && reg_al == 0x74) {
+				break;
+			}
+			if(IS_J3_ARCH && (reg_al == 0x04 || reg_al == 0x05)) {
+				INT10_SetVideoMode(0x74);
+				INT10_SetJ3ModeCGA4(reg_al);
 				break;
 			}
 			INT10_SetVideoMode(reg_al);
@@ -190,7 +193,7 @@ static Bitu INT10_Handler(void) {
 		INT10_GetPixel(reg_cx,reg_dx,reg_bh,&reg_al);
 		break;
 	case 0x0E:								/* Teletype OutPut */
-		if(IS_DOS_JAPANESE) {
+		if(DOSV_CheckJapaneseVideoMode()) {
 			Bit16u attr;
 			INT10_ReadCharAttr(&attr, 0);
 			INT10_TeletypeOutput(reg_al, attr >> 8);
@@ -506,14 +509,14 @@ graphics_chars:
 		}
 		break;
 	case 0x13:								/* Write String */
-		if((reg_al & 0x10) != 0 && IS_DOS_JAPANESE) {
+		if((reg_al & 0x10) != 0 && DOSV_CheckJapaneseVideoMode()) {
 			INT10_ReadString(reg_dh,reg_dl,reg_al,reg_bl,SegPhys(es)+reg_bp,reg_cx,reg_bh);
 		} else {
 			INT10_WriteString(reg_dh,reg_dl,reg_al,reg_bl,SegPhys(es)+reg_bp,reg_cx,reg_bh);
 		}
 		break;
 	case 0x18:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 			Bit8u *font;
 			Bitu size = 0;
 			if(reg_al == 0) {
@@ -669,7 +672,7 @@ graphics_chars:
 		}
 		break;
 	case 0x1d:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 			if(reg_al == 0x00) {
 				real_writeb(BIOSMEM_SEG, BIOSMEM_NB_ROWS, int10.text_row - reg_bl);
 			} else if(reg_al == 0x01) {
@@ -1064,13 +1067,13 @@ graphics_chars:
 		}
 		break;
 	case 0xfe:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 			reg_di = 0x0000;
 			SegSet16(es, GetTextSeg());
 		}
 		break;
 	case 0xff:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 			WriteCharTopView(reg_di, reg_cx);
 		} else {
 			if (!warned_ff) LOG(LOG_INT10,LOG_NORMAL)("INT10:FF:Weird NC call");
@@ -1148,4 +1151,5 @@ void INT10_Init(Section* /*sec*/) {
 	INT10_SetupRomMemory();
 	INT10_Seg40Init();
 	INT10_SetVideoMode(0x3);
+	SetTrueVideoMode(0x03);
 }
