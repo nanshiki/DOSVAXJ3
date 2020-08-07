@@ -1874,7 +1874,7 @@ static Bitu DOS_29Handler(void)
 	Bit16u tmp_ax = reg_ax;
 	Bit16u tmp_bx = reg_bx;
 
-	if(IS_DOS_JAPANESE) {
+	if(IS_DOS_JAPANESE && reg_al != 0x0a) {
 		Bit16u tmp_es = SegValue(es);
 		Bit16u tmp_di = reg_di;
 
