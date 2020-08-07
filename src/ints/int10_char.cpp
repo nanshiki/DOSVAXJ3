@@ -33,6 +33,7 @@
 #include "dosv.h"
 #include "SDL_events.h"
 
+extern Bit8u ShellInputFlag;
 Bit8u prevchr = 0;
 
 static void DCGA_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
@@ -406,7 +407,7 @@ void INT10_ScrollWindow(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit
 /* Do some range checking */
 	if(IS_J3_ARCH && J3_IsJapanese()) {
 		J3_OffCursor();
-	} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		DOSV_OffCursor();
 	}
 	if (CurMode->type!=M_TEXT) page=0xff;
@@ -469,14 +470,14 @@ void INT10_ScrollWindow(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit
 			TANDY16_CopyRow(cul,clr,start,start+nlines,base);break;
 		case M_EGA:		
 			EGA16_CopyRow(cul,clr,start,start+nlines,base);
-			if(IS_DOS_JAPANESE) {
+			if(DOSV_CheckJapaneseVideoMode()) {
 				DCGA_Text_CopyRow(cul,clr,start,start+nlines);
 			}
 			break;
 		case M_VGA:		
 			VGA_CopyRow(cul,clr,start,start+nlines,base);break;
 		case M_LIN4:
-			if(IS_DOS_JAPANESE) {
+			if(DOSV_CheckJapaneseVideoMode()) {
 				if(real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT) == 24) {
 					EGA16_CopyRow_24(cul,clr,start,start+nlines,base);
 				} else {
@@ -519,7 +520,7 @@ filling:
 		case M_TANDY16:		
 			TANDY16_FillRow(cul,clr,start,base,attr);break;
 		case M_EGA:		
-			if(IS_DOS_JAPANESE) {
+			if(DOSV_CheckJapaneseVideoMode()) {
 				DCGA_Text_FillRow(cul,clr,start,attr);
 				WriteCharTopView(real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) * 2 * start + cul * 2, clr - cul);
 			} else {
@@ -529,7 +530,7 @@ filling:
 		case M_VGA:		
 			VGA_FillRow(cul,clr,start,base,attr);break;
 		case M_LIN4:
-			if(IS_DOS_JAPANESE) {
+			if(DOSV_CheckJapaneseVideoMode()) {
 				DCGA_Text_FillRow(cul,clr,start,attr);
 				WriteCharTopView(real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) * 2 * start + cul * 2, clr - cul);
 				break;
@@ -783,7 +784,7 @@ void INT10_SetCursorPos(Bit8u row,Bit8u col,Bit8u page) {
 
 	if(IS_J3_ARCH && J3_IsJapanese()) {
 		J3_OffCursor();
-	} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		DOSV_OffCursor();
 	}
 	if (page>7) LOG(LOG_INT10,LOG_ERROR)("INT10_SetCursorPos page %d",page);
@@ -838,8 +839,10 @@ void ReadCharAttr(Bit16u col,Bit16u row,Bit8u page,Bit16u * result) {
 			fontdata=Real2Phys(RealGetVec(0x44));
 			break;
 		case MCH_DCGA:
-			*result = real_readw(GetTextSeg(), (row * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) + col) * 2);
-			return;
+			if(J3_IsJapanese()) {
+				*result = real_readw(GetTextSeg(), (row * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) + col) * 2);
+				return;
+			}
 		default:
 			fontdata=Real2Phys(RealGetVec(0x43));
 			break;
@@ -851,7 +854,7 @@ void ReadCharAttr(Bit16u col,Bit16u row,Bit8u page,Bit16u * result) {
 				ReadVTRAMChar(col, row, result);
 				return;
 			}
-		} else if(IS_DOS_JAPANESE) {
+		} else if(DOSV_CheckJapaneseVideoMode()) {
 			*result = real_readw(GetTextSeg(), (row * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) + col) * 2);
 			return;
 		}
@@ -1687,7 +1690,7 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 				prevchr = 0;
 				return;
 			}
-		} else if(IS_DOS_JAPANESE) {
+		} else if(DOSV_CheckJapaneseVideoMode()) {
 			DOSV_OffCursor();
 
 			Bit16u seg = GetTextSeg();
@@ -1843,7 +1846,7 @@ static void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr,Bit8u pag
 		break;
 	default:
 		/* Return if the char code is DBCS at the end of the line (for AX) */
-		if (cur_col + 1 == ncols && IS_DOS_JAPANESE && isKanji1(chr) && prevchr == 0)
+		if (cur_col + 1 == ncols && DOSV_CheckJapaneseVideoMode() && isKanji1(chr) && prevchr == 0)
 		{ 
 			INT10_TeletypeOutputAttr(' ', attr, useattr, page);
 			cur_row = CURSOR_POS_ROW(page);
@@ -1861,10 +1864,14 @@ static void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr,Bit8u pag
 	if(cur_row==nrows) {
 		//Fill with black on non-text modes and with attribute at cursor on textmode
 		Bit8u fill=0;
-		if (CurMode->type==M_TEXT || IS_DOS_JAPANESE) {
+		if(CurMode->type==M_TEXT || DOSV_CheckJapaneseVideoMode()) {
 			Bit16u chat;
-			INT10_ReadCharAttr(&chat,page);
+			ReadCharAttr(cur_col,cur_row - 1,page, &chat);
+			//INT10_ReadCharAttr(&chat,page);
 			fill=(Bit8u)(chat>>8);
+			if(ShellInputFlag) {
+				fill = 0x07;
+			}
 		}
 		INT10_ScrollWindow(0,0,(Bit8u)(nrows-1),(Bit8u)(ncols-1),-1,fill,page);
 		cur_row--;
