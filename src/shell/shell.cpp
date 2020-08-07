@@ -32,6 +32,7 @@
 #include "support.h"
 #include "timer.h"
 
+Bit8u ShellInputFlag;
 Bitu call_shellstop;
 bool insert;
 /* Larger scope so shell_del autoexec can use it to
@@ -398,9 +399,13 @@ void DOS_Shell::Run(void) {
 			}
 		} else {
 			if (echo) ShowPrompt();
+			ShellInputFlag = 1;
 			InputCommand(input_line);
+			ShellInputFlag = 0;
 			ParseLine(input_line);
-			if (echo && !bf) WriteOut_NoParsing("\n");
+			if(input_line[0] != 0) {
+				if (echo && !bf) WriteOut_NoParsing("\n");
+			}
 		}
 	} while (!exit);
 }
