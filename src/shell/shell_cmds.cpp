@@ -196,14 +196,12 @@ void DOS_Shell::DoCommand(char * line) {
 		return; \
 	}
 
-extern Bit8u RealVtextMode;
-
 void DOS_Shell::CMD_CLS(char * args) {
 	HELP("CLS");
 	reg_ah = 0x00;
 	reg_al = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE);
 	if(reg_al == 0x70) {
-		reg_al = RealVtextMode;
+		reg_al = GetTrueVideoMode();
 	}
 	CALLBACK_RunRealInt(0x10);
 }
