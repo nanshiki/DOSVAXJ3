@@ -1689,6 +1689,11 @@ static bool CheckEnableImmOnKey(SDL_KeyboardEvent key)
 extern bool debug_flag;
 #endif
 
+#ifdef WIN32
+SDL_Event key_event;
+#endif
+void MAPPER_CheckEvent(SDL_Event * event);
+
 void GFX_Events() {
 	SDL_Event event;
 #if defined (REDUCE_JOYSTICK_POLLING)
@@ -1703,6 +1708,13 @@ void GFX_Events() {
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
 		case SDL_ACTIVEEVENT:
+#ifdef WIN32
+			if(key_event.type == SDL_KEYDOWN) {
+				key_event.type = SDL_KEYUP;
+				MAPPER_CheckEvent(&key_event);
+				key_event.type = 0;
+			}
+#endif
 			if (event.active.state & SDL_APPINPUTFOCUS) {
 				if (event.active.gain) {
 #ifdef WIN32
@@ -1836,6 +1848,13 @@ void GFX_Events() {
 			if (((event.key.keysym.sym==SDLK_TAB)) &&
 				((sdl.laltstate==SDL_KEYDOWN) || (sdl.raltstate==SDL_KEYDOWN))) break;
 			// This can happen as well.
+			if(event.key.keysym.sym != SDLK_LALT && event.key.keysym.sym != SDLK_RALT && event.key.keysym.sym != SDLK_LCTRL && event.key.keysym.sym != SDLK_RCTRL) {
+				if(event.type == SDL_KEYDOWN) {
+					key_event = event;
+				} else if(event.type == SDL_KEYUP) {
+					key_event.type = 0;
+				}
+			}
 			if (((event.key.keysym.sym == SDLK_TAB )) && (event.key.keysym.mod & KMOD_ALT)) break;
 			// ignore tab events that arrive just after regaining focus. (likely the result of alt-tab)
 			if ((event.key.keysym.sym == SDLK_TAB) && (GetTicks() - sdl.focus_ticks < 2)) break;
@@ -1899,7 +1918,6 @@ void GFX_Events() {
 				event.type = SDL_KEYDOWN;
 			}
 #endif
-			void MAPPER_CheckEvent(SDL_Event * event);
 			MAPPER_CheckEvent(&event);
 #if defined(WIN32)
 			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x3a) {
@@ -2278,7 +2296,7 @@ int main(int argc, char* argv[]) {
 	LOG_MSG("DOSVAXJ3 version %s",VERSION);
 	LOG_MSG("Copyright 2002-2017 DOSBox Team, published under GNU GPL.");
 	LOG_MSG("Copyright 2016-2019 akm.");
-	LOG_MSG("Copyright 2019 takapyu.");
+	LOG_MSG("Copyright 2019-2020 takapyu.");
 	LOG_MSG("Long File Name (LFN), mouse copy/paste and other support, by Wengier,2014-2017.");
 	LOG_MSG("---");
 
