@@ -580,7 +580,7 @@ static Bitu INT8_Handler(void) {
 	} else {
 		if(IS_J3_ARCH && J3_IsJapanese()) {
 			INT8_J3();
-		} else if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 			INT8_DOSV();
 		} else if(IS_AX_ARCH) {
 			SetIMPosition();
