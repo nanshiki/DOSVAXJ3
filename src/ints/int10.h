@@ -255,4 +255,5 @@ void INT10_SetupBasicVideoParameterTable(void);
 
 void WriteCharTopView(Bit16u off, int count);
 bool INT10_SetDOSVModeVtext(Bit16u mode, enum DOSV_VTEXT_MODE vtext_mode);
+void INT10_SetJ3ModeCGA4(Bit16u mode);
 
