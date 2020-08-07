@@ -20,6 +20,7 @@
 #include "dosbox.h"
 #include "inout.h"
 #include "vga.h"
+#include "mem.h"
 
 #define attr(blah) vga.attr.blah
 
@@ -117,6 +118,11 @@ void write_p3c0(Bitu /*port*/,Bitu val,Bitu iolen) {
 		case 0x04:		case 0x05:		case 0x06:		case 0x07:
 		case 0x08:		case 0x09:		case 0x0a:		case 0x0b:
 		case 0x0c:		case 0x0d:		case 0x0e:		case 0x0f:
+			if(IS_J3_ARCH && (real_readb(0x40, 0x49) == 0x04 || real_readb(0x40, 0x49) == 0x05)) {
+				if(attr(index) == 0 && val != 0) {
+					val = 0;
+				}
+			}
 			if (attr(disabled) & 0x1) VGA_ATTR_SetPalette(attr(index),(Bit8u)val);
 			/*
 				0-5	Index into the 256 color DAC table. May be modified by 3C0h index
