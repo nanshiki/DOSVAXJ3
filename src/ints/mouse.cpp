@@ -502,8 +502,15 @@ void Mouse_CursorMoved(float xrel,float yrel,float x,float y,bool emulate) {
 	if (!useps2callback) {		
 		if (mouse.x > mouse.max_x) mouse.x = mouse.max_x;
 		if (mouse.x < mouse.min_x) mouse.x = mouse.min_x;
-		if (mouse.y > mouse.max_y) mouse.y = mouse.max_y;
-		if (mouse.y < mouse.min_y) mouse.y = mouse.min_y;
+		if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
+			float max_y = (float)(mouse.max_y * (480.0f / 200.0f));
+			float min_y = (float)(mouse.min_y * (480.0f / 200.0f));
+			if (mouse.y > max_y) mouse.y = max_y;
+			if (mouse.y < min_y) mouse.y = min_y;
+		} else {
+			if (mouse.y > mouse.max_y) mouse.y = mouse.max_y;
+			if (mouse.y < mouse.min_y) mouse.y = mouse.min_y;
+		}
 	} else {
 		if (mouse.x >= 32768.0) mouse.x -= 65536.0;
 		else if (mouse.x <= -32769.0) mouse.x += 65536.0;
@@ -742,6 +749,10 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 		Bitu rows = real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS);
 		if ((rows == 0) || (rows > 250)) rows = 25 - 1;
 		mouse.max_y = 8*(rows+1) - 1;
+		if(mode == 0x03 && IS_DOS_JAPANESE) {
+			mouse.gran_x = (Bit16s)0xffff;
+			mouse.gran_y = (Bit16s)0xffff;
+		}
 		break;
 	}
 	case 0x04:
@@ -821,6 +832,7 @@ static void Mouse_Reset(void) {
 
 static Bitu INT33_Handler(void) {
 //	LOG(LOG_MOUSE,LOG_NORMAL)("MOUSE: %04X %X %X %d %d",reg_ax,reg_bx,reg_cx,POS_X,POS_Y);
+//JTrace("%04x %04x %04x %04x %d %d\n",reg_ax,reg_bx,reg_cx,reg_dx,POS_X,POS_Y);
 	switch (reg_ax) {
 	case 0x00:	/* Reset Driver and Read Status */
 		Mouse_ResetHardware(); /* fallthrough */
@@ -845,7 +857,11 @@ static Bitu INT33_Handler(void) {
 	case 0x03:	/* Return position and Button Status */
 		reg_bx=mouse.buttons;
 		reg_cx=POS_X;
-		reg_dx=POS_Y;
+		if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
+			reg_dx=(Bit16u)(mouse.y * (200.0f / 480.0f));
+		} else {
+			reg_dx=POS_Y;
+		}
 		break;
 	case 0x04:	/* Position Mouse */
 		/* If position isn't different from current position
@@ -1160,7 +1176,11 @@ static Bitu INT74_Handler(void) {
 			reg_ax=mouse.event_queue[mouse.events].type;
 			reg_bx=mouse.event_queue[mouse.events].buttons;
 			reg_cx=POS_X;
-			reg_dx=POS_Y;
+			if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
+				reg_dx=(Bit16u)(mouse.y * (200.0f / 480.0f));
+			} else {
+				reg_dx=POS_Y;
+			}
 			reg_si=static_cast<Bit16s>(mouse.mickey_x);
 			reg_di=static_cast<Bit16s>(mouse.mickey_y);
 			CPU_Push16(RealSeg(CALLBACK_RealPointer(int74_ret_callback)));
