@@ -34,5 +34,8 @@ void DOSV_OffCursor();
 void INT8_DOSV();
 Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font);
 enum DOSV_VTEXT_MODE DOSV_GetVtextMode(Bitu no = 0);
+void SetTrueVideoMode(Bit8u mode);
+Bit8u GetTrueVideoMode();
+bool DOSV_CheckJapaneseVideoMode();
 
 #endif
