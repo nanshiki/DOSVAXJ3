@@ -555,13 +555,13 @@ void J3_SetConfig(Section_prop *section)
 void J3_GetPalette(Bit8u no, Bit8u &r, Bit8u &g, Bit8u &b)
 {
 	if(no == 0) {
-		r = (j3_back_color >> 16) & 0xff;
-		g = (j3_back_color >> 8) & 0xff;
-		b = j3_back_color & 0xff;
+		r = (j3_back_color >> 18) & 0x3f;
+		g = (j3_back_color >> 10) & 0x3f;
+		b = (j3_back_color >> 2) & 0x3f;
 	} else {
-		r = (j3_text_color >> 16) & 0xff;
-		g = (j3_text_color >> 8) & 0xff;
-		b = j3_text_color & 0xff;
+		r = (j3_text_color >> 18) & 0x3f;
+		g = (j3_text_color >> 10) & 0x3f;
+		b = (j3_text_color >> 2) & 0x3f;
 	}
 }
 
