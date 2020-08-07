@@ -41,13 +41,73 @@ typedef Bit8u * (* VGA_Line_Handler)(Bitu vidstart, Bitu line);
 static VGA_Line_Handler VGA_DrawLine;
 static Bit8u TempLine[SCALER_MAXWIDTH * 4];
 
+static Bit8u LastLine[2][160];
+
+static Bit8u DcgaColor1[] = { 0x01, 0x04, 0x10, 0x40 };
+static Bit8u DcgaColor2[] = { 0x02, 0x08, 0x20, 0x80 };
+static Bit8u DcgaColor3[] = { 0x03, 0x0c, 0x30, 0xc0 };
+
+static Bit8u SetDcgaData1(Bit8u val)
+{
+	Bit8u n, b, val1;
+
+	val1 = 0;
+	for(n = 0 ; n < 4 ; n++) {
+		b = val & DcgaColor3[n];
+		if(b == DcgaColor1[n]) {
+			val1 |= DcgaColor2[n];
+		} else if(b == DcgaColor2[n]) {
+			val1 |= DcgaColor2[n];
+		} else if(b == DcgaColor3[n]) {
+			val1 |= DcgaColor3[n];
+		}
+	}
+	return val1;
+}
+
+static Bit8u SetDcgaData2(Bit8u val)
+{
+	Bit8u n, b, val2;
+
+	val2 = 0;
+	for(n = 0 ; n < 4 ; n++) {
+		b = val & DcgaColor3[n];
+		if(b == DcgaColor2[n]) {
+			val2 |= DcgaColor1[n];
+		} else if(b == DcgaColor3[n]) {
+			val2 |= DcgaColor3[n];
+		}
+	}
+	return val2;
+}
+
 static Bit8u * VGA_Draw_1BPP_Line(Bitu vidstart, Bitu line) {
 	const Bit8u *base = vga.tandy.draw_base + ((line & vga.tandy.line_mask) << vga.tandy.line_shift);
 	Bit32u *draw = (Bit32u *)TempLine;
-	for (Bitu x=vga.draw.blocks;x>0;x--, vidstart++) {
-		Bitu val = base[(vidstart & (8 * 1024 -1))];
-		*draw++=CGA_2_Table[val >> 4];
-		*draw++=CGA_2_Table[val & 0xf];
+	if(IS_J3_ARCH && (real_readb(0x40, 0x49) == 0x04 || real_readb(0x40, 0x49) == 0x05)) {
+		Bit8u val;
+		for (Bitu x = 0 ; x < vga.draw.blocks ; x++, vidstart++) {
+			val = base[(vidstart & (8 * 1024 -1))];
+			if(line == 0) {
+				LastLine[0][x] = val;
+				val = SetDcgaData1(val);
+			} else if(line == 1) {
+				LastLine[1][x] = val;
+				val = SetDcgaData2(LastLine[0][x]);
+			} else if(line == 2) {
+				val = SetDcgaData1(LastLine[1][x]);
+			} else {
+				val = SetDcgaData2(LastLine[1][x]);
+			}
+			*draw++=CGA_2_Table[val >> 4];
+			*draw++=CGA_2_Table[val & 0xf];
+		}
+	} else {
+		for (Bitu x=vga.draw.blocks;x>0;x--, vidstart++) {
+			Bitu val = base[(vidstart & (8 * 1024 -1))];
+			*draw++=CGA_2_Table[val >> 4];
+			*draw++=CGA_2_Table[val & 0xf];
+		}
 	}
 	return TempLine;
 }
