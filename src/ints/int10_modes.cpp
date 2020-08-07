@@ -1408,13 +1408,43 @@ att_text16:
 			}
 			break;
 		case M_DCGA:
-			for (i=0;i<64;i++) {
-				IO_Write(0x3c9,cga_palette_2[i][0]);
-				IO_Write(0x3c9,cga_palette_2[i][1]);
-				IO_Write(0x3c9,cga_palette_2[i][2]);
+			{
+				Bit8u r, g, b;
+				Bit8u vmode = GetTrueVideoMode();
+				J3_GetPalette(0, r, g, b);
+				IO_Write(0x3c9, r);
+				IO_Write(0x3c9, g);
+				IO_Write(0x3c9, b);
+				J3_GetPalette(1, r, g, b);
+				for(i = 1 ; i < 64 ; i++) {
+					if(vmode != 0x74 || (vmode == 0x74 && i == 23)) {
+						IO_Write(0x3c9, r);
+						IO_Write(0x3c9, g);
+						IO_Write(0x3c9, b);
+					} else {
+						IO_Write(0x3c9,cga_palette_2[i][0]);
+						IO_Write(0x3c9,cga_palette_2[i][1]);
+						IO_Write(0x3c9,cga_palette_2[i][2]);
+					}
+				}
 			}
 			break;
 		case M_CGA2:
+			if(IS_J3_ARCH) {
+				Bit8u r, g, b;
+				Bit8u vmode = GetTrueVideoMode();
+				J3_GetPalette(0, r, g, b);
+				IO_Write(0x3c9, r);
+				IO_Write(0x3c9, g);
+				IO_Write(0x3c9, b);
+				J3_GetPalette(1, r, g, b);
+				for(i = 1 ; i < 64 ; i++) {
+					IO_Write(0x3c9, r);
+					IO_Write(0x3c9, g);
+					IO_Write(0x3c9, b);
+				}
+				break;
+			}
 		case M_CGA4:
 		case M_TANDY16:
 			for (i=0;i<64;i++) {
@@ -1625,12 +1655,6 @@ dac_text16:
 				real_writew(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE, 0x0f0f);
 			}
 			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL, 0x01);		// soft scroll
-
-			Bit8u r, g, b;
-			J3_GetPalette(0, r, g, b);
-			RENDER_SetPal(0, r, g, b);
-			J3_GetPalette(1, r, g, b);
-			RENDER_SetPal(1, r, g, b);
 		} else {
 			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, 0x00);
 		}
@@ -1725,3 +1749,9 @@ bool INT10_SetDOSVModeVtext(Bit16u mode, enum DOSV_VTEXT_MODE vtext_mode)
 	return true;
 }
 
+void INT10_SetJ3ModeCGA4(Bit16u mode)
+{
+	if(SetCurMode(ModeList_VGA, mode)) {
+		FinishSetMode(true);
+	}
+}
