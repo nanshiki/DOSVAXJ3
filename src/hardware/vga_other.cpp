@@ -384,6 +384,9 @@ static void write_cga_color_select(Bitu val) {
 }
 
 static void write_cga(Bitu port,Bitu val,Bitu /*iolen*/) {
+	if(IS_J3_ARCH && (real_readb(0x40, 0x49) == 0x04 || real_readb(0x40, 0x49) == 0x05)) {
+		return;
+	}
 	switch (port) {
 	case 0x3d8:
 		vga.tandy.mode_control=(Bit8u)val;
