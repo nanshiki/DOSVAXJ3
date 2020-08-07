@@ -30,6 +30,7 @@
 #include "control.h"
 #include "jfont.h"
 #include "dosv.h"
+#include "dos_inc.h"
 
 #define	VTEXT_MODE_COUNT	2
 
@@ -40,9 +41,29 @@ static Bit8u dosv_cursor_stat;
 static Bitu dosv_cursor_x;
 static Bitu dosv_cursor_y;
 static enum DOSV_VTEXT_MODE dosv_vtext_mode[VTEXT_MODE_COUNT];
+Bit8u TrueVideoMode;
+
+Bit8u GetTrueVideoMode()
+{
+	return TrueVideoMode;
+}
+
+void SetTrueVideoMode(Bit8u mode)
+{
+	TrueVideoMode = mode;
+}
+
+bool DOSV_CheckJapaneseVideoMode()
+{
+	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x70 || TrueVideoMode == 0x72 || TrueVideoMode == 0x78)) {
+		return true;
+	}
+	return false;
+}
 
 bool INT10_DOSV_SetCRTBIOSMode(Bitu mode)
 {
+	TrueVideoMode = mode;
 	if (!IS_DOSV) return false;
 	if (mode == 0x03 || mode == 0x70) {
 		LOG(LOG_INT10, LOG_NORMAL)("DOS/V CRT BIOS has been set to JP mode.");
