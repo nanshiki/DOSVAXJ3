@@ -158,6 +158,7 @@ bool DOS_GetSTDINStatus();
 Bit8u DOS_FindDevice(char const * name);
 void DOS_SetupDevices(void);
 void DOS_ClearKeyMap(void);
+void DOS_SetConKey(Bit16u src, Bit16u dst);
 
 /* Execute and new process creation */
 bool DOS_NewPSP(Bit16u pspseg,Bit16u size);
