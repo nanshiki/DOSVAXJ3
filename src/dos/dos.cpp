@@ -43,11 +43,34 @@
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
 extern bool force;
+extern bool LineInputFlag;
+extern bool CtrlCFlag;
 
 #define DOS_COPYBUFSIZE 0x10000
 Bit8u dos_copybuf[DOS_COPYBUFSIZE];
 
+bool DOS_BreakFlag = false;
+
 static Bit16u ias_handle;
+
+static bool hat_flag[] = {
+//            a     b     c     d     e      f      g      h
+	false, true, true, true, true, true, false,   false, false,
+//       i      j     k     l      m     n     o      p     q
+	 false, false, true, true, false, true, true, false, true,
+//      r      s      t      u     v     w     x     y     z
+	 true, false, false, false, true, true, true, true, true
+};
+
+bool CheckHat(Bit8u code)
+{
+	if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
+		if(code <= 0x1a) {
+			return hat_flag[code];
+		}
+	}
+	return false;
+}
 
 void DOS_SetError(Bit16u code) {
 	dos.errorcode=code;
@@ -116,6 +139,93 @@ static inline void overhead() {
 }
 #endif
 
+bool DOS_BreakINT23InProgress = false;
+
+void DOS_PrintCBreak() {
+	/* print ^C <newline> */
+	Bit16u n = 4;
+	const char *nl = "^C\r\n";
+	DOS_WriteFile(STDOUT,(Bit8u*)nl,&n);
+}
+bool DOS_BreakTest() {
+	if (DOS_BreakFlag) {
+		bool terminate = true;
+		bool terminint23 = false;
+		Bitu segv,offv;
+
+		/* print ^C on the console */
+		DOS_PrintCBreak();
+
+		DOS_BreakFlag = false;
+
+		offv = mem_readw((0x23*4)+0);
+		segv = mem_readw((0x23*4)+2);
+		if (offv != 0 && segv != 0) { /* HACK: DOSBox's shell currently does not assign INT 23h */
+			/* NTS: DOS calls are allowed within INT 23h! */
+			Bitu save_sp = reg_sp;
+
+			/* set carry flag */
+			reg_flags |= 1;
+
+			/* invoke INT 23h */
+			/* NTS: Some DOS programs provide their own INT 23h which then calls INT 21h AH=0x4C
+			 *      inside the handler! Set a flag so that if that happens, the termination
+			 *      handler will throw us an exception to force our way back here after
+			 *      termination completes!
+			 *
+			 *      This fixes: PC Mix compiler PCL.EXE
+			 *
+			 *      FIXME: This is an ugly hack! */
+			try {
+				DOS_BreakINT23InProgress = true;
+				CALLBACK_RunRealInt(0x23);
+				DOS_BreakINT23InProgress = false;
+			}
+			catch (int x) {
+				if (x == 0) {
+					DOS_BreakINT23InProgress = false;
+					terminint23 = true;
+				}
+				else {
+					LOG_MSG("Unexpected code in INT 23h termination exception\n");
+					abort();
+				}
+			}
+
+			/* if the INT 23h handler did not already terminate itself... */
+			if (!terminint23) {
+				/* if it returned with IRET, or with RETF and CF=0, don't terminate */
+				if (reg_sp == save_sp || (reg_flags & 1) == 0) {
+					terminate = false;
+					LOG_MSG("Note: DOS handler does not wish to terminate\n");
+				}
+				else {
+					/* program does not wish to continue. it used RETF. pop the remaining flags off */
+					LOG_MSG("Note: DOS handler does wish to terminate\n");
+				}
+
+				if (reg_sp != save_sp) reg_sp += 2;
+			}
+		}
+
+		if (terminate) {
+			LOG_MSG("Note: DOS break terminating program\n");
+			DOS_Terminate(dos.psp(),false,0);
+			return false;
+		}
+		else if (terminint23) {
+			LOG_MSG("Note: DOS break handler terminated program for us.\n");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void DOS_BreakAction() {
+	DOS_BreakFlag = true;
+}
+
 typedef struct {
 	Bit16u size_of_structure;
 	Bit16u structure_version;
@@ -137,6 +247,13 @@ static Bitu DOS_21Handler(void) {
 		psp.SetStack(RealMake(SegValue(ss),reg_sp-18));
 	}
 
+    if(dos.breakcheck && (reg_ah != 0x00 && reg_ah != 0x4c && reg_ah != 0x31)) {
+		if(CtrlCFlag) {
+			DOS_BreakAction();
+			if (!DOS_BreakTest()) return CBRET_NONE;
+		}
+	}
+
 	char name1[DOSNAMEBUF+2+DOS_NAMELENGTH_ASCII];
 	char name2[DOSNAMEBUF+2+DOS_NAMELENGTH_ASCII];
 	char *p;
@@ -146,19 +263,36 @@ static Bitu DOS_21Handler(void) {
 	switch (reg_ah) {
 	case 0x00:		/* Terminate Program */
 		DOS_Terminate(mem_readw(SegPhys(ss)+reg_sp+2),false,0);
+		if (DOS_BreakINT23InProgress) throw int(0); /* HACK: Ick */
 		break;
 	case 0x01:		/* Read character from STDIN, with echo */
 		{	
 			Bit8u c;Bit16u n=1;
 			dos.echo=true;
 			DOS_ReadFile(STDIN,&c,&n);
+			if (c == 3) {
+				DOS_BreakAction();
+				if (!DOS_BreakTest()) return CBRET_NONE;
+			}
 			reg_al=c;
 			dos.echo=false;
 		}
 		break;
 	case 0x02:		/* Write character to STDOUT */
 		{
-			Bit8u c=reg_dl;Bit16u n=1;
+			Bit8u c; Bit16u n;
+			Bit8u handle = RealHandle(STDIN);
+			if(handle != 0xFF && Files[handle] && Files[handle]->IsName("CON")) {
+				if(CtrlCFlag) {
+					while (DOS_GetSTDINStatus()) {
+						n = 1; DOS_ReadFile(STDIN,&c,&n);
+					}
+					DOS_BreakAction();
+					if (!DOS_BreakTest()) return CBRET_NONE;
+				}
+			}
+			c = reg_dl;
+			n = 1;
 			if(CheckStayVz()) {
 				if(c == 0x0d) {
 					c = 0x0a;
@@ -236,12 +370,27 @@ static Bitu DOS_21Handler(void) {
 		{
 				Bit8u c;Bit16u n=1;
 				DOS_ReadFile (STDIN,&c,&n);
+				if (c == 3) {
+					DOS_BreakAction();
+					if (!DOS_BreakTest()) return CBRET_NONE;
+				}
 				reg_al=c;
 				break;
 		};
 	case 0x09:		/* Write string to STDOUT */
 		{	
-			Bit8u c;Bit16u n=1;
+			Bit8u c; Bit16u n;
+			Bit8u handle = RealHandle(STDIN);
+			if(handle != 0xFF && Files[handle] && Files[handle]->IsName("CON")) {
+				if(CtrlCFlag) {
+					while (DOS_GetSTDINStatus()) {
+						n = 1; DOS_ReadFile(STDIN,&c,&n);
+					}
+					DOS_BreakAction();
+					if (!DOS_BreakTest()) return CBRET_NONE;
+				}
+			}
+			n = 1;
 			PhysPt buf=SegPhys(ds)+reg_dx;
 			while ((c=mem_readb(buf++))!='$') {
 				DOS_WriteFile(STDOUT,&c,&n);
@@ -257,10 +406,20 @@ static Bitu DOS_21Handler(void) {
 			Bit8u read=0;Bit8u c;Bit16u n=1;
 			if (!free) break;
 			free--;
+			LineInputFlag = true;
 			for(;;) {
 				DOS_ReadFile(STDIN,&c,&n);
 				if (n == 0)				// End of file
 					E_Exit("DOS:0x0a:Redirected input reached EOF");
+				if (c == 0) {
+					DOS_ReadFile(STDIN,&c,&n);
+					if(c == 0x4b) {
+						// left -> backspace
+						c = 0x08;
+					} else {
+						continue;
+					}
+				}
 				if (c == 10)			// Line feed
 					continue;
 				if (c == 8) {			// Backspace
@@ -275,6 +434,11 @@ static Bitu DOS_21Handler(void) {
 								if(isKanji1(c)) {
 									flag = 1;
 								}
+								if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
+									if(CheckHat(c)) {
+										flag = 2;
+									}
+								}
 							}
 						}
 						// STDOUT treats backspace as non-destructive.
@@ -283,7 +447,7 @@ static Bitu DOS_21Handler(void) {
 							c = ' '; DOS_WriteFile(STDOUT,&c,&n);
 							c = 8;   DOS_WriteFile(STDOUT,&c,&n);
 							--read;
-						} else {
+						} else if(flag == 1) {
 							c = 8;   DOS_WriteFile(STDOUT,&c,&n);
 							         DOS_WriteFile(STDOUT,&c,&n);
 							c = ' '; DOS_WriteFile(STDOUT,&c,&n);
@@ -291,8 +455,25 @@ static Bitu DOS_21Handler(void) {
 							c = 8;   DOS_WriteFile(STDOUT,&c,&n);
 							         DOS_WriteFile(STDOUT,&c,&n);
 							read -= 2;
+						} else if(flag == 2) {
+							c = 8;   DOS_WriteFile(STDOUT,&c,&n);
+							         DOS_WriteFile(STDOUT,&c,&n);
+							c = ' '; DOS_WriteFile(STDOUT,&c,&n);
+							         DOS_WriteFile(STDOUT,&c,&n);
+							c = 8;   DOS_WriteFile(STDOUT,&c,&n);
+							         DOS_WriteFile(STDOUT,&c,&n);
+							--read;
 						}
 					}
+					continue;
+				}
+				if (c == 3) {   // CTRL+C
+					LineInputFlag = false;
+					DOS_BreakAction();
+					if (!DOS_BreakTest()) return CBRET_NONE;
+				}
+				if((IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) && c == 7) {
+					DOS_WriteFile(STDOUT, &c, &n);
 					continue;
 				}
 				if (read == free && c != 13) {		// Keyboard buffer full
@@ -306,7 +487,8 @@ static Bitu DOS_21Handler(void) {
 					break;
 				}
 				read++;
-			};
+			}
+			LineInputFlag = false;
 			mem_writeb(data+1,read);
 			break;
 		};
@@ -320,11 +502,11 @@ static Bitu DOS_21Handler(void) {
 	case 0x0c:		/* Flush Buffer and read STDIN call */
 		{
 			/* flush buffer if STDIN is CON */
-			Bit8u handle=RealHandle(STDIN);
-			if (handle!=0xFF && Files[handle] && Files[handle]->IsName("CON")) {
-				Bit8u c;Bit16u n;
+			Bit8u handle = RealHandle(STDIN);
+			if(handle != 0xFF && Files[handle] && Files[handle]->IsName("CON")) {
+				Bit8u c; Bit16u n;
 				while (DOS_GetSTDINStatus()) {
-					n=1;	DOS_ReadFile(STDIN,&c,&n);
+					n = 1; DOS_ReadFile(STDIN,&c,&n);
 				}
 			}
 			switch (reg_al) {
@@ -549,6 +731,7 @@ static Bitu DOS_21Handler(void) {
 		// Important: This service does not set the carry flag!
 		DOS_ResizeMemory(dos.psp(),&reg_dx);
 		DOS_Terminate(dos.psp(),true,reg_al);
+		if (DOS_BreakINT23InProgress) throw int(0); /* HACK: Ick */
 		break;
 	case 0x1f: /* Get drive parameter block for default drive */
 	case 0x32: /* Get drive parameter block for specific drive */
@@ -734,6 +917,15 @@ static Bitu DOS_21Handler(void) {
 				MEM_BlockWrite(SegPhys(ds)+reg_dx,dos_copybuf,toread);
 				reg_ax=toread;
 				CALLBACK_SCF(false);
+			} else if(dos.errorcode == 77) {
+				DOS_BreakAction();
+				if (!DOS_BreakTest()) {
+					dos.echo = false;
+					return CBRET_NONE;
+				} else {
+					reg_ax=dos.errorcode;
+					CALLBACK_SCF(true);
+				}
 			} else {
 				reg_ax=dos.errorcode;
 				CALLBACK_SCF(true);
@@ -898,6 +1090,7 @@ static Bitu DOS_21Handler(void) {
 //TODO Check for use of execution state AL=5
 	case 0x4c:					/* EXIT Terminate with return code */
 		DOS_Terminate(dos.psp(),false,reg_al);
+		if (DOS_BreakINT23InProgress) throw int(0); /* HACK: Ick */
 		break;
 	case 0x4d:					/* Get Return code */
 		reg_al=dos.return_code;/* Officially read from SDA and clear when read */
@@ -1838,7 +2031,10 @@ static Bitu DOS_27Handler(void) {
 	// Terminate & stay resident
 	Bit16u para = (reg_dx/16)+((reg_dx % 16)>0);
 	Bit16u psp = dos.psp(); //mem_readw(SegPhys(ss)+reg_sp+2);
-	if (DOS_ResizeMemory(psp,&para)) DOS_Terminate(psp,true,0);
+	if (DOS_ResizeMemory(psp,&para)) {
+		DOS_Terminate(psp,true,0);
+		if (DOS_BreakINT23InProgress) throw int(0); /* HACK: Ick */
+	}
 	return CBRET_NONE;
 }
 
@@ -1869,33 +2065,411 @@ static Bitu DOS_26Handler(void) {
     return CBRET_NONE;
 }
 
+#define NUMBER_ANSI_DATA 10
+
+struct INT29H_DATA {
+	Bit8u lastwrite;
+	struct {
+		bool esc;
+		bool sci;
+		bool enabled;
+		Bit8u attr;
+		Bit8u data[NUMBER_ANSI_DATA];
+		Bit8u numberofarg;
+		Bit8s savecol;
+		Bit8s saverow;
+		bool warned;
+		bool key;
+	} ansi;
+	Bit16u keepcursor;
+} int29h_data;
+
+static void ClearAnsi29h(void)
+{
+	for(Bit8u i = 0 ; i < NUMBER_ANSI_DATA ; i++) {
+		int29h_data.ansi.data[i] = 0;
+	}
+	int29h_data.ansi.esc = false;
+	int29h_data.ansi.sci = false;
+	int29h_data.ansi.numberofarg = 0;
+	int29h_data.ansi.key = false;
+}
+
 static Bitu DOS_29Handler(void)
 {
 	Bit16u tmp_ax = reg_ax;
 	Bit16u tmp_bx = reg_bx;
+	Bit16u tmp_cx = reg_cx;
+	Bit16u tmp_dx = reg_dx;
+	Bitu i;
+	Bit8u col,row,page;
+	Bit16u ncols,nrows;
+	Bit8u tempdata;
+	if(!int29h_data.ansi.esc) {
+		if(reg_al == '\033') {
+			/*clear the datastructure */
+			ClearAnsi29h();
+			/* start the sequence */
+			int29h_data.ansi.esc = true;
+		} else if(reg_al == '\t' && !dos.direct_output) {
+			/* expand tab if not direct output */
+			page = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_PAGE);
+			do {
+				if(CheckAnotherDisplayDriver()) {
+					reg_ah = 0x0e;
+					reg_al = ' ';
+					CALLBACK_RunRealInt(0x10);
+				} else {
+					if(int29h_data.ansi.enabled) {
+						INT10_TeletypeOutputAttr(' ', int29h_data.ansi.attr, true);
+					} else {
+						INT10_TeletypeOutput(' ', 7);
+					}
+				}
+				col = CURSOR_POS_COL(page);
+			} while(col % 8);
+			int29h_data.lastwrite = reg_al;
+		} else { 
+			bool scroll = false;
+			/* Some sort of "hack" now that '\n' doesn't set col to 0 (int10_char.cpp old chessgame) */
+			if((reg_al == '\n') && (int29h_data.lastwrite != '\r')) {
+				reg_ah = 0x0e;
+				reg_al = '\r';
+				CALLBACK_RunRealInt(0x10);
+			}
+			reg_ax = tmp_ax;
+			int29h_data.lastwrite = reg_al;
+			/* use ansi attribute if ansi is enabled, otherwise use DOS default attribute*/
+			page = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_PAGE);
+			col = CURSOR_POS_COL(page);
+			row = CURSOR_POS_ROW(page);
+			ncols = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+			nrows = real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS);
+			if(reg_al == 0x0d) {
+				col = 0;
+			} else if(reg_al == 0x0a) {
+				if(row < nrows) {
+					row++;
+				} else {
+					scroll = true;
+				}
+			} else if(reg_al == 0x08) {
+				if(col > 0) {
+					col--;
+				}
+			} else {
+				reg_ah = 0x09;
+				reg_bh = page;
+				reg_bl = int29h_data.ansi.attr;
+				reg_cx = 1;
+				CALLBACK_RunRealInt(0x10);
 
-	if(IS_DOS_JAPANESE && reg_al != 0x0a) {
-		Bit16u tmp_es = SegValue(es);
-		Bit16u tmp_di = reg_di;
-
-		reg_ah = 0xfe;
-		CALLBACK_RunRealInt(0x10);
-
-		Bit16u seg = SegValue(es);
-		Bit16u col = CURSOR_POS_COL(0);
-		Bit16u row = CURSOR_POS_ROW(0);
-		Bit16u width = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
-		real_writeb(seg, reg_di + row * width * 2 + col * 2 + 1, 0x07);
-
-		reg_di = tmp_di;
-		SegSet16(es, tmp_es);
+				col++;
+				if(col >= ncols) {
+					col = 0;
+					if(row < nrows) {
+						row++;
+					} else {
+						scroll = true;
+					}
+				}
+			}
+			reg_ah = 0x02;
+			reg_bh = page;
+			reg_dl = col;
+			reg_dh = row;
+			CALLBACK_RunRealInt(0x10);
+			if(scroll) {
+				reg_bh = 0x07;
+				reg_ax = 0x0601;
+				reg_cx = 0x0000;
+				reg_dl = (Bit8u)(ncols - 1);
+				reg_dh = (Bit8u)nrows;
+				CALLBACK_RunRealInt(0x10);
+			}
+		}
+	} else if(!int29h_data.ansi.sci) {
+		switch(reg_al) {
+		case '[': 
+			int29h_data.ansi.sci = true;
+			break;
+		case '7': /* save cursor pos + attr */
+		case '8': /* restore this  (Wonder if this is actually used) */
+		case 'D':/* scrolling DOWN*/
+		case 'M':/* scrolling UP*/ 
+		default:
+			LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: unknown char %c after a esc", reg_al); /*prob () */
+			ClearAnsi29h();
+			break;
+		}
+	} else {
+		/*ansi.esc and ansi.sci are true */
+		page = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_PAGE);
+		if(int29h_data.ansi.key) {
+			if(reg_al == '"') {
+				int29h_data.ansi.key = false;
+			} else {
+				if(int29h_data.ansi.numberofarg < NUMBER_ANSI_DATA) {
+					int29h_data.ansi.data[int29h_data.ansi.numberofarg++] = reg_al;
+				}
+			}
+		} else {
+			switch(reg_al) {
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+					int29h_data.ansi.data[int29h_data.ansi.numberofarg] = 10 * int29h_data.ansi.data[int29h_data.ansi.numberofarg] + (reg_al - '0');
+					break;
+				case ';': /* till a max of NUMBER_ANSI_DATA */
+					int29h_data.ansi.numberofarg++;
+					break;
+				case 'm':               /* SGR */
+					for(i = 0 ; i <= int29h_data.ansi.numberofarg ; i++) {
+						int29h_data.ansi.enabled = true;
+						switch(int29h_data.ansi.data[i]) {
+						case 0: /* normal */
+							int29h_data.ansi.attr = 0x07;//Real ansi does this as well. (should do current defaults)
+							int29h_data.ansi.enabled = false;
+							break;
+						case 1: /* bold mode on*/
+							int29h_data.ansi.attr |= 0x08;
+							break;
+						case 4: /* underline */
+							LOG(LOG_IOCTL,LOG_NORMAL)("ANSI:no support for underline yet");
+							break;
+						case 5: /* blinking */
+							int29h_data.ansi.attr |= 0x80;
+							break;
+						case 7: /* reverse */
+							int29h_data.ansi.attr = 0x70;//Just like real ansi. (should do use current colors reversed)
+							break;
+						case 30: /* fg color black */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x0;
+							break;
+						case 31:  /* fg color red */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x4;
+							break;
+						case 32:  /* fg color green */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x2;
+							break;
+						case 33: /* fg color yellow */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x6;
+							break;
+						case 34: /* fg color blue */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x1;
+							break;
+						case 35: /* fg color magenta */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x5;
+							break;
+						case 36: /* fg color cyan */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x3;
+							break;
+						case 37: /* fg color white */
+							int29h_data.ansi.attr &= 0xf8;
+							int29h_data.ansi.attr |= 0x7;
+							break;
+						case 40:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x0;
+							break;
+						case 41:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x40;
+							break;
+						case 42:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x20;
+							break;
+						case 43:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x60;
+							break;
+						case 44:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x10;
+							break;
+						case 45:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x50;
+							break;
+						case 46:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x30;
+							break;	
+						case 47:
+							int29h_data.ansi.attr &= 0x8f;
+							int29h_data.ansi.attr |= 0x70;
+							break;
+						default:
+							break;
+						}
+					}
+					ClearAnsi29h();
+					break;
+				case 'f':
+				case 'H':/* Cursor Pos*/
+					if(!int29h_data.ansi.warned) { //Inform the debugger that ansi is used.
+						int29h_data.ansi.warned = true;
+						LOG(LOG_IOCTL,LOG_WARN)("ANSI SEQUENCES USED");
+					}
+					ncols = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+					nrows = real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1;
+					/* Turn them into positions that are on the screen */
+					if(int29h_data.ansi.data[0] == 0) int29h_data.ansi.data[0] = 1;
+					if(int29h_data.ansi.data[1] == 0) int29h_data.ansi.data[1] = 1;
+					if(int29h_data.ansi.data[0] > nrows) int29h_data.ansi.data[0] = (Bit8u)nrows;
+					if(int29h_data.ansi.data[1] > ncols) int29h_data.ansi.data[1] = (Bit8u)ncols;
+					INT10_SetCursorPos_viaRealInt(--(int29h_data.ansi.data[0]), --(int29h_data.ansi.data[1]), page); /*ansi=1 based, int10 is 0 based */
+					ClearAnsi29h();
+					break;
+					/* cursor up down and forward and backward only change the row or the col not both */
+				case 'A': /* cursor up*/
+					col = CURSOR_POS_COL(page) ;
+					row = CURSOR_POS_ROW(page) ;
+					tempdata = (int29h_data.ansi.data[0] ? int29h_data.ansi.data[0] : 1);
+					if(tempdata > row) row = 0;
+					else row -= tempdata;
+					INT10_SetCursorPos_viaRealInt(row, col, page);
+					ClearAnsi29h();
+					break;
+				case 'B': /*cursor Down */
+					col = CURSOR_POS_COL(page) ;
+					row = CURSOR_POS_ROW(page) ;
+					nrows = real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1;
+					tempdata = (int29h_data.ansi.data[0] ? int29h_data.ansi.data[0] : 1);
+					if(tempdata + static_cast<Bitu>(row) >= nrows) row = nrows - 1;
+					else row += tempdata;
+					INT10_SetCursorPos_viaRealInt(row, col, page);
+					ClearAnsi29h();
+					break;
+				case 'C': /*cursor forward */
+					col = CURSOR_POS_COL(page);
+					row = CURSOR_POS_ROW(page);
+					ncols = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+					tempdata = (int29h_data.ansi.data[0] ? int29h_data.ansi.data[0] : 1);
+					if(tempdata + static_cast<Bitu>(col) >= ncols) col = ncols - 1;
+					else col += tempdata;
+					INT10_SetCursorPos_viaRealInt(row, col, page);
+					ClearAnsi29h();
+					break;
+				case 'D': /*Cursor Backward  */
+					col = CURSOR_POS_COL(page);
+					row = CURSOR_POS_ROW(page);
+					tempdata=(int29h_data.ansi.data[0] ? int29h_data.ansi.data[0] : 1);
+					if(tempdata > col) col = 0;
+					else col -= tempdata;
+					INT10_SetCursorPos_viaRealInt(row, col, page);
+					ClearAnsi29h();
+					break;
+				case 'J': /*erase screen and move cursor home*/
+					if(int29h_data.ansi.data[0] == 0) int29h_data.ansi.data[0] = 2;
+					if(int29h_data.ansi.data[0] != 2) {/* every version behaves like type 2 */
+						LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: esc[%dJ called : not supported handling as 2", int29h_data.ansi.data[0]);
+					}
+					INT10_ScrollWindow_viaRealInt(0, 0, 255, 255, 0, int29h_data.ansi.attr, page);
+					ClearAnsi29h();
+					INT10_SetCursorPos_viaRealInt(0, 0, page);
+					break;
+				case 'h': /* SET   MODE (if code =7 enable linewrap) */
+					if(IS_J3_ARCH) {
+						if(int29h_data.ansi.data[int29h_data.ansi.numberofarg] == 5) {
+							// disable cursor
+							int29h_data.keepcursor = real_readw(BIOSMEM_SEG, BIOSMEM_CURSOR_TYPE);
+							INT10_SetCursorShape(0x20, 0x0f);
+						}
+					}
+				case 'I': /* RESET MODE */
+					LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: set/reset mode called(not supported)");
+					ClearAnsi29h();
+					break;
+				case 'u': /* Restore Cursor Pos */
+					INT10_SetCursorPos_viaRealInt(int29h_data.ansi.saverow, int29h_data.ansi.savecol, page);
+					ClearAnsi29h();
+					break;
+				case 's': /* SAVE CURSOR POS */
+					int29h_data.ansi.savecol = CURSOR_POS_COL(page);
+					int29h_data.ansi.saverow = CURSOR_POS_ROW(page);
+					ClearAnsi29h();
+					break;
+				case 'K': /* erase till end of line (don't touch cursor) */
+					col = CURSOR_POS_COL(page);
+					row = CURSOR_POS_ROW(page);
+					ncols = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+					INT10_WriteChar_viaRealInt(' ', int29h_data.ansi.attr, page, ncols - col, true); //Use this one to prevent scrolling when end of screen is reached
+					//for(i = col;i<(Bitu) ncols; i++) INT10_TeletypeOutputAttr(' ',ansi.attr,true);
+					INT10_SetCursorPos_viaRealInt(row, col, page);
+					ClearAnsi29h();
+					break;
+				case 'M': /* delete line (NANSI) */
+					row = CURSOR_POS_ROW(page);
+					ncols = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+					nrows = real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1;
+					INT10_ScrollWindow_viaRealInt(row, 0, nrows - 1, ncols - 1, int29h_data.ansi.data[0] ? -int29h_data.ansi.data[0] : -1, int29h_data.ansi.attr, 0xFF);
+					ClearAnsi29h();
+					break;
+				case '>':
+					break;
+				case 'l':/* (if code =7) disable linewrap */
+					if(IS_J3_ARCH) {
+						if(int29h_data.ansi.data[int29h_data.ansi.numberofarg] == 5) {
+							// enable cursor
+							INT10_SetCursorShape(int29h_data.keepcursor >> 8, int29h_data.keepcursor & 0xff);
+						}
+						ClearAnsi29h();
+						break;
+					}
+				case 'p':/* reassign keys (needs strings) */
+					{
+						Bit16u src, dst;
+						i = 0;
+						if(int29h_data.ansi.data[i] == 0) {
+							i++;
+							src = int29h_data.ansi.data[i++] << 8;
+						} else {
+							src = int29h_data.ansi.data[i++];
+						}
+						if(int29h_data.ansi.data[i] == 0) {
+							i++;
+							dst = int29h_data.ansi.data[i++] << 8;
+						} else {
+							dst = int29h_data.ansi.data[i++];
+						}
+						DOS_SetConKey(src, dst);
+						ClearAnsi29h();
+					}
+					break;
+				case '"':
+					if(!int29h_data.ansi.key) {
+						int29h_data.ansi.key = true;
+						int29h_data.ansi.numberofarg = 0;
+					}
+					break;
+				case 'i':/* printer stuff */
+				default:
+					LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: unhandled char %c in esc[", reg_al);
+					ClearAnsi29h();
+					break;
+			}
+		}
 	}
-	reg_ah = 0x0e;
-	reg_bl = 0x07;
-	CALLBACK_RunRealInt(0x10);
-
 	reg_ax = tmp_ax;
 	reg_bx = tmp_bx;
+	reg_cx = tmp_cx;
+	reg_dx = tmp_dx;
 
 	return CBRET_NONE;
 }
@@ -1928,7 +2502,8 @@ public:
 		callback[5].Install(NULL,CB_IRET,"DOS Int 28");
 		callback[5].Set_RealVec(0x28);
 
-		if(IS_J3_ARCH || IS_AX_ARCH || IS_DOSV) {
+		if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
+			int29h_data.ansi.attr = 0x07;
 			callback[6].Install(DOS_29Handler,CB_IRET,"CON Output Int 29");
 		} else {
 			callback[6].Install(NULL,CB_INT29,"CON Output Int 29");
