@@ -38,6 +38,8 @@
 #include <string>
 #include <time.h>
 
+extern bool LineInputFlag;
+
 static SHELL_Cmd cmd_list[]={
 {	"DIR",		0,			&DOS_Shell::CMD_DIR,		"SHELL_CMD_DIR_HELP"},
 {	"CHDIR",	1,			&DOS_Shell::CMD_CHDIR,		"SHELL_CMD_CHDIR_HELP"},
@@ -77,6 +79,7 @@ static SHELL_Cmd cmd_list[]={
 {	"TYPE",		0,			&DOS_Shell::CMD_TYPE,		"SHELL_CMD_TYPE_HELP"},
 {	"VER",		0,			&DOS_Shell::CMD_VER,		"SHELL_CMD_VER_HELP"},
 {	"CHEV",		0,			&DOS_Shell::CMD_CHEV,		"SHELL_CMD_CHEV_HELP"},
+{	"BREAK",	0,			&DOS_Shell::CMD_BREAK,		"SHELL_CMD_BREAK_HELP"},
 {0,0,0,0}
 }; 
 
@@ -154,7 +157,9 @@ void DOS_Shell::DoCommand(char * line) {
 			Bit32u cmd_index=0;
 			while (cmd_list[cmd_index].name) {
 				if (strcasecmp(cmd_list[cmd_index].name,cmd_buffer)==0) {
+					dos.save_dta();
 					(this->*(cmd_list[cmd_index].handler))(line);
+					dos.restore_dta();
 			 		return;
 				}
 				cmd_index++;
@@ -168,7 +173,9 @@ void DOS_Shell::DoCommand(char * line) {
 	Bit32u cmd_index=0;
 	while (cmd_list[cmd_index].name) {
 		if (strcasecmp(cmd_list[cmd_index].name,cmd_buffer)==0) {
+			dos.save_dta();
 			(this->*(cmd_list[cmd_index].handler))(line);
+			dos.restore_dta();
 			return;
 		}
 		cmd_index++;
@@ -829,6 +836,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 		char nameTarget[DOS_PATHLENGTH];
 		char nameSource[DOS_PATHLENGTH];
 		
+		bool echo=dos.echo;
 		bool second_file_of_current_source = false;
 		while (ret) {
 			dta.GetResult(name,lname,size,date,time,attr);
@@ -844,6 +852,8 @@ void DOS_Shell::CMD_COPY(char * args) {
 					if (nameTarget[strlen(nameTarget)-1]=='\\') strcat(nameTarget,uselfn?lname:name);
 					strcat(nameTarget,q);
 
+					Bit16u fattr;
+					bool exist = DOS_GetFileAttr(nameTarget, &fattr);
 					//Special variable to ensure that copy * a_file, where a_file is not a directory concats.
 					bool special = second_file_of_current_source && target_is_file;
 					second_file_of_current_source = true; 
@@ -858,17 +868,50 @@ void DOS_Shell::CMD_COPY(char * args) {
 							static Bit8u buffer[0x8000]; // static, otherwise stack overflow possible.
 							bool	failed = false;
 							Bit16u	toread = 0x8000;
+							bool iscon=DOS_FindDevice(name)==DOS_FindDevice("con");
+							if (iscon) {
+								dos.echo = true;
+								LineInputFlag = true;
+							}
+							bool cont;
 							do {
-								failed |= DOS_ReadFile(sourceHandle,buffer,&toread);
-								failed |= DOS_WriteFile(targetHandle,buffer,&toread);
-							} while (toread==0x8000);
-							failed |= DOS_CloseFile(sourceHandle);
-							failed |= DOS_CloseFile(targetHandle);
-							if (strcmp(name,lname)&&uselfn)
+								if (!DOS_ReadFile(sourceHandle,buffer,&toread)) failed = true;
+								if (iscon) {
+									if(dos.errorcode == 77) {
+										WriteOut("^C\r\n");
+										dos.dta(save_dta);
+										DOS_CloseFile(sourceHandle);
+										DOS_CloseFile(targetHandle);
+										if (!exist) DOS_UnlinkFile(nameTarget);
+										dos.echo=echo;
+										return;
+									}
+									cont = true;
+									for(int i = 0 ; i < toread ; i++) {
+										if(buffer[i] == 26) {
+											toread = i;
+											cont = false;
+											break;
+										}
+									}
+									if(!DOS_WriteFile(targetHandle,buffer,&toread)) failed = true;
+									if(cont) toread = 0x8000;
+								} else {
+									if (!DOS_WriteFile(targetHandle,buffer,&toread)) failed = true;
+									cont = toread == 0x8000;
+								}
+							} while (cont);
+							if (!DOS_CloseFile(sourceHandle)) failed=true;
+							if (!DOS_CloseFile(targetHandle)) failed=true;
+							if (failed) {
+								WriteOut(MSG_Get("SHELL_CMD_COPY_ERROR"),uselfn?lname:name);
+							} else if (strcmp(name,lname)&&uselfn) {
 								WriteOut(" %s [%s]\n",lname,name);
-							else
+							} else {
 								WriteOut(" %s\n",uselfn?lname:name);
+							}
 							if(!source.concat && !special) count++; //Only count concat files once
+							LineInputFlag = false;
 						} else {
 							DOS_CloseFile(sourceHandle);
 							WriteOut(MSG_Get("SHELL_CMD_COPY_FAILURE"),const_cast<char*>(target.filename.c_str()));
@@ -883,6 +926,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 			if ((attr&DOS_ATTR_DEVICE) == 0) ret = DOS_FindNext();
 			else ret = false;
 		};
+		dos.echo=echo;
 	}
 
 	WriteOut(MSG_Get("SHELL_CMD_COPY_SUCCESS"),count);
@@ -1639,4 +1683,18 @@ void DOS_Shell::CMD_CHEV(char *args)
 		}
 		WriteOut(MSG_Get("SHELL_CMD_CHEV_STATUS"), status, mode);
 	}
+}
+
+void DOS_Shell::CMD_BREAK(char *args)
+{
+	HELP("BREAK");
+	args = trim(args);
+	if (!*args)
+		WriteOut("BREAK is %s\n", dos.breakcheck ? "on" : "off");
+	else if (!strcasecmp(args, "OFF"))
+		dos.breakcheck = false;
+	else if (!strcasecmp(args, "ON"))
+		dos.breakcheck = true;
+	else
+		WriteOut("Must specify ON or OFF\n");
 }
