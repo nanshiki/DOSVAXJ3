@@ -32,13 +32,13 @@
 #include "support.h"
 #include "timer.h"
 
-Bit8u ShellInputFlag;
 Bitu call_shellstop;
 bool insert;
 /* Larger scope so shell_del autoexec can use it to
  * remove things from the environment */
 Program * first_shell = 0;
 Bit16u cmd_line_seg;
+bool LineInputFlag;
 
 static Bitu shellstop_handler(void) {
 	return CBRET_STOP;
@@ -399,9 +399,9 @@ void DOS_Shell::Run(void) {
 			}
 		} else {
 			if (echo) ShowPrompt();
-			ShellInputFlag = 1;
+			LineInputFlag = true;
 			InputCommand(input_line);
-			ShellInputFlag = 0;
+			LineInputFlag = false;
 			ParseLine(input_line);
 			if(input_line[0] != 0) {
 				if (echo && !bf) WriteOut_NoParsing("\n");
@@ -636,6 +636,7 @@ void SHELL_Init() {
 	MSG_Add("SHELL_CMD_PROMPT_HELP","Changes the DOSBox SVN-lfn command prompt.\n");
 	MSG_Add("SHELL_CMD_COPY_FAILURE","Copy failure : %s.\n");
 	MSG_Add("SHELL_CMD_COPY_SUCCESS","   %d File(s) copied.\n");
+	MSG_Add("SHELL_CMD_COPY_ERROR","Error in copying file %s\n");
 	MSG_Add("SHELL_CMD_SUBST_NO_REMOVE","Unable to remove, drive not in use.\n");
 	MSG_Add("SHELL_CMD_SUBST_FAILURE","SUBST failed. You either made an error in your commandline or the target drive is already used.\nIt's only possible to use SUBST on Local drives");
 
@@ -780,6 +781,8 @@ void SHELL_Init() {
 	        "US: English\n");
 	MSG_Add("SHELL_CMD_CHEV_STATUS","This is the %s environment.\nCurrent video mode is %02xh");
 	MSG_Add("SHELL_CMD_CHEV_CHANGE","Change to the %s environment.\nCurrent video mode is %02xh");
+	MSG_Add("SHELL_CMD_BREAK_HELP","Sets or clears extended CTRL+C checking.\n");
+	MSG_Add("SHELL_CMD_BREAK_HELP_LONG","BREAK [ON | OFF]\n\nType BREAK without a parameter to display the current BREAK setting.\n");
 
 	/* Regular startup */
 	call_shellstop=CALLBACK_Allocate();
