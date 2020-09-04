@@ -33,7 +33,6 @@
 #include "dosv.h"
 #include "SDL_events.h"
 
-extern Bit8u ShellInputFlag;
 Bit8u prevchr = 0;
 
 static void DCGA_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
@@ -1869,9 +1868,6 @@ static void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr,Bit8u pag
 			ReadCharAttr(cur_col,cur_row - 1,page, &chat);
 			//INT10_ReadCharAttr(&chat,page);
 			fill=(Bit8u)(chat>>8);
-			if(ShellInputFlag) {
-				fill = 0x07;
-			}
 		}
 		INT10_ScrollWindow(0,0,(Bit8u)(nrows-1),(Bit8u)(ncols-1),-1,fill,page);
 		cur_row--;
