@@ -41,6 +41,8 @@
 static Bitu call_int16,call_irq1,call_irq6;
 static Bit8u fep_line = 0x01;
 
+bool CtrlCFlag = false;
+
 /* Nice table from BOCHS i should feel bad for ripping this */
 #define none 0
 typedef struct {
@@ -199,6 +201,9 @@ bool BIOS_AddKeyToBuffer(Bit16u code) {
 			}
 		}
 	}
+	if(code == 0x2e03) {
+		CtrlCFlag = true;
+	}
 	/* Check for buffer Full */
 	//TODO Maybe beeeeeeep or something although that should happend when internal buffer is full
 	if (ttail==head) {
@@ -236,7 +241,9 @@ bool get_key(Bit16u &code) {
 		add_key(over_key_buffer.front());
 		over_key_buffer.pop();
 	}
-
+	if(code == 0x2e03) {
+		CtrlCFlag = false;
+	}
 	return true;
 }
 
