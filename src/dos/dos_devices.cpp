@@ -241,6 +241,20 @@ void DOS_ClearKeyMap()
 			if(Devices[i]->IsName("CON")) {
 				device_CON *con = (device_CON *)Devices[i];
 				con->ClearKeyMap();
+				break;
+			}
+		}
+	}
+}
+
+void DOS_SetConKey(Bit16u src, Bit16u dst)
+{
+	for(Bitu i = 0 ; i < DOS_DEVICES ; i++) {
+		if(Devices[i]) {
+			if(Devices[i]->IsName("CON")) {
+				device_CON *con = (device_CON *)Devices[i];
+				con->SetKeyMap(src, dst);
+				break;
 			}
 		}
 	}
