@@ -36,8 +36,10 @@
 
 extern Bit16u cmd_line_seg;
 extern bool insert;
+extern bool CheckHat(Bit8u code);
 
 void DOS_Shell::ShowPrompt(void) {
+	dos.save_dta();
 	std::string line;
 	char prompt[CMD_MAXLINE+2], pt[CMD_MAXLINE+16];
 	char *envPrompt=pt;
@@ -155,6 +157,7 @@ void DOS_Shell::ShowPrompt(void) {
 		}
 	prompt[len] = 0;
 	WriteOut_NoParsing(prompt);
+	dos.restore_dta();
 }
 
 static void outc(Bit8u c) {
@@ -199,6 +202,66 @@ static Bitu GetWideCount(char *line, Bitu str_index)
 			}
 			flag = 0;
 		}
+	}
+	return count;
+}
+
+static void RemoveAllChar(char *line, Bitu str_index)
+{
+	for ( ; str_index > 0 ; str_index--) {
+		// removes all characters
+		if(CheckHat(line[str_index])) {
+			outc(8); outc(8); outc(' '); outc(' '); outc(8); outc(8);
+		} else {
+			outc(8); outc(' '); outc(8);
+		}
+	}
+	if(CheckHat(line[0])) {
+		outc(8); outc(' '); outc(8);
+	}
+}
+
+static Bitu DeleteBackspace(bool delete_flag, char *line, Bitu &str_index, Bitu &str_len)
+{
+	Bitu count, pos;
+	Bit16u len;
+
+	pos = str_index;
+	if(delete_flag) {
+		if(isKanji1(line[pos])) {
+			pos += 2;
+		} else {
+			pos += 1;
+		}
+	}
+	count = GetWideCount(line, pos);
+
+	pos = str_index;
+	while(pos < str_len) {
+		len = 1;
+		DOS_WriteFile(STDOUT, (Bit8u *)&line[pos], &len);
+		pos++;
+	}
+	RemoveAllChar(line, str_len);
+	pos = delete_flag ? str_index : str_index - count;
+	while(pos < str_len - count) {
+		line[pos] = line[pos + count];
+		pos++;
+	}
+	line[pos] = 0;
+	if(!delete_flag) {
+		str_index -= count;
+	}
+	str_len -= count;
+	len = str_len;
+	DOS_WriteFile(STDOUT, (Bit8u *)line, &len);
+	pos = str_len;
+	while(pos > str_index) {
+		outc(8);
+		if(CheckHat(line[pos - 1])) {
+			outc(8);
+		}
+		pos--;
 	}
 	return count;
 }
@@ -265,10 +328,14 @@ void DOS_Shell::InputCommand(char * line) {
 				case 0x4B:	/* LEFT */
 					if (str_index) {
 						Bitu count = GetWideCount(line, str_index);
+						Bit8u ch = line[str_index - 1];
 						while(count > 0) {
 							outc(8);
 							str_index --;
 							count--;
+						}
+						if(CheckHat(ch)) {
+							outc(8);
 						}
 					}
 					break;
@@ -290,6 +357,9 @@ void DOS_Shell::InputCommand(char * line) {
 					while (str_index) {
 						outc(8);
 						str_index--;
+						if(CheckHat(line[str_index])) {
+							outc(8);
+						}
 					}
 					break;
 
@@ -303,15 +373,14 @@ void DOS_Shell::InputCommand(char * line) {
 					if (l_history.empty() || it_history == l_history.end()) break;
 
 					// store current command in history if we are at beginning
-					if (it_history == l_history.begin() && !current_hist) {
-						current_hist=true;
-						l_history.push_front(line);
+					if(*line != 0) {
+						if (it_history == l_history.begin() && !current_hist) {
+							current_hist=true;
+							l_history.push_front(line);
+						}
 					}
-
-					for (;str_index>0; str_index--) {
-						// removes all characters
-						outc(8); outc(' '); outc(8);
-					}
+					RemoveAllChar(line, str_index);
+					str_index = 0;
 					strcpy(line, it_history->c_str());
 					len = (Bit16u)it_history->length();
 					str_len = str_index = len;
@@ -337,10 +406,8 @@ void DOS_Shell::InputCommand(char * line) {
 						break;
 					} else it_history --;
 
-					for (;str_index>0; str_index--) {
-						// removes all characters
-						outc(8); outc(' '); outc(8);
-					}
+					RemoveAllChar(line, str_index);
+					str_index = 0;
 					strcpy(line, it_history->c_str());
 					len = (Bit16u)it_history->length();
 					str_len = str_index = len;
@@ -350,18 +417,8 @@ void DOS_Shell::InputCommand(char * line) {
 
 					break;
 				case 0x53:/* DELETE */
-					{
-						if(str_index>=str_len) break;
-						Bit16u a=str_len-str_index-1;
-						Bit8u* text=reinterpret_cast<Bit8u*>(&line[str_index+1]);
-						DOS_WriteFile(STDOUT,text,&a);//write buffer to screen
-						outc(' ');outc(8);
-						for(Bitu i=str_index;i<str_len-1;i++) {
-							line[i]=line[i+1];
-							outc(8);
-						}
-						line[--str_len]=0;
-						size++;
+					if(str_index < str_len) {
+						size += DeleteBackspace(true, line, str_index, str_len);
 					}
 					break;
 				case 15:		/* Shift-Tab */
@@ -388,33 +445,13 @@ void DOS_Shell::InputCommand(char * line) {
 			};
 			break;
 		case 0x08:				/* BackSpace */
-			if (str_index) {
-				Bitu count = GetWideCount(line, str_index);
-				while(count > 0) {
-					outc(8);
-					Bit32u str_remain=str_len - str_index;
-					size++;
-					if (str_remain) {
-						memmove(&line[str_index-1],&line[str_index],str_remain);
-						line[--str_len]=0;
-						str_index --;
-						/* Go back to redraw */
-						for (Bit16u i=str_index; i < str_len; i++)
-							outc(line[i]);
-					} else {
-						line[--str_index] = '\0';
-						str_len--;
-					}
-					outc(' ');	outc(8);
-					// moves the cursor left
-					while (str_remain--) outc(8);
-					count--;
-				}
+			if(str_index) {
+				size += DeleteBackspace(false, line, str_index, str_len);
 			}
 			if (l_completion.size()) l_completion.clear();
 			break;
 		case 0x0a:				/* New Line not handled */
-			/* Don't care */
+			outc('\n');
 			break;
 		case 0x0d:				/* Return */
 			outc('\n');
@@ -585,6 +622,20 @@ void DOS_Shell::InputCommand(char * line) {
 			size = 0;       // stop the next loop
 			str_len = 0;    // prevent multiple adds of the same line
 			break;
+		case 0x03:				/* Ctrl-C */
+			outc(0x03);
+			outc('\n');
+			outc('\n');
+			*line = 0;
+			if (l_completion.size()) l_completion.clear();
+			size = 0;
+			str_len = 0;
+			break;
+		case 0x07:
+			if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
+				outc(7);
+				break;
+			}
 		default:
 			{
 				bool kanji_flag = false;
@@ -625,6 +676,9 @@ void DOS_Shell::InputCommand(char * line) {
 				while(pos > str_index) {
 					outc(8);
 					pos--;
+					if (CheckHat(line[pos])) {
+						outc(8);
+					}
 				}
 			}
 			break;
@@ -634,15 +688,17 @@ void DOS_Shell::InputCommand(char * line) {
 	if (!str_len) return;
 	str_len++;
 
-	// remove current command from history if it's there
-	if (current_hist) {
-		current_hist=false;
-		l_history.pop_front();
-	}
+	if(*line != 0) {
+		// remove current command from history if it's there
+		if (current_hist) {
+			current_hist=false;
+			l_history.pop_front();
+		}
 
-	// add command line to history
-	l_history.push_front(line); it_history = l_history.begin();
-	if (l_completion.size()) l_completion.clear();
+		// add command line to history
+		l_history.push_front(line); it_history = l_history.begin();
+		if (l_completion.size()) l_completion.clear();
+	}
 }
 
 std::string full_arguments = "";
