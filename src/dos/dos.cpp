@@ -38,7 +38,8 @@
 #include "jfont.h"
 #include <time.h>
 
-#define	IAS_DEVICE_HANDLE	0x1a50
+#define	IAS_DEVICE_HANDLE		0x1a50
+#define	MSKANJI_DEVICE_HANDLE	0x1a51
 
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
@@ -52,6 +53,7 @@ Bit8u dos_copybuf[DOS_COPYBUFSIZE];
 bool DOS_BreakFlag = false;
 
 static Bit16u ias_handle;
+static Bit16u mskanji_handle;
 
 static bool hat_flag[] = {
 //            a     b     c     d     e      f      g      h
@@ -873,9 +875,15 @@ static Bitu DOS_21Handler(void) {
 	case 0x3d:		/* OPEN Open existing file */
 		MEM_StrCopy(SegPhys(ds)+reg_dx,name1,DOSNAMEBUF);
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
-			if(!strncmp(name1, "$IBMAIAS", 8) || !strncmp(name1, "@:$IBMAIAS", 10)) {
+			if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_IAS) && (!strncmp(name1, "$IBMAIAS", 8) || !strncmp(name1, "@:$IBMAIAS", 10))) {
 				ias_handle = IAS_DEVICE_HANDLE;
 				reg_ax = IAS_DEVICE_HANDLE;
+				force = false;
+				CALLBACK_SCF(false);
+				break;
+			} else if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_MSKANJI) && (!strncmp(name1, "MS$KANJI", 8) || !strncmp(name1, "@:MS$KANJI", 10))) {
+				mskanji_handle = MSKANJI_DEVICE_HANDLE;
+				reg_ax = MSKANJI_DEVICE_HANDLE;
 				force = false;
 				CALLBACK_SCF(false);
 				break;
@@ -898,6 +906,9 @@ static Bitu DOS_21Handler(void) {
 	case 0x3e:		/* CLOSE Close file */
 		if(ias_handle != 0 && ias_handle == reg_bx) {
 			ias_handle = 0;
+			CALLBACK_SCF(false);
+		} else if(mskanji_handle != 0 && mskanji_handle == reg_bx) {
+			mskanji_handle = 0;
 			CALLBACK_SCF(false);
 		}
 
@@ -1005,8 +1016,24 @@ static Bitu DOS_21Handler(void) {
 		break;
 	case 0x44:					/* IOCTL Functions */
 		if(ias_handle != 0 && ias_handle == reg_bx) {
-			reg_dx = 0x0080;
-			CALLBACK_SCF(false);
+			if(reg_al == 0) {
+				reg_dx = 0x0080;
+				CALLBACK_SCF(false);
+				break;
+			}
+		} else if(mskanji_handle != 0 && mskanji_handle == reg_bx) {
+			if(reg_al == 0) {
+				reg_dx = 0x0080;
+				CALLBACK_SCF(false);
+			} else if(reg_al == 2 && reg_cx == 4) {
+				real_writew(SegValue(ds), reg_dx, DOSV_GetFontHandlerOffset(DOSV_MSKANJI_API));
+				real_writew(SegValue(ds), reg_dx + 2, CB_SEG);
+				reg_ax = 4;
+				CALLBACK_SCF(false);
+			} else {
+				reg_ax = 1;
+				CALLBACK_SCF(true);
+			}
 			break;
 		}
 		if (DOS_IOCTL()) {
