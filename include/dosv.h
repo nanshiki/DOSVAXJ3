@@ -24,7 +24,15 @@ enum DOSV_FONT {
 	DOSV_FONT_16X16_WRITE,
 	DOSV_FONT_24X24_WRITE,
 
+	DOSV_MSKANJI_API,
+
 	DOSV_FONT_MAX
+};
+
+enum DOSV_FEP_CTRL {
+	DOSV_FEP_CTRL_IAS = 1,
+	DOSV_FEP_CTRL_MSKANJI = 2,
+	DOSV_FEP_CTRL_BOTH = 3
 };
 
 bool INT10_DOSV_SetCRTBIOSMode(Bitu mode);
@@ -34,6 +42,7 @@ void DOSV_OffCursor();
 void INT8_DOSV();
 Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font);
 enum DOSV_VTEXT_MODE DOSV_GetVtextMode(Bitu no = 0);
+enum DOSV_FEP_CTRL DOSV_GetFepCtrl();
 void SetTrueVideoMode(Bit8u mode);
 Bit8u GetTrueVideoMode();
 bool DOSV_CheckJapaneseVideoMode();
