@@ -46,7 +46,6 @@
 Bit16u int10_offset;
 Bit16u int60_offset;
 
-extern void SetIMPosition();
 extern bool image_boot_flag;
 extern bool debug_flag;
 
@@ -580,8 +579,12 @@ static Bitu INT8_Handler(void) {
 	} else {
 		if(IS_J3_ARCH && J3_IsJapanese()) {
 			INT8_J3();
-		} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
-			INT8_DOSV();
+		} else if((IS_J3_ARCH || IS_DOSV)) {
+			if(DOSV_CheckJapaneseVideoMode()) {
+				INT8_DOSV();
+			} else if(IS_DOS_JAPANESE) {
+				SetIMPosition();
+			}
 		} else if(IS_AX_ARCH) {
 			SetIMPosition();
 		}
@@ -601,15 +604,11 @@ static Bitu INT8_Handler(void) {
 			Bit16u temp_es = SegValue(es);
 			Bit16u temp_ax = reg_ax;
 			Bit16u temp_bx = reg_bx;
-			char buff[100]; 
+
 			reg_ax = 0x1000;
 			CALLBACK_RunRealInt(0x60);
-			sprintf(buff, "font address %04x", reg_bx);
-#if defined(LINUX)
-			printf("%s\n", buff);
-#else
-			MessageBox(0,buff,buff,0);
-#endif
+			LOG_MSG("font address %04x", reg_bx);
+
 			SegSet16(es, temp_es);
 			reg_bx = temp_bx;
 			reg_ax = temp_ax;
