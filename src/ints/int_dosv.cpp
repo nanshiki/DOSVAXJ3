@@ -41,6 +41,7 @@ static Bit8u dosv_cursor_stat;
 static Bitu dosv_cursor_x;
 static Bitu dosv_cursor_y;
 static enum DOSV_VTEXT_MODE dosv_vtext_mode[VTEXT_MODE_COUNT];
+static enum DOSV_FEP_CTRL dosv_fep_ctrl;
 Bit8u TrueVideoMode;
 
 Bit8u GetTrueVideoMode()
@@ -153,6 +154,49 @@ static Bitu write_font24x24(void)
 	return CBRET_NONE;
 }
 
+static Bitu mskanji_api(void)
+{
+	Bit16u param_seg, param_off;
+	Bit16u func, mode;
+
+	param_seg = real_readw(SegValue(ss), reg_sp + 6);
+	param_off = real_readw(SegValue(ss), reg_sp + 4);
+	func = real_readw(param_seg, param_off);
+	mode = real_readw(param_seg, param_off + 2);
+
+	reg_ax = 0xffff;
+	if(func == 1) {
+		Bit16u kk_seg, kk_off;
+		kk_seg = real_readw(param_seg, param_off + 6);
+		kk_off = real_readw(param_seg, param_off + 4);
+		real_writew(kk_seg, kk_off, 1);
+		real_writeb(kk_seg, kk_off + 2, 'I');
+		real_writeb(kk_seg, kk_off + 3, 'M');
+		real_writeb(kk_seg, kk_off + 4, 'E');
+		real_writeb(kk_seg, kk_off + 5, 0);
+		reg_ax = 0;
+	} else if(func == 5) {
+		if(mode & 0x8000) {
+			if(mode & 0x0001) {
+				SDL_SetIMValues(SDL_IM_ONOFF, 0, NULL);
+			} else if(mode & 0x0002) {
+				SDL_SetIMValues(SDL_IM_ONOFF, 1, NULL);
+			}
+		} else {
+			int onoff;
+			if(SDL_GetIMValues(SDL_IM_ONOFF, &onoff, NULL) == NULL) {
+				if(onoff) {
+					real_writew(param_seg, param_off + 2, 0x000a);
+				} else {
+					real_writew(param_seg, param_off + 2, 0x0009);
+				}
+			}
+		}
+		reg_ax = 0;
+	}
+	return CBRET_NONE;
+}
+
 static CallBack_Handler font_handler_list[] = {
 	font8x16,
 	font8x19,
@@ -161,6 +205,8 @@ static CallBack_Handler font_handler_list[] = {
 	font24x24,
 	write_font16x16,
 	write_font24x24,
+
+	mskanji_api,
 };
 
 Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font)
@@ -469,9 +515,21 @@ enum DOSV_VTEXT_MODE DOSV_StringVtextMode(std::string vtext)
 	return DOSV_VTEXT_SVGA;
 }
 
+enum DOSV_FEP_CTRL DOSV_GetFepCtrl()
+{
+	return dosv_fep_ctrl;
+}
 
 void DOSV_SetConfig(Section_prop *section)
 {
+	const char *param = section->Get_string("fepcontrol");
+	if(!strcmp(param, "ias")) {
+		dosv_fep_ctrl = DOSV_FEP_CTRL_IAS;
+	} else if(!strcmp(param, "mskanji")) {
+		dosv_fep_ctrl = DOSV_FEP_CTRL_MSKANJI;
+	} else {
+		dosv_fep_ctrl = DOSV_FEP_CTRL_BOTH;
+	}
 	dosv_vtext_mode[0] = DOSV_StringVtextMode(section->Get_string("vtext"));
 	dosv_vtext_mode[1] = DOSV_StringVtextMode(section->Get_string("vtext2"));
 }
@@ -486,6 +544,11 @@ void DOSV_Setup()
 		phys_writeb(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 0, 0xFE);
 		phys_writeb(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 1, 0x38);
 		phys_writew(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 2, (Bit16u)dosv_font_handler[ct]);
-		phys_writeb(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 4, 0xcb);
+		if(ct == DOSV_MSKANJI_API) {
+			phys_writeb(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 4, 0xca);
+			phys_writew(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 5, 0x0004);
+		} else {
+			phys_writeb(CALLBACK_PhysPointer(dosv_font_handler[ct]) + 4, 0xcb);
+		}
 	}
 }
