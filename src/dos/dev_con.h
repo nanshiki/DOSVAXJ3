@@ -26,7 +26,6 @@
 
 #define NUMBER_ANSI_DATA 10
 
-void JTrace(const char *,...);
 extern bool CheckHat(Bit8u code);
 extern bool LineInputFlag;
 
@@ -116,9 +115,32 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 		case 8:
 			if(*size==1) data[count++]=reg_al;  //one char at the time so give back that BS
 			else if(count) {                    //Remove data if it exists (extended keys don't go right)
-				data[count--]=0;
-				INT10_TeletypeOutput_viaRealInt(8, 7);
-				INT10_TeletypeOutput_viaRealInt(' ', 7);
+				Bit8u flag = 0;
+				if(count > 1) {
+					for(Bit16u pos = 0 ; pos < count ; pos++) {
+						if(flag == 1) {
+							flag = 2;
+						} else {
+							flag = 0;
+							if(isKanji1(data[pos])) {
+								flag = 1;
+							}
+						}
+					}
+				}
+				if(flag == 2) {
+					data[count--]=0;
+					data[count--]=0;
+					INT10_TeletypeOutput_viaRealInt(8, 7);
+					INT10_TeletypeOutput_viaRealInt(8, 7);
+					INT10_TeletypeOutput_viaRealInt(' ', 7);
+					INT10_TeletypeOutput_viaRealInt(' ', 7);
+					INT10_TeletypeOutput_viaRealInt(8, 7);
+				} else {
+					data[count--]=0;
+					INT10_TeletypeOutput_viaRealInt(8, 7);
+					INT10_TeletypeOutput_viaRealInt(' ', 7);
+				}
 			} else {
 				continue;                       //no data read yet so restart whileloop.
 			}
