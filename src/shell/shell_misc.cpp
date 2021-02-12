@@ -729,7 +729,13 @@ bool DOS_Shell::Execute(char * name,char * args) {
 		if (!DOS_SetDrive(toupper(name[0])-'A')) {
 #ifdef WIN32
 			Section_prop * sec=0; sec=static_cast<Section_prop *>(control->GetSection("dos"));
-			if(!sec->Get_bool("automount")) { WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0])); return true; }
+			const char *auto_string = sec->Get_string("automount");
+
+			//if(!sec->Get_bool("automount")) { WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0])); return true; }
+			if(strcmp(auto_string, "true") && strcmp(auto_string, "auto")) {
+				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0]));
+				return true;
+			}
 			// automount: attempt direct letter to drive map.
 first_1:
 			int drvtype=GetDriveType(name);
@@ -740,23 +746,31 @@ first_1:
 				drvtype=GetDriveType(names);
 			}
 			if(drvtype==2) {
-				WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
-				WriteOut("\n");
-				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_REMOVABLE"),toupper(name[0]));
+				if(strcmp(auto_string, "auto")) {
+					WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
+					WriteOut("\n");
+					WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_REMOVABLE"),toupper(name[0]));
+				}
 			} else if(drvtype==4) {
-				WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
-				WriteOut("\n");
-				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_NETWORK"),toupper(name[0]));
+				if(strcmp(auto_string, "auto")) {
+					WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
+					WriteOut("\n");
+					WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_NETWORK"),toupper(name[0]));
+				}
 			} else if(drvtype==5) {
-				WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
-				WriteOut("\n");
-				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_OPTICAL"),toupper(name[0]));
+				if(strcmp(auto_string, "auto")) {
+					WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
+					WriteOut("\n");
+					WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_OPTICAL"),toupper(name[0]));
+				}
 			} else if(drvtype==3||drvtype==6) {
-				WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
-				if(drvtype==3 && strcasecmp(name,"c:")==0)
-					WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_WARNING_WIN"));
-				WriteOut("\n");
-				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_LOCAL"),toupper(name[0]));
+				if(strcmp(auto_string, "auto")) {
+					WriteOut(MSG_Get("SHELL_EXECUTE_AUTOMOUNT"));
+					if(drvtype==3 && strcasecmp(name,"c:")==0)
+						WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_WARNING_WIN"));
+					WriteOut("\n");
+					WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_ACCESS_LOCAL"),toupper(name[0]));
+				}
 			} else {
 				WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0]));
 				return true;
@@ -764,40 +778,41 @@ first_1:
 
 first_2:
 		Bit8u c;Bit16u n=1;
-		DOS_ReadFile (STDIN,&c,&n);
-		do switch (c) {
-			case 'n':			case 'N':
-			{
-				DOS_WriteFile (STDOUT,&c, &n);
-				DOS_ReadFile (STDIN,&c,&n);
-				do switch (c) {
-					case 0xD: WriteOut("\n\n"); WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0])); return true;
-					case 0x08: WriteOut("\b \b"); goto first_2;
-				} while (DOS_ReadFile (STDIN,&c,&n));
-			}
-			case 'y':			case 'Y':
-			{
-				DOS_WriteFile (STDOUT,&c, &n);
-				DOS_ReadFile (STDIN,&c,&n);
-				do switch (c) {
-					case 0xD: WriteOut("\n"); goto continue_1;
-					case 0x08: WriteOut("\b \b"); goto first_2;
-				} while (DOS_ReadFile (STDIN,&c,&n));
-			}
-			case 0xD: WriteOut("\n"); goto first_1;
-			case '\t': case 0x08: goto first_2;
-			default:
-			{
-				DOS_WriteFile (STDOUT,&c, &n);
-				DOS_ReadFile (STDIN,&c,&n);
-				do switch (c) {
-					case 0xD: WriteOut("\n");goto first_1;
-					case 0x08: WriteOut("\b \b"); goto first_2;
-				} while (DOS_ReadFile (STDIN,&c,&n));
-				goto first_2;
-			}
-		} while (DOS_ReadFile (STDIN,&c,&n));
-
+		if(strcmp(auto_string, "auto")) {
+			DOS_ReadFile (STDIN,&c,&n);
+			do switch (c) {
+				case 'n':			case 'N':
+				{
+					DOS_WriteFile (STDOUT,&c, &n);
+					DOS_ReadFile (STDIN,&c,&n);
+					do switch (c) {
+						case 0xD: WriteOut("\n\n"); WriteOut(MSG_Get("SHELL_EXECUTE_DRIVE_NOT_FOUND"),toupper(name[0])); return true;
+						case 0x08: WriteOut("\b \b"); goto first_2;
+					} while (DOS_ReadFile (STDIN,&c,&n));
+				}
+				case 'y':			case 'Y':
+				{
+					DOS_WriteFile (STDOUT,&c, &n);
+					DOS_ReadFile (STDIN,&c,&n);
+					do switch (c) {
+						case 0xD: WriteOut("\n"); goto continue_1;
+						case 0x08: WriteOut("\b \b"); goto first_2;
+					} while (DOS_ReadFile (STDIN,&c,&n));
+				}
+				case 0xD: WriteOut("\n"); goto first_1;
+				case '\t': case 0x08: goto first_2;
+				default:
+				{
+					DOS_WriteFile (STDOUT,&c, &n);
+					DOS_ReadFile (STDIN,&c,&n);
+					do switch (c) {
+						case 0xD: WriteOut("\n");goto first_1;
+						case 0x08: WriteOut("\b \b"); goto first_2;
+					} while (DOS_ReadFile (STDIN,&c,&n));
+					goto first_2;
+				}
+			} while (DOS_ReadFile (STDIN,&c,&n));
+		}
 continue_1:
 
 			char mountstring[DOS_PATHLENGTH+CROSS_LEN+20];
