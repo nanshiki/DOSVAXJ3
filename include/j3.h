@@ -32,5 +32,6 @@ void J3_SetConfig(Section_prop *section);
 void J3_GetPalette(Bit8u no, Bit8u &r, Bit8u &g, Bit8u &b);
 Bit16u J3_GetMachineCode();
 bool J3_IsJapanese();
+void SetIMPosition();
 
 #endif
