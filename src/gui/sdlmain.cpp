@@ -2296,7 +2296,7 @@ int main(int argc, char* argv[]) {
 	LOG_MSG("DOSVAXJ3 version %s",VERSION);
 	LOG_MSG("Copyright 2002-2017 DOSBox Team, published under GNU GPL.");
 	LOG_MSG("Copyright 2016-2019 akm.");
-	LOG_MSG("Copyright 2019-2020 takapyu.");
+	LOG_MSG("Copyright 2019-2021 takapyu.");
 	LOG_MSG("Long File Name (LFN), mouse copy/paste and other support, by Wengier,2014-2017.");
 	LOG_MSG("---");
 
