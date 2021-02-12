@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2002-2015  The DOSBox Team
  *  Copyright (C) 2016-2019 akm
- *  Copyright (C) 2019 takapyu
+ *  Copyright (C) 2019-2021 takapyu
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -512,6 +512,10 @@ void DOSBOX_Init(void) {
 #elif defined(WIN32)
 	Pbool->Set_help("Windows IME enabled.");
 #endif
+	const char* fepcontrol_settings[] = { "ias", "mskanji", "both", 0};
+	Pstring = secprop->Add_path("fepcontrol",Property::Changeable::OnlyAtStart,"both");
+	Pstring->Set_values(fepcontrol_settings);
+	Pstring->Set_help("FEP control API");
 
 	Pbool = secprop->Add_bool("debug",Property::Changeable::OnlyAtStart,false);
 	Pbool->Set_help("debug flag");
@@ -866,8 +870,10 @@ void DOSBOX_Init(void) {
 		"will be enabled if and only if the major DOS version is set to\n"
 		"at least 7.");
 
-	Pbool = secprop->Add_bool("automount",Property::Changeable::WhenIdle,true);
-	Pbool->Set_help("Enable automatic drive mounting.");
+	const char* automount_settings[] = { "true", "auto", "false", 0};
+	Pstring = secprop->Add_string("automount",Property::Changeable::WhenIdle,"true");
+	Pstring->Set_values(automount_settings);
+	Pstring->Set_help("Enable automatic drive mounting.");
 
 	const char *autoreload_settings[]={ "all", "dos", "cmd", "false", 0};
 	Pstring = secprop->Add_string("autoreload",Property::Changeable::WhenIdle,"cmd");
