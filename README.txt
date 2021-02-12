@@ -32,7 +32,6 @@ clipboardmodifier  クリップボードのコピー・ペーストの指定を�
 machine        dcga を指定すると J-3100 モードで起動します。
                dosv を指定すると DOS/V モードでビデオカード ET-4000 相当で起動
                します。
-               dosv_s3 で DOS/V モードでビデオカード S3 相当で起動します。
                jega を指定すると AX モードで起動します。
                上記以外の場合は DOSBox のそれぞれのモードで起動します。
 
@@ -58,6 +57,9 @@ gaijiend       外字領域の終了コードを指定します。未定義の�
 yen            半角フォントの 7fh に \ が入っている場合 true としてください。
 
 im             IM の有効/無効を指定します。true で有効、false で無効です。
+fepcontrol     DOS の FEP 制御用 API を選択します。
+               ias で $IAS.SYS、mskanji で MS-KANJI API、both で両方有効となり
+               ます。
 
 languagejp     日本語メッセージ定義ファイルを指定します。
                内容は Shift JIS で記述する必要があります。
@@ -84,8 +86,8 @@ j3100          J-3100 の機種名を指定します。画面の色とキーボ�
                白、背景色は黒となり、システムコードは 0x6a74 となります。
 
 debug          J-3100 用の MS-DOS イメージからブートした際に半角英数字が文字化
-               けする場合は debug=true としてブートし、途中で表示される 4 桁の
-               アドレス文字列を下の j3sbcsaddress に指定してください。
+               けする場合は debug=true としてブートし、半角英数字データのアド
+               レスを取得して下の j3sbcsaddress に指定してください。
                詳しくは J-3100 モードでの注意事項を参照してください。
 j3sbcsaddress  J-3100 用の半角フォントの開始アドレスを指定します。
                未指定の場合 ca00 となります。
@@ -117,7 +119,8 @@ lfn            ロングファイルネームの設定を指定します。
                ジョンが 7 以上でロングファイルネーム有効となります。
 
 automount      オートマウントの設定を行います。
-               true でオートマウント有効、false で無効です。
+               true でオートマウント有効、auto で Y/N の問い合わせを行わずマウ
+               ント、false で無効です。
                オートマウント有効の場合、C: [enter] で実 PC 上の C ドライブを
                C:\ にマウントします。
                Linux では使用できません。
@@ -139,13 +142,14 @@ machine=dosv
 jfontname=ＭＳ 明朝
 yen=false
 im=true
+fepcontrol=both
 vtext=svga
 vtext2=xga
 
 [dos]
 keyboardlayout=jp
 ver=7.10
-lfn=true
+lfn=auto
 automount=true
 autoreload=cmd
 
@@ -174,10 +178,10 @@ chev を使用します。
 　MS-DOS 用の FEP を入手するのは困難と思われましたので、Windows の IME, Linux
 の XIM を使用可能としています。
 　Windows 10 で MS-IME を使用する場合、Windows 10 のバージョンを 1803 以上にアッ
-プデートしてください。バージョン1709 以前の MS-IME の場合、$IAS.SYS のファンク
-ションによる FEP 制御ができません。
-　Windows 8.1 の場合は現行の最新版でも $IAS.SYS のファンクションによる FEP 制
-御はできません。ATOK 等、他の IME を使用する事を推薦します。
+プデートしてください。バージョン1709 以前の MS-IME の場合、$IAS.SYS や MS-KANJI
+のファンクションによる FEP 制御ができません。
+　Windows 8.1 の場合は現行の最新版でも $IAS.SYS や MS-KANJI のファンクションに
+よる FEP 制御はできません。ATOK 等、他の IME を使用する事を推薦します。
 　Linux の XIM の場合、変換文字列や候補が通常とは異なる表示にはなりますが、入
 力自体は可能です。
 　日本語キーボード設定かつ DOS 用の IME がインストールされている DOS/V イメー
@@ -236,11 +240,12 @@ AX モードにも反映しています。
 　漢字キーは Ctrl+F1 で呼び出される mapper 画面の Kanji にキーを割り当ててく
 ださい。
 　辞書 ROM やハードウェアによる EMS は使用できません。
-　半角英数字が正しく表示されない場合、dosboxj.conf の [dosbox] debug=true と
-してブートし、Windows の場合ダイアログ、Linux の場合コンソールに表示される
-"font address XXXX" の XXXX の部分を dosboxj.confの [dosbox] j3sbcsaddress で
-指定してください。
-　JP208007 版からパレットの設定方法を変更し、VGA DAC で設定するようになったた
+　東芝 MS-DOS のイメージファイルでブートした際に半角英数字が正しく表示されな
+い場合、dosboxj.conf の [dosbox] debug=true として Windows の場合は -console
+オプション付きで起動し、イメージファイルからのブート時にコンソールに表示され
+る "font address XXXX" の XXXX の部分を dosboxj.confの [dosbox] j3sbcsaddress
+で指定してください。
+　JP200807 版からパレットの設定方法を変更し、VGA DAC で設定するようになったた
 め、j3textcolor, j3backcolor の下位 2 bit は無効になり、ffffff は 3f3f3f 相当
 となります。
 
@@ -255,13 +260,16 @@ AX モードにも反映しています。
 後は 70h となります。
 　日本語フォントドライバは DOSVAXJ3 に内蔵しており、8×19, 8×16, 16×16,
 12×24, 24×24 サイズのフォントが使用可能となっています。
-　ビデオカード ET-4000 の設定の場合、dspVV は /hs=off として使用してください。
+　dspVV は /hs=off として使用してください。
 　ディスプレイ BIOS(int 10h) の ax=1311h, ax=1321h (拡張 CGA テキストモードの
 文字列読み書き)には対応していません。
-　キーボード BIOS(int 16h) ax=1300h では dl の bit 7 or Bit0 ON で IME ON、
-bit 7 OFF で IME OFF となります。
-　ax=1301h では IME OFF で dl=00h、IME ON で dl=81h を返します。
-　ah=14h でシフト情報を表示に設定しても FEP 用のラインは確保されません。
+　fepcontrol で ias または both が指定されている場合、キーボード BIOS(int 16h)
+ax=1300h では dl の bit 7 or Bit0 ON で IME ON、bit 7 OFF で IME OFF となりま
+す。ax=1301h では IME OFF で dl=00h、IME ON で dl=81h を返します。ah=14h でシ
+フト情報を表示に設定しても FEP用のラインは確保されません。
+　fepcontrol で mskanji または both が指定されている場合、MS-KANJI API のファ
+ンクション 1 とファンクション 5 が使用可能になります。変換位置は常にカーソル
+位置となります。
 　ディスクの直接読込(int 25h) に対応していないため、fd でファイル一覧が表示さ
 れない場合はオプション -D をつけて起動してください。DOS バージョンが 7.1 以上
 であれば fd は int 25h を使用しないようです。
@@ -377,7 +385,7 @@ mount したディレクトリ上の dir で表示されていなかったのを
 表示するよう修正しました。文字色、背景色も j3textcolor, j3backcolor が適用され
 ます。また、ビデオモード6 の文字色、背景色も j3textcolor, j3backcolor が適用さ
 れるように修正しています。それとパレットの定義方法が少し変わったため、プラズマ
-等の色が以前と比べると微妙に違いように思われるかもしれません。
+等の色が以前と比べると微妙に違うように思われるかもしれません。
 　日本語モードの状態から直接ビデオモード 4, 5 に切り替えると画面表示がおかしく
 なっていたのを修正しました。
 　背景色付きのプロンプト表示に設定した場合、最下行で改行すると背景色が一行全体
@@ -399,6 +407,17 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　コマンドラインで copy con file とした場合に入力文字がエコーバックされない等
 の不具合を修正しました。(参考 DosBox-X のソース)
 　コマンドラインで Ctrl-A 等を入力した際に ^A と表示するように修正しました。
+
+・build JP210212 (2021/2/12)
+　MS-KANJI API に対応しました。ただし FEP ON/OFF 程度にしか対応していません。
+　JW_CAD での文字入力時の FEP 自動 ON/OFF や Windows 版でカーソル位置での変換
+が可能となるよう修正しました。
+　automount に Y/N の問い合わせをせずにマウントする設定 auto を追加しました。
+　Windows 版付属の dosboxj.conf の [midi] や [sblaster] の項目名が間違ってい
+たのを修正しました。他の各項目の設定もデフォルトの値になるよう修正しています
+ので、ご注意ください。
+　J-3100 の MS-DOS イメージファイルブート時の文字化け対策時の情報表示方法を変
+更しました。
 
 ●ライセンス
 　GPL v2
