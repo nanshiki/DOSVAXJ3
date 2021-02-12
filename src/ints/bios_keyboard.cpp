@@ -28,6 +28,8 @@
 #include "dos_inc.h"
 #include "SDL.h"
 #include "j3.h"
+#include "dosv.h"
+#include "jfont.h"
 
 /* SDL by default treats numlock and scrolllock different from all other keys.
  * In recent versions this can disabled by a environment variable which we set in sdlmain.cpp
@@ -710,7 +712,7 @@ INT16_Handler(void) {
 		break;
 	// DOS/V
 	case 0x13:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE && (DOSV_GetFepCtrl() & DOSV_FEP_CTRL_IAS)) {
 			if(reg_al == 0x00) {
 				if(reg_dl & 0x81) {
 					SDL_SetIMValues(SDL_IM_ONOFF, 1, NULL);
@@ -729,7 +731,7 @@ INT16_Handler(void) {
 		}
 		break;
 	case 0x14:
-		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
+		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE && (DOSV_GetFepCtrl() & DOSV_FEP_CTRL_IAS)) {
 			if(reg_al == 0x02) {
 				// get
 				reg_al = fep_line;
