@@ -1857,7 +1857,7 @@ void GFX_Events() {
 			}
 			if (((event.key.keysym.sym == SDLK_TAB )) && (event.key.keysym.mod & KMOD_ALT)) break;
 			// ignore tab events that arrive just after regaining focus. (likely the result of alt-tab)
-			if ((event.key.keysym.sym == SDLK_TAB) && (GetTicks() - sdl.focus_ticks < 2)) break;
+			if ((event.key.keysym.sym == SDLK_TAB) && ((GetTicks() - sdl.focus_ticks < 2) || GetKeyState(VK_MENU) < 0)) break;
 			int onoff;
 			if(SDL_GetIMValues(SDL_IM_ONOFF, &onoff, NULL) == NULL) {
 				if(onoff != 0 && event.type == SDL_KEYDOWN) {
