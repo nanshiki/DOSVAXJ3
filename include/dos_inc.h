@@ -159,6 +159,7 @@ Bit8u DOS_FindDevice(char const * name);
 void DOS_SetupDevices(void);
 void DOS_ClearKeyMap(void);
 void DOS_SetConKey(Bit16u src, Bit16u dst);
+Bit32u DOS_CheckExtDevice(const char *name, bool already_flag);
 
 /* Execute and new process creation */
 bool DOS_NewPSP(Bit16u pspseg,Bit16u size);
@@ -662,6 +663,7 @@ struct DOS_Block {
 		//Bit8u* country;//Will be copied to dos memory. resides in real mem
 		Bit16u dpb; //Fake Disk parameter system using only the first entry so the drive letter matches
 		Bit16u country_seg;
+		Bit16u dcp;	// Device command packet
 	} tables;
 	Bit16u loaded_codepage;
 
@@ -670,8 +672,8 @@ struct DOS_Block {
 
 	//for AX
 	bool set_ax_enabled;
-
 	bool set_dosv_enabled;
+	bool im_enable_flag;
 };
 
 extern DOS_Block dos;
@@ -687,5 +689,7 @@ static INLINE Bit8u RealHandle(Bit16u handle) {
 #define	AUTORELOAD_CMD		0x01
 #define	AUTORELOAD_DOS		0x02
 #define	AUTORELOAD_ALL		0x03
+
+#define	EXT_DEVICE_BIT				0x0200
 
 #endif
