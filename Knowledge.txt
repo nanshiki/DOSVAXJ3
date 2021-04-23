@@ -81,6 +81,30 @@ both に設定する必要があります。
 　V-Text 上でのマウス座標はどうなるか不明ですが、そもそも V-Text 上でマウスを
 使用するプログラムは存在しないと思われます。
 
+・デバイスドライバ
+　オリジナルの adddev (https://www.vector.co.jp/soft/dos/writing/se002001.html)
+を使用する場合、ver set でバージョンを 6 以下に設定してください。
+　sava 氏版 adddev (http://hp.vector.co.jp/authors/VA003720/lpproj/dostools.htm)
+の場合、DOSBOX 対応版でなくても動作します。
+　adddev で登録したキャラクタデバイスに対しては下記の DOS ファンクションが使
+用できます。
+　int 21h
+　　ah=3dh デバイスオープン
+　　ah=3eh デバイスクローズ
+　　ah=3fh デバイスからデータを入力
+　　ah=40h デバイスにデータを出力
+　　ax=4400h デバイスデータの取得
+　　ax=4402h I/O Control データ取得
+　　ax=4403h I/O Control データ送出
+　　ax=4406h 入力ステータスの取得
+　　ax=4407h 出力ステータスの取得
+
+　デバイス $IBMAFNT や $IBMADSP はオープンできますが、クローズ以外のファンク
+ションは使用できません。MS-IME はこれらのデバイス名がオープンできれば日本語
+モードと判定しているようです。
+　デバイス $IBMAIAS については DOS/V BIOS int 16h (キーボード) を、デバイス
+MS$KANJI については MS-KANJI API を参照してください。
+
 ・J-3100 BIOS
 　int 10h (ディスプレイ)
 　　ah=70h カレントデバイスの読み込み
@@ -146,14 +170,15 @@ both に設定する必要があります。
 　　上記は非対応です。
 
 　int 16h (キーボード)
-　　fepcontrol が ias または both の場合
+　　im が true で fepcontrol が ias または both の場合
+　　デバイス $IBMAIAS がオープンできるようになります。
 　　ax=1300h dl の bit 7 or Bit0 ON で IME ON、bit 7 OFF で IME OFF
 　　ax=1301h IME OFF で dl=00h、IME ON で dl=81h を返します。
 　　ah=14h シフト情報を表示に設定しても FEP 用のラインは確保されません。
 
-
 ・MS-KANJI API
-　fepcontrol が mskanji または both の場合
+　im が true で fepcontrol が mskanji または both の場合
+　デバイス MS$KANJI がオープンできるようになります。
 　ファンクション1 KKAsk
 　　カナ漢字変換システム名取得
 　　API サポートレベルは 1、カナ漢字変換システムの名前は IME となります。
