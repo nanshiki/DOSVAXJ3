@@ -34,8 +34,208 @@
 
 #include "dev_con.h"
 
-
 DOS_Device * Devices[DOS_DEVICES];
+
+struct ExtDeviceData {
+	Bit16u attribute;
+	Bit16u segment;
+	Bit16u strategy;
+	Bit16u interrupt;
+};
+
+class DOS_ExtDevice : public DOS_Device {
+public:
+	DOS_ExtDevice(const char *name, Bit16u seg, Bit16u off) {
+		SetName(name);
+		ext.attribute = real_readw(seg, off + 4);
+		ext.segment = seg;
+		ext.strategy = real_readw(seg, off + 6);
+		ext.interrupt = real_readw(seg, off + 8);
+	}
+	virtual bool	Read(Bit8u * data,Bit16u * size);
+	virtual bool	Write(Bit8u * data,Bit16u * size);
+	virtual bool	Seek(Bit32u * pos,Bit32u type);
+	virtual bool	Close();
+	virtual Bit16u	GetInformation(void);
+	virtual bool	ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
+	virtual bool	WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
+	virtual Bit8u	GetStatus(bool input_flag);
+	bool CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off);
+private:
+	struct ExtDeviceData ext;
+
+	Bit16u CallDeviceFunction(Bit8u command, Bit8u length, PhysPt bufptr, Bit16u size);
+};
+
+bool DOS_ExtDevice::CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off) {
+	if(seg == ext.segment && s_off == ext.strategy && i_off == ext.interrupt) {
+		return true;
+	}
+	return false;
+}
+
+Bit16u DOS_ExtDevice::CallDeviceFunction(Bit8u command, Bit8u length, PhysPt bufptr, Bit16u size) {
+	Bit16u oldbx = reg_bx;
+	Bit16u oldes = SegValue(es);
+
+	real_writeb(dos.tables.dcp, 0, length);
+	real_writeb(dos.tables.dcp, 1, 0);
+	real_writeb(dos.tables.dcp, 2, command);
+	real_writew(dos.tables.dcp, 3, 0);
+	real_writed(dos.tables.dcp, 5, 0);
+	real_writed(dos.tables.dcp, 9, 0);
+	real_writeb(dos.tables.dcp, 13, 0);
+	real_writew(dos.tables.dcp, 14, (Bit16u)(bufptr & 0x000f));
+	real_writew(dos.tables.dcp, 16, (Bit16u)(bufptr >> 4));
+	real_writew(dos.tables.dcp, 18, size);
+
+	reg_bx = 0;
+	SegSet16(es, dos.tables.dcp);
+	CALLBACK_RunRealFar(ext.segment, ext.strategy);
+	CALLBACK_RunRealFar(ext.segment, ext.interrupt);
+	reg_bx = oldbx;
+	SegSet16(es, oldes);
+
+	return real_readw(dos.tables.dcp, 3);
+}
+
+bool DOS_ExtDevice::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) {
+	if(ext.attribute & 0x4000) {
+		// IOCTL INPUT
+		if((CallDeviceFunction(3, 26, bufptr, size) & 0x8000) == 0) {
+			*retcode = real_readw(dos.tables.dcp, 18);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool DOS_ExtDevice::WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) { 
+	if(ext.attribute & 0x4000) {
+		// IOCTL OUTPUT
+		if((CallDeviceFunction(12, 26, bufptr, size) & 0x8000) == 0) {
+			*retcode = real_readw(dos.tables.dcp, 18);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool DOS_ExtDevice::Read(Bit8u * data,Bit16u * size) {
+	PhysPt bufptr = (dos.tables.dcp << 4) | 32;
+	for(Bit16u no = 0 ; no < *size ; no++) {
+		// INPUT
+		if((CallDeviceFunction(4, 26, bufptr, 1) & 0x8000)) {
+			return false;
+		} else {
+			if(real_readw(dos.tables.dcp, 18) != 1) {
+				return false;
+			}
+			*data++ = mem_readb(bufptr);
+		}
+	}
+	return true;
+}
+
+bool DOS_ExtDevice::Write(Bit8u * data,Bit16u * size) {
+	PhysPt bufptr = (dos.tables.dcp << 4) | 32;
+	for(Bit16u no = 0 ; no < *size ; no++) {
+		mem_writeb(bufptr, *data);
+		// OUTPUT
+		if((CallDeviceFunction(8, 26, bufptr, 1) & 0x8000)) {
+			return false;
+		} else {
+			if(real_readw(dos.tables.dcp, 18) != 1) {
+				return false;
+			}
+		}
+		data++;
+	}
+	return true;
+}
+
+bool DOS_ExtDevice::Close() {
+	return true;
+}
+
+bool DOS_ExtDevice::Seek(Bit32u * pos,Bit32u type) {
+	return true;
+}
+
+Bit16u DOS_ExtDevice::GetInformation(void) { 
+	// bit9=1 .. ExtDevice
+	return (ext.attribute & 0xc07f) | 0x0080 | EXT_DEVICE_BIT;
+}
+
+Bit8u DOS_ExtDevice::GetStatus(bool input_flag) {
+	Bit16u status;
+	if(input_flag) {
+		// NON-DESTRUCTIVE INPUT NO WAIT
+		status = CallDeviceFunction(5, 14, 0, 0);
+	} else {
+		// OUTPUT STATUS
+		status = CallDeviceFunction(10, 13, 0, 0);
+	}
+	// check NO ERROR & BUSY
+	if((status & 0x8200) == 0) {
+		return 0xff;
+	}
+	return 0x00;
+}
+
+Bit32u DOS_CheckExtDevice(const char *name, bool already_flag) {
+	Bit32u addr = dos_infoblock.GetDeviceChain();
+	Bit16u seg, off;
+	Bit16u next_seg, next_off;
+	Bit16u no;
+	char devname[8 + 1];
+
+	seg = addr >> 16;
+	off = addr & 0xffff;
+	while(1) {
+		no = real_readw(seg, off + 4);
+		next_seg = real_readw(seg, off + 2);
+		next_off = real_readw(seg, off);
+		if(next_seg == 0xffff && next_off == 0xffff) {
+			break;
+		}
+		if(no & 0x8000) {
+			for(no = 0 ; no < 8 ; no++) {
+				if((devname[no] = real_readb(seg, off + 10 + no)) <= 0x20) {
+					devname[no] = 0;
+					break;
+				}
+			}
+			devname[8] = 0;
+			if(!strcmp(name, devname)) {
+				if(already_flag) {
+					for(no = 0 ; no < DOS_DEVICES ; no++) {
+						if(Devices[no]) {
+							if(Devices[no]->GetInformation() & EXT_DEVICE_BIT) {
+								if(((DOS_ExtDevice *)Devices[no])->CheckSameDevice(seg, real_readw(seg, off + 6), real_readw(seg, off + 8))) {
+									return 0;
+								}
+							}
+						}
+					}
+				}
+				return (Bit32u)seg << 16 | (Bit32u)off;
+			}
+		}
+		seg = next_seg;
+		off = next_off;
+	}
+	return 0;
+}
+
+static void DOS_CheckOpenExtDevice(const char *name) {
+	Bit32u addr;
+
+	if((addr = DOS_CheckExtDevice(name, true)) != 0) {
+		DOS_ExtDevice *device = new DOS_ExtDevice(name, addr >> 16, addr & 0xffff);
+		DOS_AddDevice(device);
+	}
+}
 
 class device_NUL : public DOS_Device {
 public:
@@ -127,6 +327,14 @@ bool DOS_Device::WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcod
 	return Devices[devnum]->WriteToControlChannel(bufptr,size,retcode);
 }
 
+Bit8u DOS_Device::GetStatus(bool input_flag) {
+	Bit16u info = Devices[devnum]->GetInformation();
+	if(info & EXT_DEVICE_BIT) {
+		return Devices[devnum]->GetStatus(input_flag);
+	}
+	return (info & 0x40) ? 0x00 : 0xff;
+}
+
 DOS_File::DOS_File(const DOS_File& orig) {
 	flags=orig.flags;
 	time=orig.time;
@@ -161,18 +369,43 @@ DOS_File & DOS_File::operator= (const DOS_File & orig) {
 Bit8u DOS_FindDevice(char const * name) {
 	/* should only check for the names before the dot and spacepadded */
 	char fullname[DOS_PATHLENGTH];Bit8u drive;
+	bool ime_flag = false;
 //	if(!name || !(*name)) return DOS_DEVICES; //important, but makename does it
-	if (!DOS_MakeName(name,fullname,&drive)) return DOS_DEVICES;
-
+	if(*name == '@' && *(name + 1) == ':') {
+		strcpy(fullname, name + 2);
+		ime_flag = true;
+	} else {
+		if (!DOS_MakeName(name,fullname,&drive)) return DOS_DEVICES;
+	}
 	char* name_part = strrchr(fullname,'\\');
 	if(name_part) {
 		*name_part++ = 0;
 		//Check validity of leading directory.
 		if(!Drives[drive]->TestDir(fullname)) return DOS_DEVICES;
 	} else name_part = fullname;
-   
+
 	char* dot = strrchr(name_part,'.');
 	if(dot) *dot = 0; //no ext checking
+
+	DOS_CheckOpenExtDevice(name_part);
+	for(Bit8s index = DOS_DEVICES - 1 ; index >= 0 ; index--) {
+		if(Devices[index]) {
+			if(Devices[index]->GetInformation() & EXT_DEVICE_BIT) {
+				if(WildFileCmp(name_part, Devices[index]->name)) {
+					if(DOS_CheckExtDevice(name_part, false) != 0) {
+						return index;
+					} else {
+						delete Devices[index];
+						Devices[index] = 0;
+						break;
+					}
+				}
+			}
+		}
+	}
+	if(ime_flag) {
+		return DOS_DEVICES;
+	}
 
 	static char com[5] = { 'C','O','M','1',0 };
 	static char lpt[5] = { 'L','P','T','1',0 };
