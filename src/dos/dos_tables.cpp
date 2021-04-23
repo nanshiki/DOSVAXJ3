@@ -161,6 +161,9 @@ void DOS_SetupTables(void) {
 	dos.tables.dpb=DOS_GetMemory(2);
 	for(Bitu d=0;d<26;d++) real_writeb(dos.tables.dpb,d,d);
 
+	/* Create Device command packet area */
+	dos.tables.dcp = DOS_GetMemory(3);
+
 	/* Create a fake disk buffer head */
 	seg=DOS_GetMemory(6);
 	for (Bitu ct=0; ct<0x20; ct++) real_writeb(seg,ct,0);
