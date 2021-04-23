@@ -54,7 +54,7 @@ bool DOS_IOCTL(void) {
 	switch(reg_al) {
 	case 0x00:		/* Get Device Information */
 		if (Files[handle]->GetInformation() & 0x8000) {	//Check for device
-			reg_dx=Files[handle]->GetInformation();
+			reg_dx=Files[handle]->GetInformation() & ~EXT_DEVICE_BIT;
 		} else {
 			Bit8u hdrive=Files[handle]->GetDrive();
 			if (hdrive==0xff) {
@@ -80,7 +80,7 @@ bool DOS_IOCTL(void) {
 		}
 		return true;
 	case 0x02:		/* Read from Device Control Channel */
-		if (Files[handle]->GetInformation() & 0xc000) {
+		if ((Files[handle]->GetInformation() & 0xc000) == 0xc000) {
 			/* is character device with IOCTL support */
 			PhysPt bufptr=PhysMake(SegValue(ds),reg_dx);
 			Bit16u retcode=0;
@@ -92,7 +92,7 @@ bool DOS_IOCTL(void) {
 		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
 		return false;
 	case 0x03:		/* Write to Device Control Channel */
-		if (Files[handle]->GetInformation() & 0xc000) {
+		if ((Files[handle]->GetInformation() & 0xc000) == 0xc000) {
 			/* is character device with IOCTL support */
 			PhysPt bufptr=PhysMake(SegValue(ds),reg_dx);
 			Bit16u retcode=0;
@@ -105,7 +105,7 @@ bool DOS_IOCTL(void) {
 		return false;
 	case 0x06:      /* Get Input Status */
 		if (Files[handle]->GetInformation() & 0x8000) {		//Check for device
-			reg_al=(Files[handle]->GetInformation() & 0x40) ? 0x0 : 0xff;
+			reg_al = ((DOS_Device*)(Files[handle]))->GetStatus(true);
 		} else { // FILE
 			Bit32u oldlocation=0;
 			Files[handle]->Seek(&oldlocation, DOS_SEEK_CUR);
@@ -121,6 +121,10 @@ bool DOS_IOCTL(void) {
 		}
 		return true;
 	case 0x07:		/* Get Output Status */
+		if (Files[handle]->GetInformation() & EXT_DEVICE_BIT) {
+			reg_al = ((DOS_Device*)(Files[handle]))->GetStatus(false);
+			return true;
+		}
 		LOG(LOG_IOCTL,LOG_NORMAL)("07:Fakes output status is ready for handle %d",handle);
 		reg_al=0xff;
 		return true;
