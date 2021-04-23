@@ -69,7 +69,7 @@ static bool DBCS_LeadByte(Bit8u c) {
 		Bit8u cstart, cend;
 		pair = mem_readw(Real2Phys(dos.tables.dbcs) + 0x02 + i*2);
 		if (!pair) break;
-		cstart = pair;
+		cstart = (Bit8u)pair;
 		cend = pair >> 8;
 		if ((cstart <= c) && (c <= cend)) return true;
 	}
@@ -738,7 +738,9 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 
 	char fullname[DOS_PATHLENGTH];Bit8u drive;Bit8u i;
 	/* First check if the name is correct */
-	if (!DOS_MakeName(name,fullname,&drive)) return false;
+	if(!device || *name != '@' || *(name + 1) != ':') {
+		if (!DOS_MakeName(name,fullname,&drive)) return false;
+	}
 
 	if(autoreload & AUTORELOAD_DOS) {
 		Drives[drive]->EmptyCache();
