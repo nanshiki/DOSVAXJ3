@@ -40,6 +40,7 @@
 
 #define	IAS_DEVICE_HANDLE		0x1a50
 #define	MSKANJI_DEVICE_HANDLE	0x1a51
+#define	IBMJP_DEVICE_HANDLE		0x1a52
 
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
@@ -54,6 +55,7 @@ bool DOS_BreakFlag = false;
 
 static Bit16u ias_handle;
 static Bit16u mskanji_handle;
+static Bit16u ibmjp_handle;
 
 static bool hat_flag[] = {
 //            a     b     c     d     e      f      g      h
@@ -875,18 +877,33 @@ static Bitu DOS_21Handler(void) {
 	case 0x3d:		/* OPEN Open existing file */
 		MEM_StrCopy(SegPhys(ds)+reg_dx,name1,DOSNAMEBUF);
 		if((IS_J3_ARCH || IS_DOSV) && IS_DOS_JAPANESE) {
-			if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_IAS) && (!strncmp(name1, "$IBMAIAS", 8) || !strncmp(name1, "@:$IBMAIAS", 10))) {
-				ias_handle = IAS_DEVICE_HANDLE;
-				reg_ax = IAS_DEVICE_HANDLE;
-				force = false;
-				CALLBACK_SCF(false);
-				break;
-			} else if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_MSKANJI) && (!strncmp(name1, "MS$KANJI", 8) || !strncmp(name1, "@:MS$KANJI", 10))) {
-				mskanji_handle = MSKANJI_DEVICE_HANDLE;
-				reg_ax = MSKANJI_DEVICE_HANDLE;
-				force = false;
-				CALLBACK_SCF(false);
-				break;
+			char *name_start = name1;
+			if(name1[0] == '@' && name1[1] == ':') {
+				name_start += 2;
+			}
+			if(DOS_CheckExtDevice(name_start, false) == 0) {
+				if(dos.im_enable_flag) {
+					if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_IAS) && !strncmp(name_start, "$IBMAIAS", 8)) {
+						ias_handle = IAS_DEVICE_HANDLE;
+						reg_ax = IAS_DEVICE_HANDLE;
+						force = false;
+						CALLBACK_SCF(false);
+						break;
+					} else if((DOSV_GetFepCtrl() & DOSV_FEP_CTRL_MSKANJI) && !strncmp(name_start, "MS$KANJI", 8)) {
+						mskanji_handle = MSKANJI_DEVICE_HANDLE;
+						reg_ax = MSKANJI_DEVICE_HANDLE;
+						force = false;
+						CALLBACK_SCF(false);
+						break;
+					}
+				}
+				if(!strncmp(name_start, "$IBMAFNT", 8) || !strncmp(name_start, "$IBMADSP", 8)) {
+					ibmjp_handle = IBMJP_DEVICE_HANDLE;
+					reg_ax = IBMJP_DEVICE_HANDLE;
+					force = false;
+					CALLBACK_SCF(false);
+					break;
+				}
 			}
 		}
 		force = true;
@@ -909,6 +926,9 @@ static Bitu DOS_21Handler(void) {
 			CALLBACK_SCF(false);
 		} else if(mskanji_handle != 0 && mskanji_handle == reg_bx) {
 			mskanji_handle = 0;
+			CALLBACK_SCF(false);
+		} else if(ibmjp_handle != 0 && ibmjp_handle == reg_bx) {
+			ibmjp_handle = 0;
 			CALLBACK_SCF(false);
 		}
 
