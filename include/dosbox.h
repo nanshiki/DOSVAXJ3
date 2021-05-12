@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#define	BUILD_VERSION	"JP210423"
+#define	BUILD_VERSION	"JP210512"
 #ifndef VERSION
 #define VERSION BUILD_VERSION
 #endif
