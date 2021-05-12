@@ -649,10 +649,30 @@ static Bitu DOS_21Handler(void) {
 		reg_al=0xf0;	/* al destroyed */		
 		break;
 	case 0x2a:		/* Get System Date */
-		{
+		if(dos.host_time_flag) {
+#if defined (WIN32)
+			SYSTEMTIME st;
+			GetLocalTime(&st);
+
+			dos.date.day = (Bit8u)st.wDay;
+			dos.date.month = (Bit8u)st.wMonth;
+			dos.date.year = st.wYear;
+#else
+			time_t curtime;
+			struct tm *loctime;
+			curtime = time(NULL);
+			loctime = localtime(&curtime);
+
+			dos.date.day = loctime->tm_mday;
+			dos.date.month = loctime->tm_mon + 1;
+			dos.date.year = loctime->tm_year + 1900;
+#endif
+		} else {
 			reg_ax=0; // get time
 			CALLBACK_RunRealInt(0x1a);
 			if(reg_al) DOS_AddDays(reg_al);
+		}
+		{
 			int a = (14 - dos.date.month)/12;
 			int y = dos.date.year - a;
 			int m = dos.date.month + 12*a - 2;
@@ -675,29 +695,56 @@ static Bitu DOS_21Handler(void) {
 		dos.date.day=reg_dl;
 		reg_al=0;
 		break;
-	case 0x2c: {	/* Get System Time */
-		reg_ax=0; // get time
-		CALLBACK_RunRealInt(0x1a);
-		if(reg_al) DOS_AddDays(reg_al);
-		reg_ah=0x2c;
+	case 0x2c: 	/* Get System Time */
+		if(dos.host_time_flag) {
+#if defined (WIN32)
+			SYSTEMTIME st;
+			GetLocalTime(&st);
+			
+			dos.date.day = (Bit8u)st.wDay;
+			dos.date.month = (Bit8u)st.wMonth;
+			dos.date.year = st.wYear;
+			reg_dl = (Bit8u)(st.wMilliseconds / 10);
+			reg_dh = (Bit8u)st.wSecond;
+			reg_cl = (Bit8u)st.wMinute;
+			reg_ch = (Bit8u)st.wHour;
+#else
+			time_t curtime;
+			struct tm *loctime;
 
-		Bitu ticks=((Bitu)reg_cx<<16)|reg_dx;
-		if(time_start<=ticks) ticks-=time_start;
-		Bitu time=(Bitu)((100.0/((double)PIT_TICK_RATE/65536.0)) * (double)ticks);
+			curtime = time(NULL);
+			loctime = localtime(&curtime);
 
-		reg_dl=(Bit8u)((Bitu)time % 100); // 1/100 seconds
-		time/=100;
-		reg_dh=(Bit8u)((Bitu)time % 60); // seconds
-		time/=60;
-		reg_cl=(Bit8u)((Bitu)time % 60); // minutes
-		time/=60;
-		reg_ch=(Bit8u)((Bitu)time % 24); // hours
+			dos.date.day = loctime->tm_mday;
+			dos.date.month = loctime->tm_mon + 1;
+			dos.date.year = loctime->tm_year + 1900;
+			reg_dl = 0;
+			reg_dh = loctime->tm_sec;
+			reg_cl = loctime->tm_min;
+			reg_ch = loctime->tm_hour;
+#endif
+		} else {
+			reg_ax=0; // get time
+			CALLBACK_RunRealInt(0x1a);
+			if(reg_al) DOS_AddDays(reg_al);
+			reg_ah=0x2c;
+			Bitu ticks=((Bitu)reg_cx<<16)|reg_dx;
+			if(time_start<=ticks) ticks-=time_start;
+			Bitu time=(Bitu)((100.0/((double)PIT_TICK_RATE/65536.0)) * (double)ticks);
 
-		//Simulate DOS overhead for timing-sensitive games
-        //Robomaze 2
-		overhead();
+			reg_dl=(Bit8u)((Bitu)time % 100); // 1/100 seconds
+			time/=100;
+			reg_dh=(Bit8u)((Bitu)time % 60); // seconds
+			time/=60;
+			reg_cl=(Bit8u)((Bitu)time % 60); // minutes
+			time/=60;
+			reg_ch=(Bit8u)((Bitu)time % 24); // hours
+
+			//Simulate DOS overhead for timing-sensitive games
+    	    //Robomaze 2
+			overhead();
+		}
 		break;
-	}
 	case 0x2d:		/* Set System Time */
 		LOG(LOG_DOSMISC,LOG_ERROR)("DOS:Set System Time not supported");
 		//Check input parameters nonetheless
@@ -2590,6 +2637,9 @@ public:
 		dos.version.minor=0;
 
 		dos.direct_output=false;
+
+		Section_prop *section=static_cast<Section_prop *>(configuration);
+		dos.host_time_flag = section->Get_bool("hosttime");
 	}
 	~DOS(){
 		for (Bit16u i=0;i<DOS_DRIVES;i++) delete Drives[i];
