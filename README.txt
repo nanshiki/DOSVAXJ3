@@ -132,6 +132,10 @@ autoreload     オートリロード(ディレクトリキャッシュ更新)の
                実行時、all で両方のタイミングでディレクトリキャッシュの更新を
                行います。false で更新は行いません。
 
+hosttime       DOS function (ah=2ah, 2ch) で日時をホスト OS から取得します。
+               false で以前通り tick 値から算出、true でホスト OS から取得と
+               なります。
+
 　DOSVAXJ3 関連の初期設定値は下記の通りです。
 [sdl]
 clipboardmodifier=alt
@@ -152,6 +156,7 @@ ver=7.10
 lfn=auto
 automount=true
 autoreload=cmd
+hosttime=false
 
 ●Windows 版起動時オプション
 　Windows 版はデフォルトでステータスウインドウ非表示となっています。
@@ -222,6 +227,11 @@ OFF (Eb-) としてください。ON (Eb+) の場合、ロングファイルネ�
 　adddev で MCDPC.EXE を登録して BBS ホストプログラムを動作させたり、日本語
 FEP を登録して MS KANJI API で操作する事ができます。
 　adddrv で日本語 FEP を登録する場合、[dosbox] im=false としてください。
+
+　hosttime=ture とすると、int 21h ah=2ah, 2ch の日時をホスト OS から取得します。
+　長時間動作させる際に日時がずれるのが問題になる場合は設定してください。
+　int 1ah で取得できる tick 値から算出される日時とずれが発生しますのでご注意く
+ださい。
 
 ・AX モードでの注意事項
 　AX モードで起動した場合、chev jp では AX 日本語モードとなります。
@@ -434,6 +444,9 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　adddev で登録したキャラクタデバイスに対して DOS ファンクションでの各種操作
 ができるように修正しました。
 　adddev で日本語 FEP を登録可能となるよう修正しました。
+
+・build JP210512 (2021/5/12)
+　int 21h ah=2ah, 2ch の日時をホスト OS から取得する設定を追加しました。
 
 ●ライセンス
 　GPL v2
