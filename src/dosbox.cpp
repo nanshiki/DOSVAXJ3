@@ -482,6 +482,7 @@ void DOSBOX_Init(void) {
 	Pstring->Set_help("not used.");
 #else
 	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"\x082\x06c\x082\x072\x020\x083\x053\x083\x056\x083\x062\x083\x04e");
+	Pstring->Set_help("Font name used by Windows IME.");
 #endif
 	// gaiji
 	Phex = secprop->Add_hex("gaijistart",Property::Changeable::OnlyAtStart,0xf040);
@@ -882,6 +883,9 @@ void DOSBOX_Init(void) {
 	secprop->AddInitFunction(&DOS_KeyboardLayout_Init,true);
 	Pstring = secprop->Add_string("keyboardlayout",Property::Changeable::WhenIdle, "jp");
 	Pstring->Set_help("Language code of the keyboard layout (or none).");
+
+	Pbool = secprop->Add_bool("hosttime",Property::Changeable::OnlyAtStart, false);
+	Pbool->Set_help("Use host OS time in DOS functions(0x2a/0x2c).");
 
 	// Mscdex
 	secprop->AddInitFunction(&MSCDEX_Init);
