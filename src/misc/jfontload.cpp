@@ -184,6 +184,9 @@ void JFONT_Init(Section_prop * section) {
 	bool yen_flag = section->Get_bool("yen");
 
 	font_name = section->Get_string("jfontname");
+#if defined(WIN32)
+	SetFontUse20(section->Get_bool("jfontuse20"));
+#endif
 	SetFontName(font_name.c_str());
 	Prop_path* pathprop = section->Get_path("jfontsbcs");
 	if (pathprop) {
