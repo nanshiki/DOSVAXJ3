@@ -19,6 +19,9 @@ Bit8u GetKanjiAttr();
 Bit8u *GetSbcsFont(Bitu code);
 Bit8u *GetSbcs19Font(Bitu code);
 Bit8u *GetSbcs24Font(Bitu code);
+#if defined(WIN32)
+void SetFontUse20(bool flag);
+#endif
 void SetFontName(const char *name);
 Bit8u *GetDbcsFont(Bitu code);
 Bit8u *GetDbcs24Font(Bitu code);
