@@ -186,6 +186,7 @@ void DOS_SetupTables(void) {
 	dos.tables.country_seg = DOS_GetMemory(3);
 	PhysPt dest = (dos.tables.country_seg << 4) + 7;
 	MEM_BlockWrite(dest, country_info, sizeof(country_info));
+	real_writeb(dos.tables.country_seg, 0, 1);
 	real_writew(dos.tables.country_seg, 1, 0x26);
 	real_writew(dos.tables.country_seg, 5, dos.loaded_codepage);
 	real_writed(dos.tables.country_seg, 7 + 0x12, CALLBACK_RealPointer(call_casemap));

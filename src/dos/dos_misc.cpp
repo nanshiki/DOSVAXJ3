@@ -52,6 +52,14 @@ static Bitu INT2F_Handler(void) {
 	if(reg_ax == 0x1203) {
 		SegSet16(ds, dos.tables.country_seg);
 		return CBRET_NONE;
+	} else if(reg_ax == 0x4f00) {
+		reg_ax = 0x0000;
+		reg_dx = 0x0001;
+		return CBRET_NONE;
+	} else if(reg_ax == 0x4f01) {
+		reg_ax = 0x0000;
+		reg_bx = dos.loaded_codepage;
+		return CBRET_NONE;
 	}
 
 	LOG(LOG_DOSMISC,LOG_ERROR)("DOS:Multiplex Unhandled call %4X",reg_ax);

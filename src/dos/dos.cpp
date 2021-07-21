@@ -1417,12 +1417,13 @@ static Bitu DOS_21Handler(void) {
 			case 0x01:
 				{
 					PhysPt src = (dos.tables.country_seg << 4);
-					len = (reg_cx < 0x1f) ? reg_cx : 0x1f;
+					len = (reg_cx < 0x1f) ? reg_cx : 0x29;
 					MEM_BlockCopy(data, src, len);
 					mem_writeb(data, reg_al);
 					if(IS_DOS_JAPANESE) {
 						mem_writeb(data + 0x07, 2);
 					}
+					reg_cx = len;
 				}
 				CALLBACK_SCF(false);
 				break;
