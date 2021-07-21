@@ -486,13 +486,16 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 				break;
 		}
 		if(keyboard_jp_flag) {
-			if(key == 0x1a) {
-				key = 0x1b;
-			} else if(key == 0x1b) {
-				key = 0x2b;
-			} else if(key == 0x2b) {
-				key = 0x73;
-			} else if(key == 0x90) {
+			if(!GFX_SDLUsingWinDIB()) {
+				if(key == 0x1a) {
+					key = 0x1b;
+				} else if(key == 0x1b) {
+					key = 0x2b;
+				} else if(key == 0x2b) {
+					key = 0x73;
+				}
+			}
+			if(key == 0x90) {
 				key = 0x0d;
 			} else if(key == 0x91) {
 				key = 0x1a;

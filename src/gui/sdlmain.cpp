@@ -1994,7 +1994,12 @@ void Config_Add_SDL() {
 	Pstring = sdl_sec->Add_string("output",Property::Changeable::Always,"surface");
 	Pstring->Set_help("What video system to use for output.");
 	Pstring->Set_values(outputs);
-
+#if defined(WIN32)
+	const char *videodrivers[] = { "directx", "windib", 0 };
+	Pstring = sdl_sec->Add_string("videodriver",Property::Changeable::WhenIdle,"");
+	Pstring->Set_help("Forces a video driver for the SDL library to use.");
+	Pstring->Set_values(videodrivers);
+#endif
 	Pbool = sdl_sec->Add_bool("autolock",Property::Changeable::Always,true);
 	Pbool->Set_help("Mouse will automatically lock, if you click on the screen. (Press CTRL-F10 to unlock)");
 
@@ -2321,35 +2326,6 @@ int main(int argc, char* argv[]) {
 	sdl.laltstate = SDL_KEYUP;
 	sdl.raltstate = SDL_KEYUP;
 
-#if defined (WIN32)
-#if SDL_VERSION_ATLEAST(1, 2, 10)
-		sdl.using_windib=true;
-#else
-		sdl.using_windib=false;
-#endif
-		char sdl_drv_name[128];
-		if (getenv("SDL_VIDEODRIVER")==NULL) {
-			if (SDL_VideoDriverName(sdl_drv_name,128)!=NULL) {
-				sdl.using_windib=false;
-				if (strcmp(sdl_drv_name,"directx")!=0) {
-					SDL_QuitSubSystem(SDL_INIT_VIDEO);
-					putenv("SDL_VIDEODRIVER=directx");
-					if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) {
-						putenv("SDL_VIDEODRIVER=windib");
-						if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) E_Exit("Can't init SDL Video %s",SDL_GetError());
-						sdl.using_windib=true;
-					}
-				}
-			}
-		} else {
-			char* sdl_videodrv = getenv("SDL_VIDEODRIVER");
-			if (strcmp(sdl_videodrv,"directx")==0) sdl.using_windib = false;
-			else if (strcmp(sdl_videodrv,"windib")==0) sdl.using_windib = true;
-		}
-		if (SDL_VideoDriverName(sdl_drv_name,128)!=NULL) {
-			if (strcmp(sdl_drv_name,"windib")==0) LOG_MSG("SDL_Init: Starting up with SDL windib video driver.\n          Try to update your video card and directx drivers!");
-		}
-#endif
 	sdl.num_joysticks=SDL_NumJoysticks();
 
 #if defined (WIN32)
@@ -2431,6 +2407,30 @@ int main(int argc, char* argv[]) {
 		control->Init();
 		/* Some extra SDL Functions */
 		Section_prop * sdl_sec=static_cast<Section_prop *>(control->GetSection("sdl"));
+
+#if defined(WIN32)
+		sdl.using_windib=true;
+		if (getenv("SDL_VIDEODRIVER")==NULL) {
+			std::string videodriver = sdl_sec->Get_string("videodriver");
+			if (videodriver=="directx") {
+				sdl.using_windib=false;
+				videodriver = "SDL_VIDEODRIVER="+videodriver;
+				SDL_QuitSubSystem(SDL_INIT_VIDEO);
+				putenv((char *)videodriver.c_str());
+				if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) {
+					putenv("SDL_VIDEODRIVER=windib");
+					if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) E_Exit("Can't init SDL Video %s",SDL_GetError());
+					sdl.using_windib=true;
+				}
+				GFX_SetIcon();
+				GFX_SetTitle(-1,-1,false);
+			}
+		} else {
+			char* sdl_videodrv = getenv("SDL_VIDEODRIVER");
+			if (strcmp(sdl_videodrv,"directx")==0) sdl.using_windib = false;
+			else if (strcmp(sdl_videodrv,"windib")==0) sdl.using_windib = true;
+		}
+#endif
 
 		if (control->cmdline->FindExist("-fullscreen") || sdl_sec->Get_bool("fullscreen")) {
 			if(!sdl.desktop.fullscreen) { //only switch if not already in fullscreen
