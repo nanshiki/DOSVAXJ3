@@ -483,6 +483,8 @@ void DOSBOX_Init(void) {
 #else
 	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"\x082\x06c\x082\x072\x020\x083\x053\x083\x056\x083\x062\x083\x04e");
 	Pstring->Set_help("Font name used by Windows IME.");
+	Pbool = secprop->Add_bool("jfontuse20",Property::Changeable::OnlyAtStart,false);
+	Pbool->Set_help("Use a 20-dot font instead of Windows' built-in Japanese 24-dot font.");
 #endif
 	// gaiji
 	Phex = secprop->Add_hex("gaijistart",Property::Changeable::OnlyAtStart,0xf040);
