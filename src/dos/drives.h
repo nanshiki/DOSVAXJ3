@@ -131,6 +131,17 @@ struct direntry {
 	Bit32u entrysize;
 } GCC_ATTRIBUTE(packed);
 
+struct direntry_lfn {
+    Bit8u LDIR_Ord;                 /* 0x00 Long filename ordinal (1 to 63). bit 6 (0x40) is set if the last entry, which normally comes first in the directory */
+    Bit16u LDIR_Name1[5];           /* 0x01 first 5 chars */
+    Bit8u attrib;                   /* 0x0B */
+    Bit8u LDIR_Type;                /* 0x0C zero to indicate a LFN */
+    Bit8u LDIR_Chksum;              /* 0x0D checksum */
+    Bit16u LDIR_Name2[6];           /* 0x0E next 6 chars */
+    Bit16u LDIR_FstClusLO;          /* 0x1A zero (loFirstClust) */
+    Bit16u LDIR_Name3[2];           /* 0x1C next 2 chars */
+} GCC_ATTRIBUTE(packed);
+
 struct partTable {
 	Bit8u booter[446];
 	struct {
@@ -175,6 +186,9 @@ public:
 	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 public:
+	char* Generate_SFN(const char *path, const char *name);
+	Bit8u readSector(Bit32u sectnum, void * data);
+	Bit8u writeSector(Bit32u sectnum, void * data);
 	Bit32u getAbsoluteSectFromBytePos(Bit32u startClustNum, Bit32u bytePos);
 	Bit32u getSectorSize(void);
 	Bit32u getAbsoluteSectFromChain(Bit32u startClustNum, Bit32u logicalSector);
@@ -192,8 +206,8 @@ private:
 	Bit32u getClustFirstSect(Bit32u clustNum);
 	bool FindNextInternal(Bit32u dirClustNumber, DOS_DTA & dta, direntry *foundEntry);
 	bool getDirClustNum(char * dir, Bit32u * clustNum, bool parDir);
-	bool getFileDirEntry(char const * const filename, direntry * useEntry, Bit32u * dirClust, Bit32u * subEntry);
-	bool addDirectoryEntry(Bit32u dirClustNumber, direntry useEntry);
+	bool getFileDirEntry(char const * const filename, direntry * useEntry, Bit32u * dirClust, Bit32u * subEntry,bool dirOk=false);
+	bool addDirectoryEntry(Bit32u dirClustNumber, direntry useEntry,const char *lfn=NULL);
 	void zeroOutCluster(Bit32u clustNumber);
 	bool getEntryName(char *fullname, char *entname);
 	friend void DOS_Shell::CMD_SUBST(char* args); 	
@@ -210,6 +224,7 @@ private:
 	} allocation;
 	
 	bootstrap bootbuffer;
+	bool absolute = false;
 	Bit8u fattype;
 	Bit32u CountOfClusters;
 	Bit32u partSectOff;
@@ -221,7 +236,17 @@ private:
 
 	Bit8u fatSectBuffer[1024];
 	Bit32u curFatSect;
+	struct lfnRange_t {
+		Bit16u      dirPos_start;
+		Bit16u      dirPos_end;
 
+		void clear(void) {
+			dirPos_start = dirPos_end = 0;
+		}
+		bool empty(void) const {
+			return dirPos_start == dirPos_end;
+		}
+	} lfnRange = {0,0};
 	bool diskWriteProtected;
 };
 
@@ -426,6 +451,13 @@ private:
 	VFILE_Block * search_file;
 };
 
-
+/* No LFN filefind in progress (SFN call). This index is out of range and meant to indicate no LFN call in progress. */
+#define LFN_FILEFIND_NONE           258
+/* FAT image handle */
+#define LFN_FILEFIND_IMG            256
+/* Internal handle */
+#define LFN_FILEFIND_INTERNAL       255
+/* Highest valid handle */
+#define LFN_FILEFIND_MAX            255
 
 #endif

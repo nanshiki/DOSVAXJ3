@@ -49,6 +49,7 @@ bool force = false;
 int sdrive;
 
 extern Bitu autoreload;
+int lfn_filefind_handle = LFN_FILEFIND_NONE;
 
 Bit8u DOS_GetDefaultDrive(void) {
 //	return DOS_SDA(DOS_SDA_SEG,DOS_SDA_OFS).GetDrive();
@@ -120,10 +121,14 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 	r=0;w=0;
 	while (name_int[r]!=0 && (r<DOS_PATHLENGTH)) {
 		c=name_int[r++];
-		if ((c>='a') && (c<='z')) c-=32;
-		if (c=='"') {q++;continue;}
-		else if (c=='/') c='\\';
-		else if (c==' ' && q/2*2 == q) break; /* should be separator */
+		if (c=='/') c='\\';
+		else if (c=='"') {q++;continue;}
+		else if (uselfn&&!force) {
+			if (c==' ' && q/2*2 == q) continue;
+		} else {
+			if ((c>='a') && (c<='z')) c-=32;
+			else if (c==' ') continue; /* should be separator */
+		}
 		upname[w++]=c;
 		if (DBCS_LeadByte(c)) {
 			// skip DBCS 2nd byte
@@ -217,11 +222,16 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 						if ((c>='A') && (c<='Z')) continue;
 						if ((c>='0') && (c<='9')) continue;
 						switch (c) {
+						case '+':	case '[':	case ']':	case ' ':
+							if (!uselfn||force) {
+								DOS_SetError(DOSERR_PATH_NOT_FOUND);
+								return false;
+							}
 						case '$':	case '#':	case '@':	case '(':	case ')':
 						case '!':	case '%':	case '{':	case '}':	case '`':	case '~':
 						case '_':	case '-':	case '.':	case '*':	case '?':	case '&':
-						case '\'':	case '+':	case '^':	case 246:	case 255:	case 0xa0:
-						case 0xe5:	case 0xbd:	case 0x9d:
+						case '\'':	case '^':	case 0xa0:	case 0xe5:	case 0xbd:	case 0x9d:
+						case 246:	case 255:
 							break;
 						default:
 							if(c < 0xa1 || c > 0xdf) {
@@ -254,21 +264,22 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 	return true;	
 }
 
+bool checkwat=false;
 bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
-	char dir_current[DOS_PATHLENGTH + 1], pdir[LFN_NAMELENGTH], *p;
-	Bit8u drive;char fulldir[DOS_PATHLENGTH],LFNPath[CROSS_LEN];
-	char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH];
-	int w=0;
+    char pdir[LFN_NAMELENGTH+4], *p;
+    Bit8u drive;char fulldir[DOS_PATHLENGTH],LFNPath[CROSS_LEN];
+    char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH];
+    Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
+    if (!DOS_MakeName(path,fulldir,&drive)) return false;
+    sprintf(SFNPath,"%c:\\",drive+'A');
+    strcpy(LFNPath,SFNPath);
+    p = fulldir;
+    if (*p==0) return true;
+	RealPt save_dta=dos.dta();
+	dos.dta(dos.tables.tempdta);
 	DOS_DTA dta(dos.dta());
-	Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
-	if (!DOS_MakeName(path,fulldir,&drive)) return false;
-	sprintf(SFNPath,"%c:\\",drive+'A');
-	strcpy(LFNPath,SFNPath);
-	strcpy(dir_current,Drives[drive]->curdir);
-	Drives[drive]->curdir,"";
-	p = fulldir;
-	if (*p==0) return true;
-	for (char *s = strchr(p,'\\'); s != NULL; s = strchr(p,'\\')) {
+	int fbak=lfn_filefind_handle;
+    for (char *s = strchr(p,'\\'); s != NULL; s = strchr(p,'\\')) {
 		*s = 0;
 		if (SFNPath[strlen(SFNPath)-1]=='\\')
 			sprintf(pdir,"\"%s%s\"",SFNPath,p);
@@ -277,16 +288,20 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
 		if (!strrchr(p,'*') && !strrchr(p,'?')) {
 			*s = '\\';
 			p = s + 1;
+			lfn_filefind_handle=LFN_FILEFIND_INTERNAL;
 			if (DOS_FindFirst(pdir,0xffff & DOS_ATTR_DIRECTORY & ~DOS_ATTR_VOLUME,false)) {
+				lfn_filefind_handle=fbak;
 				dta.GetResult(name,lname,size,date,time,attr);
 				strcat(SFNPath,name);
 				strcat(LFNPath,lname);
-				Drives[drive]->curdir,SFNPath+3;
 				strcat(SFNPath,"\\");
 				strcat(LFNPath,"\\");
 			}
 			else {
-			return false;}
+				lfn_filefind_handle=fbak;
+				dos.dta(save_dta);
+				return false;
+			}
 		} else {
 			strcat(SFNPath,p);
 			strcat(LFNPath,p);
@@ -296,21 +311,27 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
 			p = s + 1;
 			break;
 		}
-	}
-	if (p != 0) {
+    }
+    if (p != 0) {
 		sprintf(pdir,"\"%s%s\"",SFNPath,p);
+		lfn_filefind_handle=LFN_FILEFIND_INTERNAL;
 		if (!strrchr(p,'*')&&!strrchr(p,'?')&&DOS_FindFirst(pdir,0xffff & ~DOS_ATTR_VOLUME,false)) {
 			dta.GetResult(name,lname,size,date,time,attr);
 			strcat(SFNPath,name);
 			strcat(LFNPath,lname);
+        } else if (checkwat) {
+            lfn_filefind_handle=fbak;
+            dos.dta(save_dta);
+            return false;
 		} else {
 			strcat(SFNPath,p);
 			strcat(LFNPath,p);
 		}
-	}
-	Drives[drive]->curdir,dir_current;
-	if (LFN) strcpy(SFNPath,LFNPath);
-	return true;
+		lfn_filefind_handle=fbak;
+    }
+	dos.dta(save_dta);
+    if (LFN) strcpy(SFNPath,LFNPath);
+    return true;
 }
 
 bool DOS_GetCurrentDir(Bit8u drive,char * const buffer, bool LFN) {

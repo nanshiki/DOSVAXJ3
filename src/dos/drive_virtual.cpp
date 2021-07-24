@@ -38,8 +38,8 @@ struct VFILE_Block {
 	VFILE_Block * next;
 };
 
-
-static VFILE_Block * first_file;	
+extern int lfn_filefind_handle;
+static VFILE_Block * first_file, * lfn_search[256];
 
 void VFILE_Register(const char * name,Bit8u * data,Bit32u size) {
 	VFILE_Block * new_file=new VFILE_Block;
@@ -205,15 +205,19 @@ bool Virtual_Drive::FileExists(const char* name){
 }
 
 bool Virtual_Drive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
-	search_file=first_file;
+    (void)_dir;//UNUSED
+	if (lfn_filefind_handle>=LFN_FILEFIND_MAX)
+		search_file=first_file;
+	else
+		lfn_search[lfn_filefind_handle]=first_file;
 	Bit8u attr;char pattern[CROSS_LEN];
-	dta.GetSearchParams(attr,pattern,true);
+    dta.GetSearchParams(attr,pattern,false);
 	if (attr == DOS_ATTR_VOLUME) {
-		dta.SetResult("DOSBOX","DOSBOX",0,0,0,DOS_ATTR_VOLUME);
+		dta.SetResult(GetLabel(),GetLabel(),0,0,0,DOS_ATTR_VOLUME);
 		return true;
 	} else if ((attr & DOS_ATTR_VOLUME) && !fcb_findfirst) {
-		if (WildFileCmp("DOSBOX",pattern)) {
-			dta.SetResult("DOSBOX","DOSBOX",0,0,0,DOS_ATTR_VOLUME);
+		if (WildFileCmp(GetLabel(),pattern)) {
+			dta.SetResult(GetLabel(),GetLabel(),0,0,0,DOS_ATTR_VOLUME);
 			return true;
 		}
 	}
@@ -222,15 +226,25 @@ bool Virtual_Drive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 
 bool Virtual_Drive::FindNext(DOS_DTA & dta) {
 	Bit8u attr;char pattern[CROSS_LEN];
-	dta.GetSearchParams(attr,pattern,true);
-	while (search_file) {
-		if (WildFileCmp(search_file->name,pattern)) {
-			dta.SetResult(search_file->name,search_file->lname,search_file->size,search_file->date,search_file->time,DOS_ATTR_ARCHIVE);
+	dta.GetSearchParams(attr,pattern,false);
+	if (lfn_filefind_handle>=LFN_FILEFIND_MAX)
+		while (search_file) {
+			if (WildFileCmp(search_file->name,pattern)||LWildFileCmp(search_file->lname,pattern)) {
+				dta.SetResult(search_file->name,search_file->lname,search_file->size,search_file->date,search_file->time,DOS_ATTR_ARCHIVE);
+				search_file=search_file->next;
+				return true;
+			}
 			search_file=search_file->next;
-			return true;
 		}
-		search_file=search_file->next;
-	}
+	else
+		while (lfn_search[lfn_filefind_handle]) {
+			if (WildFileCmp(lfn_search[lfn_filefind_handle]->name,pattern)||LWildFileCmp(lfn_search[lfn_filefind_handle]->lname,pattern)) {
+				dta.SetResult(lfn_search[lfn_filefind_handle]->name,lfn_search[lfn_filefind_handle]->lname,lfn_search[lfn_filefind_handle]->size,lfn_search[lfn_filefind_handle]->date,lfn_search[lfn_filefind_handle]->time,DOS_ATTR_ARCHIVE);
+				lfn_search[lfn_filefind_handle]=lfn_search[lfn_filefind_handle]->next;
+				return true;
+			}
+			lfn_search[lfn_filefind_handle]=lfn_search[lfn_filefind_handle]->next;
+		}
 	DOS_SetError(DOSERR_NO_MORE_FILES);
 	return false;
 }
