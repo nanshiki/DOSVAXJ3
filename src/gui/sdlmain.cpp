@@ -54,6 +54,7 @@
 #include "bios.h"
 #include "jega.h"
 #include "jfont.h"
+#include "../ints/int10.h"
 
 #if C_CLIPBOARD
  #if !defined(C_NOPDCLIP)
@@ -231,6 +232,10 @@ struct SDL_Block {
 	// state of alt-keys for certain special handlings
 	Bit8u laltstate;
 	Bit8u raltstate;
+	Bit8u lctrlstate;
+	Bit8u rctrlstate;
+	Bit8u lshiftstate;
+	Bit8u rshiftstate;
 };
 
 static SDL_Block sdl;
@@ -298,7 +303,10 @@ extern bool CPU_CycleAutoAdjust;
 //Globals for keyboard initialisation
 bool startup_state_numlock=false;
 bool startup_state_capslock=false;
-int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, fy=-1;
+bool selmark = false;
+int selsrow = -1, selscol = -1;
+int selerow = -1, selecol = -1;
+int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, fy=-1, mbutton=3;
 const char *modifier;
 
 void GFX_SetTitle(Bit32s cycles,Bits frameskip,bool paused){
@@ -1260,6 +1268,11 @@ static void GUI_StartUp(Section * sec) {
 		}
 	}
 	sdl.desktop.doublebuf=section->Get_bool("fulldouble");
+    const char *clip_mouse_button = section->Get_string("clipinputbutton");
+    if (!strcmp(clip_mouse_button, "middle")) mbutton=2;
+    else if (!strcmp(clip_mouse_button, "right")) mbutton=3;
+    else if (!strcmp(clip_mouse_button, "arrows")) mbutton=4;
+    else mbutton=0;
 	modifier=section->Get_string("clipboardmodifier");
 #if SDL_VERSION_ATLEAST(1, 2, 10)
 	if (!sdl.desktop.full.width || !sdl.desktop.full.height){
@@ -1517,8 +1530,8 @@ void ClipboardPaste(bool pressed) {
 #endif
 }
 
-void ClipboardCopy(void) {
-	const char* text = Mouse_GetSelected(mouse_start_x,mouse_start_y,mouse_end_x,mouse_end_y,sdl.draw.width,sdl.draw.height);
+void ClipboardCopy(int all) {
+	const char* text = all==1?Mouse_GetSelected(selscol, selsrow, selecol, selerow, -1, -1):Mouse_GetSelected(mouse_start_x,mouse_start_y,mouse_end_x,mouse_end_y,sdl.draw.width,sdl.draw.height);
 #if C_NOPDCLIP && defined(WIN32)
 	if (OpenClipboard(NULL)) {
 		HGLOBAL clipbuffer;
@@ -1565,6 +1578,81 @@ void Mouse_AutoLock(bool enable) {
 	}
 }
 
+#if C_CLIPBOARD
+bool isModifierApplied() {
+    return !strcmp(modifier,"none") ||
+    ((!strcmp(modifier,"ctrl") || !strcmp(modifier,"lctrl")) && sdl.lctrlstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"ctrl") || !strcmp(modifier,"rctrl")) && sdl.rctrlstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"alt") || !strcmp(modifier,"lalt")) && sdl.laltstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"alt") || !strcmp(modifier,"ralt")) && sdl.raltstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"shift") || !strcmp(modifier,"lshift")) && sdl.lshiftstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"shift") || !strcmp(modifier,"rshift")) && sdl.rshiftstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"ctrlalt") || !strcmp(modifier,"lctrlalt")) && sdl.lctrlstate==SDL_KEYDOWN && sdl.laltstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"ctrlalt") || !strcmp(modifier,"rctrlalt")) && sdl.rctrlstate==SDL_KEYDOWN && sdl.raltstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"ctrlshift") || !strcmp(modifier,"lctrlshift")) && sdl.lctrlstate==SDL_KEYDOWN && sdl.lshiftstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"ctrlshift") || !strcmp(modifier,"rctrlshift")) && sdl.rctrlstate==SDL_KEYDOWN && sdl.rshiftstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"altshift") || !strcmp(modifier,"laltshift")) && sdl.laltstate==SDL_KEYDOWN && sdl.lshiftstate==SDL_KEYDOWN) ||
+    ((!strcmp(modifier,"altshift") || !strcmp(modifier,"raltshift")) && sdl.raltstate==SDL_KEYDOWN && sdl.rshiftstate==SDL_KEYDOWN);
+}
+
+void ClipKeySelect(int sym) {
+    if (sym==SDLK_ESCAPE) {
+        if (mbutton==4 && selsrow>-1 && selscol>-1) {
+            Restore_Text(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
+            selmark = false;
+            selsrow = selscol = selerow = selecol = -1;
+        } else if (mouse_start_x >= 0 && mouse_start_y >= 0 && fx >= 0 && fy >= 0) {
+            Restore_Text(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h);
+            mouse_start_x = mouse_start_y = -1;
+            mouse_end_x = mouse_end_y = -1;
+            fx = fy = -1;
+        }
+        return;
+    }
+    if (mbutton!=4 || (CurMode->type!=M_TEXT && !IS_DOSV)) return;
+    if (sym==SDLK_HOME) {
+        if (selsrow==-1 || selscol==-1) {
+            int p=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
+            selscol = CURSOR_POS_COL(p);
+            selsrow = CURSOR_POS_ROW(p);
+        } else {
+            if (selsrow>-1 && selscol>-1) Restore_Text(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
+            if (selmark) {
+                selscol = selecol;
+                selsrow = selerow;
+            }
+        }
+        selmark = true;
+        selecol = selscol;
+        selerow = selsrow;
+        Mouse_Select(selscol, selsrow, selecol, selerow, -1, -1);
+    } else if (sym==SDLK_END) {
+        if (selmark) {
+            if (selsrow>-1 && selscol>-1 && selerow > -1 && selecol > -1) {
+                Restore_Text(selscol, selsrow, selecol, selerow, -1, -1);
+                ClipboardCopy(1);
+            }
+            selmark = false;
+            selsrow = selscol = selerow = selecol = -1;
+        }
+    } else if (sym==SDLK_LEFT || sym==SDLK_RIGHT || sym==SDLK_UP || sym==SDLK_DOWN) {
+        if (selsrow==-1 || selscol==-1) {
+            int p=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
+            selscol = CURSOR_POS_COL(p);
+            selsrow = CURSOR_POS_ROW(p);
+            selerow = selecol = -1;
+            selmark = false;
+        } else
+            Restore_Text(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
+        if (sym==SDLK_LEFT && (selmark?selecol:selscol)>0) (selmark?selecol:selscol)--;
+        else if (sym==SDLK_RIGHT && (selmark?selecol:selscol)<real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)-1) (selmark?selecol:selscol)++;
+        else if (sym==SDLK_UP && (selmark?selerow:selsrow)>0) (selmark?selerow:selsrow)--;
+        else if (sym==SDLK_DOWN && (selmark?selerow:selsrow)<(IS_EGAVGA_ARCH?real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS):24)) (selmark?selerow:selsrow)++;
+        Mouse_Select(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
+    }
+}
+#endif
+
 static void HandleMouseMotion(SDL_MouseMotionEvent * motion) {
 	if (sdl.mouse.locked || !sdl.mouse.autoenable)
 		Mouse_CursorMoved((float)motion->xrel*sdl.mouse.sensitivity/100.0f,
@@ -1587,7 +1675,19 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 	switch (button->state) {
 	case SDL_PRESSED:
 #if C_CLIPBOARD
-		if (!sdl.mouse.locked && button->button == SDL_BUTTON_RIGHT && (!strcmp(modifier,"none") || (!strcmp(modifier,"alt") || !strcmp(modifier,"lalt")) && sdl.laltstate==SDL_KEYDOWN || (!strcmp(modifier,"alt") || !strcmp(modifier,"ralt")) && sdl.raltstate==SDL_KEYDOWN)) {
+		if (!sdl.mouse.locked && button->button == SDL_BUTTON_LEFT && isModifierApplied()) {
+            if (mbutton==4 && selsrow>-1 && selscol>-1) {
+                Restore_Text(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
+                selmark = false;
+                selsrow = selscol = selerow = selecol = -1;
+            } else if (mouse_start_x >= 0 && mouse_start_y >= 0 && fx >= 0 && fy >= 0) {
+                Restore_Text(mouse_start_x-sdl.clip.x,mouse_start_y-sdl.clip.y,fx-sdl.clip.x,fy-sdl.clip.y,sdl.clip.w,sdl.clip.h);
+                mouse_start_x = mouse_start_y = -1;
+                mouse_end_x = mouse_end_y = -1;
+                fx = fy = -1;
+            }
+		}
+		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE) || (mbutton==3 && button->button == SDL_BUTTON_RIGHT)) && isModifierApplied()) {
 			mouse_start_x=motion->x;
 			mouse_start_y=motion->y;
 			break;
@@ -1616,14 +1716,14 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 		break;
 	case SDL_RELEASED:
 #if C_CLIPBOARD
-		if (!sdl.mouse.locked && button->button == SDL_BUTTON_RIGHT && mouse_start_x >= 0 && &mouse_start_y >= 0) {
+		if (!sdl.mouse.locked && ((mbutton==2 && button->button == SDL_BUTTON_MIDDLE) || (mbutton==3 && button->button == SDL_BUTTON_RIGHT)) && mouse_start_x >= 0 && &mouse_start_y >= 0) {
 			mouse_end_x=motion->x;
 			mouse_end_y=motion->y;
 			if (mouse_start_x == mouse_end_x && mouse_start_y == mouse_end_y)
 				ClipboardPaste(true);
 			else {
 				Restore_Text(mouse_start_x,mouse_start_y,fx,fy,sdl.draw.width,sdl.draw.height);
-				ClipboardCopy();
+				ClipboardCopy(0);
 			}
 			mouse_start_x = -1;
 			mouse_start_y = -1;
@@ -1650,8 +1750,12 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 }
 
 void GFX_LosingFocus(void) {
-	sdl.laltstate=SDL_KEYUP;
-	sdl.raltstate=SDL_KEYUP;
+    sdl.laltstate=SDL_KEYUP;
+    sdl.raltstate=SDL_KEYUP;
+    sdl.lctrlstate=SDL_KEYUP;
+    sdl.rctrlstate=SDL_KEYUP;
+    sdl.lshiftstate=SDL_KEYUP;
+    sdl.rshiftstate=SDL_KEYUP;
 	MAPPER_LosingFocus();
 }
 
@@ -1803,11 +1907,17 @@ void GFX_Events() {
 		case SDL_VIDEOEXPOSE:
 			if (sdl.draw.callback) sdl.draw.callback( GFX_CallBackRedraw );
 			break;
-#if defined(LINUX)
 		case SDL_KEYUP:
 		case SDL_KEYDOWN:
-			if (event.key.keysym.sym==SDLK_LALT) sdl.laltstate = event.key.type;
-			if (event.key.keysym.sym==SDLK_RALT) sdl.raltstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_LALT) sdl.laltstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_RALT) sdl.raltstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_LCTRL) sdl.lctrlstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_RCTRL) sdl.rctrlstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_LSHIFT) sdl.lshiftstate = event.key.type;
+            if (event.key.keysym.sym==SDLK_RSHIFT) sdl.rshiftstate = event.key.type;
+            if (event.type == SDL_KEYDOWN && isModifierApplied())
+                ClipKeySelect(event.key.keysym.sym);
+#if defined(LINUX)
 			if(event.type == SDL_KEYDOWN) {
 				if(event.key.keysym.unicode != 0) {
 					iconv_t ic;
@@ -1839,11 +1949,7 @@ void GFX_Events() {
 			}
 #endif
 #ifdef WIN32
-		case SDL_KEYDOWN:
-		case SDL_KEYUP:
 			// ignore event alt+tab
-			if (event.key.keysym.sym==SDLK_LALT) sdl.laltstate = event.key.type;
-			if (event.key.keysym.sym==SDLK_RALT) sdl.raltstate = event.key.type;
 			if (((event.key.keysym.sym==SDLK_TAB)) &&
 				((sdl.laltstate==SDL_KEYDOWN) || (sdl.raltstate==SDL_KEYDOWN))) break;
 			// This can happen as well.
@@ -1900,8 +2006,6 @@ void GFX_Events() {
 			}
 #endif
 #if defined (MACOSX)
-		case SDL_KEYDOWN:
-		case SDL_KEYUP:
 			/* On macs CMD-Q is the default key to close an application */
 			if (event.key.keysym.sym == SDLK_q && (event.key.keysym.mod == KMOD_RMETA || event.key.keysym.mod == KMOD_LMETA) ) {
 				KillSwitch(true);
@@ -2032,10 +2136,15 @@ void Config_Add_SDL() {
 	Pstring = sdl_sec->Add_string("titlebar",Property::Changeable::Always,"GNU GPL");
 	Pstring->Set_help("Change the string displayed in the DOSBox title bar.");
 
-	const char* clipboardmodifier[] = { "none", "alt", "lalt", "ralt", "disabled", 0};
+	const char* clipboardbutton[] = { "none", "middle", "right", "arrows", 0};
+	Pstring = sdl_sec->Add_string("clipinputbutton",Property::Changeable::Always, "right");
+	Pstring->Set_values(clipboardbutton);
+	Pstring->Set_help("Select the mouse button or use arrow keys for the clipboard copy/paste function.");
+
+	const char* clipboardmodifier[] = { "none", "ctrl", "lctrl", "rctrl", "alt", "lalt", "ralt", "shift", "lshift", "rshift", "ctrlalt", "ctrlshift", "altshift", "lctrlalt", "lctrlshift", "laltshift", "rctrlalt", "rctrlshift", "raltshift", 0};
 	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"alt");
 	Pstring->Set_values(clipboardmodifier);
-	Pstring->Set_help("Change the keyboard modifier for the right mouse button clipboard copy/paste function.");
+	Pstring->Set_help("Change the keyboard modifier for the mouse button clipboard copy/paste function.");
 }
 
 static void show_warning(char const * const message) {
@@ -2325,6 +2434,10 @@ int main(int argc, char* argv[]) {
 
 	sdl.laltstate = SDL_KEYUP;
 	sdl.raltstate = SDL_KEYUP;
+	sdl.lctrlstate = SDL_KEYUP;
+	sdl.rctrlstate = SDL_KEYUP;
+	sdl.lshiftstate = SDL_KEYUP;
+	sdl.rshiftstate = SDL_KEYUP;
 
 	sdl.num_joysticks=SDL_NumJoysticks();
 

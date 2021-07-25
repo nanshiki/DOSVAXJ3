@@ -526,8 +526,14 @@ static char mouse_text[50*80];
 const char* Mouse_GetSelected(int x1, int y1, int x2, int y2, int w, int h) {
 	Bit8u page = real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
 	Bit16u c=real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS), r=(Bit16u)real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS)+1;
-	int c1=c*x1/w, r1=r*y1/h, c2=c*x2/w, r2=r*y2/h, t;
 	char str[2], *out=mouse_text;
+    int c1=x1, r1=y1, c2=x2, r2=y2, t;
+    if (w>0&&h>0) {
+        c1=c*x1/w;
+        r1=r*y1/h;
+        c2=c*x2/w;
+        r2=r*y2/h;
+    }
 	if (c1>c2) {
 		t=c1;
 		c1=c2;
@@ -566,13 +572,19 @@ const char* Mouse_GetSelected(int x1, int y1, int x2, int y2, int w, int h) {
 void Mouse_Select(int x1, int y1, int x2, int y2, int w, int h) {
 	Bit8u page = real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
 	Bit16u c=real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS), r=(Bit16u)real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS)+1;
-	int c1=c*x1/w, r1=r*y1/h, c2=c*x2/w, r2=r*y2/h, t;
 	Bit16u seg;
 	if(IS_DOS_JAPANESE && !IS_AX_ARCH) {
 		seg = GetTextSeg();
 	} else {
 		seg = 0xb800;
 	}
+    int c1=x1, r1=y1, c2=x2, r2=y2, t;
+    if (w>0&&h>0) {
+        c1=c*x1/w;
+        r1=r*y1/h;
+        c2=c*x2/w;
+        r2=r*y2/h;
+    }
 	if (c1>c2) {
 		t=c1;
 		c1=c2;
@@ -599,13 +611,19 @@ void Mouse_Select(int x1, int y1, int x2, int y2, int w, int h) {
 void Restore_Text(int x1, int y1, int x2, int y2, int w, int h) {
 	Bit8u page = real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
 	Bit16u c=real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS), r=(Bit16u)real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS)+1;
-	int c1=c*x1/w, r1=r*y1/h, c2=c*x2/w, r2=r*y2/h, t;
 	Bit16u seg;
 	if(IS_DOS_JAPANESE && !IS_AX_ARCH) {
 		seg = GetTextSeg();
 	} else {
 		seg = 0xb800;
 	}
+    int c1=x1, r1=y1, c2=x2, r2=y2, t;
+    if (w>0&&h>0) {
+        c1=c*x1/w;
+        r1=r*y1/h;
+        c2=c*x2/w;
+        r2=r*y2/h;
+    }
 	if (c1>c2) {
 		t=c1;
 		c1=c2;
