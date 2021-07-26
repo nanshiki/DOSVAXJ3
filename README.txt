@@ -22,11 +22,21 @@ clipboardmodifier  クリップボードのコピー・ペーストの指定を�
                    none の場合、右クリックでペースト、右ドラッグで選択開始し、
                    右ボタンオフで選択範囲の文字がクリップボードにコピーされま
                    す。
-                   alt, lalt, ralt の場合は ALT キーを押しながらの右ボタン操作
-                   となります。lalt は左 ALT のみ、ralt は右 ALT のみとなりま
-                   す。
-                   disable の場合は使用しません。
+                   alt, lalt, ralt の場合は ALT キーを押しながら clipboardbutton
+                   で指定したマウスボタンやキーボードで操作します。
+                   lalt は左 ALT のみ、ralt は右 ALT のみとなります。
+                   ctrl, lctrl, rctrl の場合は Ctrl キー、shift, lshift, rshift
+                   の場合は Shift キーとなります。
+                   他に ctrlshift, ctrlalt, altshift といった組み合わせも指定
+                   可能です。
+                   none の場合は使用しません。
                    Linux の場合、xclip をインストールしておけば使用可能です。
+clipinputbutton    clipboardmodifier と組み合わせる操作を指定します。
+                   middle でマウス中ボタン、right でマウス右ボタン、arrow でキー
+                   ボード操作となります。
+                   キーボードの場合、Alt + Home で選択開始、Alt + End でコピー、
+                   Alt + 矢印キーで選択位置や範囲を変更できます。
+                   none の場合は使用しません。
 videodriver        SDL のビデオドライバを指定します。Windows 版のみの設定です。
                    デフォルトは windib で、他に directx が指定できます。
 
@@ -106,8 +116,8 @@ vtext2         chev vt2 で切り替わる V-text モードを指定します。
                xga24   解像度 1024× 768  文字  85×32 24ドットフォント
                sxga24  解像度 1280×1024  文字 106×42 24ドットフォント
                Windows フォントで 24 ドットフォントを代用する場合、MS ゴシック
-               や MS 明朝はビットマップデータを持っていませんのであまり綺麗にな
-               りません。
+               や MS 明朝はビットマップデータを持っていませんのであまり綺麗に
+               なりません。
                FONTX2 ファイルを使用するか、jfontuse20=true を指定することを推
                薦します。
 
@@ -147,6 +157,7 @@ hosttime       DOS function (ah=2ah, 2ch) で日時をホスト OS から取得�
 　DOSVAXJ3 関連の初期設定値は下記の通りです。
 [sdl]
 clipboardmodifier=alt
+clipinputbutton=right
 
 [dosbox]
 languagejp=japanese.lng
@@ -462,9 +473,14 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　オプション videodriver で以前のビデオドライバ directx も選択可能です。
 　BILING.SYS のコードページ取得に対応し、MS-DOS/V のエディタが日本語モードで
 も動作するようになりました。
-　Windows のフォントを使用する設定の際に 24 ドットフォントを 20 ドットで代用
-するオプションを追加しました。
+　Windows のフォントを使用する設定の際に 24 ドットフォントを 20 ドットフォン
+トで代用するオプションを追加しました。
 　Linux で一部の全角記号が正しく表示できなかったのを修正しました。
+
+・build JP210726 (2021/7/26)
+　LFN 関連処理の改善を行いました。(Wengier 氏提供)
+　設定に clipinputbutton を追加し、キーボードでのクリップボード操作に対応しま
+した。(Wengier 氏提供)
 
 ●ライセンス
 　GPL v2
