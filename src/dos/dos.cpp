@@ -28,6 +28,7 @@
 #include "callback.h"
 #include "regs.h"
 #include "dos_inc.h"
+#include "drives.h"
 #include "setup.h"
 #include "support.h"
 #include "serialport.h"
@@ -44,6 +45,7 @@
 
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
+extern int lfn_filefind_handle;
 extern bool force;
 extern bool LineInputFlag;
 extern bool CtrlCFlag;
@@ -1756,20 +1758,21 @@ static Bitu DOS_21Handler(void) {
 					CALLBACK_SCF(true);
 					break;
 				}
-				if (DOS_FindFirst(name2,reg_cx,false)) {
-					Bit16u entry;
-					Bit8u i,handle=DOS_FILES;
-					for (i=0;i<DOS_FILES;i++) {
-						if (!Files[i]) {
-							handle=i;
-							break;
-						}
-					}
-					if (handle==DOS_FILES) {
-						reg_ax=DOSERR_TOO_MANY_OPEN_FILES;
-						CALLBACK_SCF(true);
+				Bit16u entry;
+				Bit8u i,handle=DOS_FILES;
+				for (i=0;i<DOS_FILES;i++) {
+					if (!Files[i]) {
+						handle=i;
 						break;
 					}
+				}
+				if (handle==DOS_FILES) {
+					reg_ax=DOSERR_TOO_MANY_OPEN_FILES;
+					CALLBACK_SCF(true);
+					break;
+				}
+				lfn_filefind_handle=handle;
+				if (DOS_FindFirst(name2,reg_cx,false)) {
 					DOS_PSP psp(dos.psp());
 					entry = psp.FindFreeFileEntry();
 					if (entry==0xff) {
@@ -1788,7 +1791,8 @@ static Bitu DOS_21Handler(void) {
 				} else {
 					reg_ax=dos.errorcode;
 					CALLBACK_SCF(true);
-				};
+				}
+				lfn_filefind_handle=LFN_FILEFIND_NONE;
 				break;
 			}
 			case 0x4f:		/* LFN FindNext */
@@ -1799,6 +1803,7 @@ static Bitu DOS_21Handler(void) {
 					CALLBACK_SCF(true);
 					break;
 				}
+				lfn_filefind_handle=handle;
 				if (DOS_FindNext()) {
 					DOS_DTA dta(dos.dta());
 					char finddata[CROSS_LEN];
@@ -1808,7 +1813,8 @@ static Bitu DOS_21Handler(void) {
 				} else {
 					reg_ax=dos.errorcode;
 					CALLBACK_SCF(true);
-				};
+				}
+				lfn_filefind_handle=LFN_FILEFIND_NONE;
 				break;
 			}
 			case 0x56:		/* LFN Rename */

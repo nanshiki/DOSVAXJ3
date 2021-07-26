@@ -38,6 +38,10 @@
 #define	ftell	_ftelli64
 #endif
 
+static uint16_t ldid[256];
+static std::string ldir[256];
+extern int lfn_filefind_handle;
+
 class localFile : public DOS_File {
 public:
 	localFile(const char* name, FILE * handle);
@@ -238,11 +242,16 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 		return false;
 	}
 
-	strcpy(srchInfo[id].srch_dir,tempDir);
-	dta.SetDirID(id);
+	if (lfn_filefind_handle>=LFN_FILEFIND_MAX) {
+		dta.SetDirID(id);
+		strcpy(srchInfo[id].srch_dir,tempDir);
+	} else {
+		ldid[lfn_filefind_handle]=id;
+		ldir[lfn_filefind_handle]=tempDir;
+	}
 	
 	Bit8u sAttr;
-	dta.GetSearchParams(sAttr,tempDir,true);
+	dta.GetSearchParams(sAttr,tempDir,false);
 
 	if (this->isRemote() && this->isRemovable()) {
 		// cdroms behave a bit different than regular drives
@@ -287,8 +296,8 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 	Bit8u srch_attr;char srch_pattern[LFN_NAMELENGTH+1];
 	Bit8u find_attr;
 
-	dta.GetSearchParams(srch_attr,srch_pattern,true);
-	Bit16u id = dta.GetDirID();
+	dta.GetSearchParams(srch_attr,srch_pattern,false);
+	uint16_t id = lfn_filefind_handle>=LFN_FILEFIND_MAX?dta.GetDirID():ldid[lfn_filefind_handle];
 
 #if defined(LINUX)
 	ChangeUtf8FileName(srch_pattern);
@@ -296,12 +305,16 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 
 again:
 	if (!dirCache.FindNext(id,dir_ent,ldir_ent)) {
+		if (lfn_filefind_handle<LFN_FILEFIND_MAX) {
+			ldid[lfn_filefind_handle]=0;
+			ldir[lfn_filefind_handle]="";
+		}
 		DOS_SetError(DOSERR_NO_MORE_FILES);
 		return false;
 	}
 	if(!WildFileCmp(dir_ent,srch_pattern)&&!LWildFileCmp(ldir_ent,srch_pattern)) goto again;
 
-	strcpy(full_name,srchInfo[id].srch_dir);
+	strcpy(full_name,lfn_filefind_handle>=LFN_FILEFIND_MAX?srchInfo[id].srch_dir:(ldir[lfn_filefind_handle]!=""?ldir[lfn_filefind_handle].c_str():"\\"));
 	strcat(full_name,dir_ent);
 	
 	//GetExpandName might indirectly destroy dir_ent (by caching in a new directory 

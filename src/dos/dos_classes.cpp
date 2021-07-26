@@ -23,10 +23,14 @@
 #include <stdlib.h>
 #include "dosbox.h"
 #include "mem.h"
+#include "drives.h"
 #include "dos_inc.h"
 #include "support.h"
 
-char sname[LFN_NAMELENGTH+1],storect[CTBUF];
+Bit8u sdriv[260], sattr[260], fattr;
+char sname[260][LFN_NAMELENGTH+1],storect[CTBUF];
+extern int lfn_filefind_handle;
+
 struct finddata {
 	Bit8u attr;
 	Bit8u fres1[19];
@@ -344,35 +348,35 @@ bool DOS_PSP::SetNumFiles(Bit16u fileNum) {
 }
 
 void DOS_DTA::SetupSearch(Bit8u _sdrive,Bit8u _sattr,char * pattern) {
+	unsigned int i;
+
+	if (lfn_filefind_handle<LFN_FILEFIND_NONE) {
+		sdriv[lfn_filefind_handle]=_sdrive;
+		sattr[lfn_filefind_handle]=_sattr;
+		for (i=0;i<LFN_NAMELENGTH;i++) {
+			if (pattern[i]==0) break;
+				sname[lfn_filefind_handle][i]=pattern[i];
+		}
+		while (i<=LFN_NAMELENGTH) sname[lfn_filefind_handle][i++]=0;
+	}
+    for (i=0;i<11;i++) mem_writeb(pt+offsetof(sDTA,spname)+i,0);
+
 	sSave(sDTA,sdrive,_sdrive);
 	sSave(sDTA,sattr,_sattr);
-	/* Fill with char 0 */
-	int i;
-	for (i=0;i<LFN_NAMELENGTH;i++) {
-		if (pattern[i]==0) break;
-		sname[i]=pattern[i];
-	}
-	while (i<=LFN_NAMELENGTH) sname[i++]=0;
-	for (i=0;i<11;i++) mem_writeb(pt+offsetof(sDTA,spname)+i,0);
-	char * find_ext;
-	find_ext=strchr(pattern,'.');
-	if (find_ext) {
-		Bitu size=(Bitu)(find_ext-pattern);
+    const char* find_ext;
+    find_ext=strchr(pattern,'.');
+    if (find_ext) {
+        Bitu size=(Bitu)(find_ext-pattern);
 		if (size>8) size=8;
-		MEM_BlockWrite(pt+offsetof(sDTA,spname),pattern,size);
-		find_ext++;
-		MEM_BlockWrite(pt+offsetof(sDTA,spext),find_ext,(strlen(find_ext)>3) ? 3 : (Bitu)strlen(find_ext));
+			MEM_BlockWrite(pt+offsetof(sDTA,spname),pattern,size);
+			find_ext++;
+			MEM_BlockWrite(pt+offsetof(sDTA,spext),find_ext,(strlen(find_ext)>3) ? 3 : (Bitu)strlen(find_ext));
 	} else {
 		MEM_BlockWrite(pt+offsetof(sDTA,spname),pattern,(strlen(pattern) > 8) ? 8 : (Bitu)strlen(pattern));
 	}
 }
 
 void DOS_DTA::SetResult(const char * _name, const char * _lname, Bit32u _size,Bit16u _date,Bit16u _time,Bit8u _attr) {
-	MEM_BlockWrite(pt+offsetof(sDTA,name),(void *)_name,strlen(_name)+1);
-	sSave(sDTA,size,_size);
-	sSave(sDTA,date,_date);
-	sSave(sDTA,time,_time);
-	sSave(sDTA,attr,_attr);
 	fd.hsize=0;
 	fd.size=_size;
 	fd.mdate=_date;
@@ -381,15 +385,30 @@ void DOS_DTA::SetResult(const char * _name, const char * _lname, Bit32u _size,Bi
 	strcpy(fd.lname,_lname);
 	strcpy(fd.sname,_name);
 	if (!strcmp(fd.lname,fd.sname)) fd.sname[0]=0;
+	if (lfn_filefind_handle>=LFN_FILEFIND_MAX) {
+		MEM_BlockWrite(pt+offsetof(sDTA,name),(void *)_name,strlen(_name)+1);
+		sSave(sDTA,size,_size);
+		sSave(sDTA,date,_date);
+		sSave(sDTA,time,_time);
+		sSave(sDTA,attr,_attr);
+	}
 }
 
 void DOS_DTA::GetResult(char * _name, char * _lname,Bit32u & _size,Bit16u & _date,Bit16u & _time,Bit8u & _attr) {
-	MEM_BlockRead(pt+offsetof(sDTA,name),_name,DOS_NAMELENGTH_ASCII);
 	strcpy(_lname,fd.lname);
-	_size=sGet(sDTA,size);
-	_date=(Bit16u)sGet(sDTA,date);
-	_time=(Bit16u)sGet(sDTA,time);
-	_attr=(Bit8u)sGet(sDTA,attr);
+	if (fd.sname[0]!=0) strcpy(_name,fd.sname);
+	else if (strlen(fd.lname)<DOS_NAMELENGTH_ASCII) strcpy(_name,fd.lname);
+	_size = fd.size;
+	_date = fd.mdate;
+	_time = fd.mtime;
+	_attr = fd.attr;
+	if (lfn_filefind_handle>=LFN_FILEFIND_MAX) {
+		MEM_BlockRead(pt+offsetof(sDTA,name),_name,DOS_NAMELENGTH_ASCII);
+		_size=sGet(sDTA,size);
+		_date=(uint16_t)sGet(sDTA,date);
+		_time=(uint16_t)sGet(sDTA,time);
+		_attr=(uint8_t)sGet(sDTA,attr);
+	}
 }
 
 int DOS_DTA::GetFindData(int fmt, char * fdstr) {
@@ -408,23 +427,23 @@ int DOS_DTA::GetFindData(int fmt, char * fdstr) {
 }
 
 Bit8u DOS_DTA::GetSearchDrive(void) {
-	return (Bit8u)sGet(sDTA,sdrive);
+	return lfn_filefind_handle>=LFN_FILEFIND_MAX?(uint8_t)sGet(sDTA,sdrive):sdriv[lfn_filefind_handle];
 }
 
 void DOS_DTA::GetSearchParams(Bit8u & attr,char * pattern, bool lfn) {
-	attr=(Bit8u)sGet(sDTA,sattr);
-	// Trouble with double calling FindFirst
-	if (lfn && strlen(sname) > 8) {
-		memcpy(pattern,sname,LFN_NAMELENGTH);
-		pattern[LFN_NAMELENGTH]=0;
-	} else {
-		char temp[11];
-		MEM_BlockRead(pt+offsetof(sDTA,spname),temp,11);
-		for (int i=0;i<13;i++) pattern[i]=0;
-		memcpy(pattern,temp,8);
-		pattern[strlen(pattern)]='.';
-		memcpy(&pattern[strlen(pattern)],&temp[8],3);
-	}
+    if (lfn||uselfn&&lfn_filefind_handle<LFN_FILEFIND_NONE) {
+		attr=sattr[lfn_filefind_handle];
+        memcpy(pattern,sname[lfn_filefind_handle],LFN_NAMELENGTH);
+        pattern[LFN_NAMELENGTH]=0;
+    } else {
+		attr=(uint8_t)sGet(sDTA,sattr);
+        char temp[11];
+        MEM_BlockRead(pt+offsetof(sDTA,spname),temp,11);
+        for (int i=0;i<13;i++) pattern[i]=0;
+            memcpy(pattern,temp,8);
+            pattern[strlen(pattern)]='.';
+            memcpy(&pattern[strlen(pattern)],&temp[8],3);
+    }
 }
 
 DOS_FCB::DOS_FCB(Bit16u seg,Bit16u off,bool allow_extended) { 
