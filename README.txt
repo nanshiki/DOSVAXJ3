@@ -482,12 +482,21 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　設定に clipinputbutton を追加し、キーボードでのクリップボード操作に対応しま
 した。(Wengier 氏提供)
 
+・build JP210728 (2021/7/28)
+　IME 有効状態で半角/全角キーを押下すると ` が入ってしまう場合があったのを修
+正しました。
+　英語キーボード設定で ` が入力できない場合があったのを修正しました。
+　変換・無変換・カタカナひらがなキーの入力が受け取れていなかったのを修正しま
+した。
+　ビデオドライバが directx の場合 IME を無効にできなかったのを修正しました。
+
 ●ライセンス
 　GPL v2
 　ソースコードや ABOUT_LIB、README_AX.txt も参照してください。
 
 ●最後に
-　DOSBox, DOSVAX, DOSBox-lfn, SDL, libpng, zlib 等の作者の方々に感謝します。
+　DOSBox, DOSVAX, DOSBox-lfn, DOSBox-X, SDL, libpng, zlib の作者の方々に感謝
+します。
 
 
                                                                       takapyu
