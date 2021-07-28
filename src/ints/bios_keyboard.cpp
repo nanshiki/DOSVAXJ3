@@ -153,7 +153,38 @@ static scancode_tbl scan_to_scanascii[MAX_SCAN_CODE + 1] = {
 	  { none,   none,   none,   none ,   none,   none },
 	  { 0xab00, 0xac00, 0xad00, 0xae00, 0xab00, 0xac00 },  /* 5a –³•ÏŠ· (non-conversion) for AX */
 	  { 0xa700, 0xa800, 0xa900, 0xaa00, 0xa700, 0xa800 },  /* 5b •ÏŠ· (conversion) for AX */
-	  { 0xd200, 0xd300, 0xd400, 0xd500, 0xd200, 0xd300 }   /* 5c AX (additional function key) for AX */
+	  { 0xd200, 0xd300, 0xd400, 0xd500, 0xd200, 0xd300 },   /* 5c AX (additional function key) for AX */
+	  { none,   none,   none,   none ,   none,   none }, //5d
+	  { none,   none,   none,   none ,   none,   none }, //5e
+	  { none,   none,   none,   none ,   none,   none }, //5f
+	  { none,   none,   none,   none ,   none,   none }, //60
+	  { none,   none,   none,   none ,   none,   none }, //61
+	  { none,   none,   none,   none ,   none,   none }, //62
+	  { none,   none,   none,   none ,   none,   none }, //63
+	  { none,   none,   none,   none ,   none,   none }, //64
+	  { none,   none,   none,   none ,   none,   none }, //65
+	  { none,   none,   none,   none ,   none,   none }, //66
+	  { none,   none,   none,   none ,   none,   none }, //67
+	  { none,   none,   none,   none ,   none,   none }, //68
+	  { none,   none,   none,   none ,   none,   none }, //69
+	  { none,   none,   none,   none ,   none,   none }, //6a
+	  { none,   none,   none,   none ,   none,   none }, //6b
+	  { none,   none,   none,   none ,   none,   none }, //6c
+	  { none,   none,   none,   none ,   none,   none }, //6d
+	  { none,   none,   none,   none ,   none,   none }, //6e
+	  { none,   none,   none,   none ,   none,   none }, //6f
+	  { 0xb600, 0xb700, 0xb800, 0xb900 , none,   none }, //70 katakana hiragana
+	  { none,   none,   none,   none ,   none,   none }, //71
+	  { none,   none,   none,   none ,   none,   none }, //72
+	  { none,   none,   none,   none ,   none,   none }, //73
+	  { none,   none,   none,   none ,   none,   none }, //74
+	  { none,   none,   none,   none ,   none,   none }, //75
+	  { none,   none,   none,   none ,   none,   none }, //76
+	  { none,   none,   none,   none ,   none,   none }, //77
+	  { none,   none,   none,   none ,   none,   none }, //78
+	  { 0xa700, 0xa800, 0xa900, 0xaa00,  none,   none }, //79 henkan
+	  { none,   none,   none,   none ,   none,   none }, //7a
+	  { 0xab00, 0xac00, 0xad00, 0xae00 , none,   none }, //7b muhenkan
       };
 
 #include <queue>
