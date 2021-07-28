@@ -1796,6 +1796,7 @@ extern bool debug_flag;
 SDL_Event key_event;
 #endif
 void MAPPER_CheckEvent(SDL_Event * event);
+extern bool keyboard_jp_flag;
 
 void GFX_Events() {
 	SDL_Event event;
@@ -2014,16 +2015,31 @@ void GFX_Events() {
 #endif
 		default:
 #if defined(WIN32)
-			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x3a) {
-				if(event.key.keysym.scancode == 0x94 && dos.im_enable_flag) {
-					break;
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x3a) {
+				event.type = SDL_KEYDOWN;
+			} else if(event.key.keysym.scancode == 0x94) {
+				if(!keyboard_jp_flag) {
+					event.key.keysym.scancode = 0x29;
+					event.key.keysym.sym = SDLK_BACKQUOTE;
+				} else {
+					if(dos.im_enable_flag) {
+						break;
+					}
 				}
 				event.type = SDL_KEYDOWN;
+			} else if(event.key.keysym.scancode == 0x29) {
+				if(keyboard_jp_flag) {
+					if(dos.im_enable_flag) {
+						break;
+					} else {
+						event.key.keysym.scancode = 0x94;
+					}
+				}
 			}
 #endif
 			MAPPER_CheckEvent(&event);
 #if defined(WIN32)
-			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x3a) {
+			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x3a || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x29) {
 				event.type = SDL_KEYUP;
 				MAPPER_CheckEvent(&event);
 			}
@@ -2537,6 +2553,10 @@ int main(int argc, char* argv[]) {
 				}
 				GFX_SetIcon();
 				GFX_SetTitle(-1,-1,false);
+				if(!dos.im_enable_flag) {
+					SDL_SetIMValues(SDL_IM_ENABLE, 1, NULL);
+					SDL_SetIMValues(SDL_IM_ENABLE, 0, NULL);
+				}
 			}
 		} else {
 			char* sdl_videodrv = getenv("SDL_VIDEODRIVER");
