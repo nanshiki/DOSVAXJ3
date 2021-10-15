@@ -71,6 +71,8 @@ static Bitu INT2A_Handler(void) {
 	return CBRET_NONE;
 }
 
+extern uint16_t seg_win_startup_info;
+
 static bool DOS_MultiplexFunctions(void) {
 	char name[256];
 	switch (reg_ax) {
@@ -288,6 +290,12 @@ static bool DOS_MultiplexFunctions(void) {
 		reg_ax=0;
 		return true;
 	case 0x1605:
+		if(IS_DOSV && (reg_dx & 0x0001) == 0) {
+			real_writew(seg_win_startup_info, 0x02, reg_bx);
+			real_writew(seg_win_startup_info, 0x04, SegValue(es));
+			SegSet16(es, seg_win_startup_info);
+			reg_bx = 0;
+		}
 		return true;
 	case 0x1612:
 		reg_ax=0;
