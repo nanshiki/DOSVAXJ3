@@ -18,7 +18,11 @@
 #define C_IPX 1
 
 /* Enable some heavy debugging options */
+#if defined(ENABLE_DEBUGGER)
+#define C_HEAVY_DEBUG 1
+#else
 #define C_HEAVY_DEBUG 0
+#endif
 
 /* The type of cpu this host has */
 #define C_TARGETCPU X86
