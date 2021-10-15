@@ -875,7 +875,17 @@ static Bitu DOS_21Handler(void) {
 			//MEM_BlockWrite(dest,dos.tables.country,0x18);
 			PhysPt src = (dos.tables.country_seg << 4) + 7;
 			MEM_BlockCopy(dest, src, 0x18);
-			reg_ax = reg_bx = 0x01;
+			reg_al = real_readb(dos.tables.country_seg, 3);
+			reg_bx = reg_al;
+			CALLBACK_SCF(false);
+			break;
+		} else if (reg_dx == 0xffff) { /* Set country code */
+			if(reg_al == 0xff) {
+				real_writeb(dos.tables.country_seg, 3, reg_bl);
+			} else {
+				real_writeb(dos.tables.country_seg, 3, reg_al);
+			}
+			reg_ax = 0;
 			CALLBACK_SCF(false);
 			break;
 		} else {				/* Set country code */
@@ -946,7 +956,7 @@ static Bitu DOS_21Handler(void) {
 						break;
 					}
 				}
-				if(!strncmp(name_start, "$IBMAFNT", 8) || !strncmp(name_start, "$IBMADSP", 8)) {
+				if(!strncmp(name_start, "$IBMAFNT", 8)) {
 					ibmjp_handle = IBMJP_DEVICE_HANDLE;
 					reg_ax = IBMJP_DEVICE_HANDLE;
 					force = false;
