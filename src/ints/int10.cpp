@@ -981,6 +981,8 @@ graphics_chars:
 				if(reg_bl == 0x00 || reg_bl == 0x01) {
 					real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK, reg_bl);
 				}
+			} else if(reg_al == 0x05) {
+				reg_bl = 0x01;
 			}
 			break;
 		}
