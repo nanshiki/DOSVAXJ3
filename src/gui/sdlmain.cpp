@@ -1765,8 +1765,8 @@ bool GFX_IsFullscreen(void) {
 
 static bool CheckEnableImmOnKey(SDL_KeyboardEvent key)
 {
-	if(key.keysym.sym == 0 || key.keysym.sym == 0x08 || key.keysym.sym == 0x113 || key.keysym.sym == 0x114) {
-		// BS, <-, ->
+	if(key.keysym.sym == 0 || key.keysym.sym == 0x08 || key.keysym.sym == 0x09 || key.keysym.sym == 0x7f || (key.keysym.sym >= 0x111 && key.keysym.sym <= 0x119)) {
+		// BS, Tab, Arrow, PgUp etc.
 		return true;
 	}
 	if(key.keysym.scancode == 0x01 || key.keysym.scancode == 0x1d || key.keysym.scancode == 0x2a || key.keysym.scancode == 0x36 || key.keysym.scancode == 0x38) {
@@ -1777,8 +1777,8 @@ static bool CheckEnableImmOnKey(SDL_KeyboardEvent key)
 		// function
 		return true;
 	}
-	if(key.keysym.mod & 0x40) {
-		// ctrl+
+	if(key.keysym.mod & (KMOD_ALT | KMOD_CTRL)) {
+		// Ctrl+, Alt+
 		return true;
 	}
 	if((key.keysym.mod & 0x03) != 0 && key.keysym.scancode == 0x39) {
