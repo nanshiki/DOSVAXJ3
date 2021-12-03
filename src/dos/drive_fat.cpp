@@ -30,6 +30,7 @@
 #include "cross.h"
 #include "bios.h"
 #include "bios_disk.h"
+#include "jega.h"
 
 #if defined(WIN32)
 #define	fseek	_fseeki64
@@ -47,7 +48,6 @@
 static Bit16u dpos[256];
 static Bit32u dnum[256];
 extern bool wpcolon, force;
-extern bool isKanji1(Bit8u chr);
 extern int lfn_filefind_handle;
 void dos_ver_menu(bool start);
 char sfn[DOS_NAMELENGTH_ASCII];
