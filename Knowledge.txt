@@ -113,8 +113,10 @@ MS$KANJI については MS-KANJI API を参照してください。
     ax=8200h スクロールモードの設定
              つねにノーマルモード(ソフトウェアスクロール)となります。
     ax=8205h 漢字テキストドライバの確認
-             bl=01h カラー CRT ドライバあり を返します。
-             Windows 3.1 CGA/EGA キットの setup.exe 対策です。
+             [dosbox] j3colordriver=true の場合 bl=01h カラー CRT ドライバあ
+             り を返します。
+             Windows 3.1 CGA/EGA キットの setup.exe を動かす場合は true とし
+             てください。
 
 　int 14h (RS-232C)
 　　ah=04h 割り込み使用
