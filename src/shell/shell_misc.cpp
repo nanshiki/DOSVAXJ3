@@ -211,13 +211,13 @@ static void RemoveAllChar(char *line, Bitu str_index)
 	for ( ; str_index > 0 ; str_index--) {
 		// removes all characters
 		if(CheckHat(line[str_index])) {
-			outc(8); outc(8); outc(' '); outc(' '); outc(8); outc(8);
+			backone(); backone(); outc(' '); outc(' '); backone(); backone();
 		} else {
-			outc(8); outc(' '); outc(8);
+			backone(); outc(' '); backone();
 		}
 	}
 	if(CheckHat(line[0])) {
-		outc(8); outc(' '); outc(8);
+		backone(); outc(' '); backone();
 	}
 }
 
@@ -257,9 +257,9 @@ static Bitu DeleteBackspace(bool delete_flag, char *line, Bitu &str_index, Bitu 
 	DOS_WriteFile(STDOUT, (Bit8u *)line, &len);
 	pos = str_len;
 	while(pos > str_index) {
-		outc(8);
+		backone();
 		if(CheckHat(line[pos - 1])) {
-			outc(8);
+			backone();
 		}
 		pos--;
 	}
@@ -330,12 +330,12 @@ void DOS_Shell::InputCommand(char * line) {
 						Bitu count = GetWideCount(line, str_index);
 						Bit8u ch = line[str_index - 1];
 						while(count > 0) {
-							outc(8);
+							backone();
 							str_index --;
 							count--;
 						}
 						if(CheckHat(ch)) {
-							outc(8);
+							backone();
 						}
 					}
 					break;
@@ -355,10 +355,10 @@ void DOS_Shell::InputCommand(char * line) {
 
 				case 0x47:	/* HOME */
 					while (str_index) {
-						outc(8);
+						backone();
 						str_index--;
 						if(CheckHat(line[str_index])) {
-							outc(8);
+							backone();
 						}
 					}
 					break;
@@ -429,7 +429,7 @@ void DOS_Shell::InputCommand(char * line) {
 						if (it_completion->length()) {
 							for (;str_index > completion_index; str_index--) {
 								// removes all characters
-								outc(8); outc(' '); outc(8);
+								backone(); outc(' '); backone();
 							}
 
 							strcpy(&line[completion_index], it_completion->c_str());
@@ -674,10 +674,10 @@ void DOS_Shell::InputCommand(char * line) {
 				}
 				pos = str_len;
 				while(pos > str_index) {
-					outc(8);
+					backone();
 					pos--;
 					if (CheckHat(line[pos])) {
-						outc(8);
+						backone();
 					}
 				}
 			}
