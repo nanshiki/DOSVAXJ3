@@ -123,6 +123,7 @@ GOTO: ラベル %s がありません
 .
 :SHELL_CMD_PAUSE
 準備ができたらキーをどれか押してください．．．
+
 .
 :SHELL_CMD_COPY_FAILURE
 %s をコピーできません
