@@ -652,7 +652,11 @@ void DOS_Shell::CMD_DIR(char * args) {
 			}
 		}
 		if (optP && !(++p_count%(22*w_size))) {
-			CMD_PAUSE(empty_string);
+			WriteOut(MSG_Get("SHELL_CMD_PAUSE"));
+			Bit8u c;Bit16u n=1;
+			DOS_ReadFile(STDIN,&c,&n);
+			if (c==3) {WriteOut("^C\n");dos.dta(save_dta);return;}
+			if (c==0) DOS_ReadFile(STDIN,&c,&n); // read extended key
 		}
 		if(check_key(code)) {
 			if(code == 0x2e03) {
