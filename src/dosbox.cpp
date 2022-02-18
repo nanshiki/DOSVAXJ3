@@ -502,6 +502,8 @@ void DOSBOX_Init(void) {
 	Pstring->Set_help("J-3100 machine type.");
 	Phex = secprop->Add_hex("j3sbcsaddress",Property::Changeable::OnlyAtStart,0xca00);
 	Phex->Set_help("J-3100 SBCS font address");
+	Pbool = secprop->Add_bool("j3colordriver",Property::Changeable::WhenIdle,false);
+	Pbool->Set_help("If set to true, Toshiba Windows 3.1 CGA/EGA setup.exe can be used.");
 	// for DOS/V
 	Pstring = secprop->Add_path("vtext",Property::Changeable::OnlyAtStart,"svga");
 	Pstring->Set_help("V-text screen mode.");
