@@ -992,15 +992,25 @@ void WriteCharJ31Sbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 	Bitu x, y, off, net, pos;
 	Bit8u data;
 	Bit8u *font;
+	RealPt fontdata;
 
 	net = ((attr & 0xf0) == 0xe0) ? 1 : 0;
 	pos = 0;
-	font = GetSbcsFont(chr);
+	if(J3_IsJapanese() && chr >= 0x20) {
+		font = GetSbcsFont(chr);
+	} else {
+		fontdata = RealGetVec(0x43);
+		fontdata = RealMake(RealSeg(fontdata), RealOff(fontdata) + chr * 16);
+	}
 	x = col;
 	y = row * 16;
 	off = (y >> 2) * 80 + 8 * 1024 * (y & 3) + x;
 	for(Bit8u h = 0 ; h < 16 ; h++) {
-		data = *font++;
+		if(J3_IsJapanese() && chr >= 0x20) {
+			data = *font++;
+		} else {
+			data = mem_readb(Real2Phys(fontdata++));
+		}
 		if((attr & 0x07) == 0x00) {
 			data ^= 0xff;
 		}
