@@ -982,7 +982,8 @@ graphics_chars:
 					real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK, reg_bl);
 				}
 			} else if(reg_al == 0x05) {
-				reg_bl = 0x01;
+				Section_prop *section = static_cast<Section_prop *>(control->GetSection("dosbox"));
+				if (section && section->Get_bool("j3colordriver")) reg_bl = 0x01;
 			}
 			break;
 		}
