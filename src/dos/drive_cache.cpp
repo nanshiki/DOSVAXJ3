@@ -442,19 +442,30 @@ Bits DOS_Drive_Cache::GetLongName(CFileInfo* curDir, char* shortName) {
 	// Remove dot, if no extension...
 	RemoveTrailingDot(shortName);
 	// Search long name and return array number of element
-	Bits low	= 0;
-	Bits high	= (Bits)(filelist_size-1);
-	Bits mid,res;
-	while (low<=high) {
-		mid = (low+high)/2;
-		res = strcmp(shortName,curDir->fileList[mid]->shortname);
-		if (res>0)	low  = mid+1; else
-		if (res<0)	high = mid-1; else
-		{	// Found
-			strcpy(shortName,curDir->fileList[mid]->orgname);
-			return mid;
-		};
-	}
+    Bits res;
+    if (!uselfn) {
+        Bits low	= 0;
+        Bits high	= (Bits)(filelist_size-1);
+        Bits mid;
+        while (low<=high) {
+            mid = (low+high)/2;
+            res = strcmp(shortName,curDir->fileList[mid]->shortname);
+            if (res>0)	low  = mid+1; else
+            if (res<0)	high = mid-1; else
+            {	// Found
+                strcpy(shortName,curDir->fileList[mid]->orgname);
+                return mid;
+            };
+        }
+    } else if (strlen(shortName)) {
+        for (Bitu i=0; i<filelist_size; i++) {
+            if (!strcasecmp(shortName,curDir->fileList[i]->orgname) || !strcasecmp(shortName,curDir->fileList[i]->shortname)) {
+                strcpy(shortName,curDir->fileList[i]->orgname);
+                return (Bits)i;
+            }
+        }
+    }
+
 #ifdef WINE_DRIVE_SUPPORT
 	if (strlen(shortName) < 8 || shortName[4] != '~' || shortName[5] == '.' || shortName[6] == '.' || shortName[7] == '.') return -1; // not available
 	// else it's most likely a Wine style short name ABCD~###, # = not dot  (length at least 8) 
