@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN support
  */
@@ -86,8 +86,13 @@ public:
 
 typedef struct dir_struct {
 	HANDLE          handle;
-	char            base_path[MAX_PATH+4];
+	char            base_path[(MAX_PATH+4)*sizeof(wchar_t)];
+    wchar_t *wbase_path(void) {
+        return (wchar_t*)base_path;
+    }
 	WIN32_FIND_DATA search_data;
+	WIN32_FIND_DATAW search_dataw;
+    bool            wide;
 } dir_information;
 
 #else
@@ -107,4 +112,5 @@ bool read_directory_first(dir_information* dirp, char* entry_name, char* entry_s
 bool read_directory_next(dir_information* dirp, char* entry_name, char* entry_sname, bool& is_directory);
 void close_directory(dir_information* dirp);
 
+FILE *fopen_wrap(const char *path, const char *mode);
 #endif
