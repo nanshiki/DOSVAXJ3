@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN support
  */
@@ -54,17 +54,17 @@ void VFILE_Register(const char * name,Bit8u * data,Bit32u size) {
 }
 
 void VFILE_Remove(const char *name) {
-	VFILE_Block * chan=first_file;
-	VFILE_Block * * where=&first_file;
+	VFILE_Block * chan = first_file;
+	VFILE_Block * * where = &first_file;
 	while (chan) {
 		if (strcmp(name,chan->name) == 0) {
 			*where = chan->next;
-			if(chan == first_file) first_file = chan->next;
+			if (chan == first_file) first_file = chan->next;
 			delete chan;
 			return;
 		}
-		where=&chan->next;
-		chan=chan->next;
+		where = &chan->next;
+		chan = chan->next;
 	}
 }
 
@@ -84,27 +84,27 @@ private:
 
 
 Virtual_File::Virtual_File(Bit8u * in_data,Bit32u in_size) {
-	file_size=in_size;
-	file_data=in_data;
-	file_pos=0;
-	date=DOS_PackDate(2002,10,1);
-	time=DOS_PackTime(12,34,56);
-	open=true;
+	file_size = in_size;
+	file_data = in_data;
+	file_pos = 0;
+	date = DOS_PackDate(2002,10,1);
+	time = DOS_PackTime(12,34,56);
+	open = true;
 }
 
 bool Virtual_File::Read(Bit8u * data,Bit16u * size) {
 	Bit32u left=file_size-file_pos;
-	if (left<=*size) { 
-		memcpy(data,&file_data[file_pos],left);
-		*size=(Bit16u)left;
+	if (left <= *size) {
+		memcpy(data, &file_data[file_pos], left);
+		*size = (Bit16u)left;
 	} else {
-		memcpy(data,&file_data[file_pos],*size);
+		memcpy(data, &file_data[file_pos], *size);
 	}
-	file_pos+=*size;
+	file_pos += *size;
 	return true;
 }
 
-bool Virtual_File::Write(Bit8u * data,Bit16u * size){
+bool Virtual_File::Write(Bit8u * /*data*/,Bit16u * /*size*/){
 	/* Not really writable */
 	return false;
 }
@@ -112,19 +112,19 @@ bool Virtual_File::Write(Bit8u * data,Bit16u * size){
 bool Virtual_File::Seek(Bit32u * new_pos,Bit32u type){
 	switch (type) {
 	case DOS_SEEK_SET:
-		if (*new_pos<=file_size) file_pos=*new_pos;
+		if (*new_pos <= file_size) file_pos = *new_pos;
 		else return false;
 		break;
 	case DOS_SEEK_CUR:
-		if ((*new_pos+file_pos)<=file_size) file_pos=*new_pos+file_pos;
+		if ((*new_pos + file_pos) <= file_size) file_pos = *new_pos + file_pos;
 		else return false;
 		break;
 	case DOS_SEEK_END:
-		if (*new_pos<=file_size) file_pos=file_size-*new_pos;
+		if (*new_pos <= file_size) file_pos = file_size - *new_pos;
 		else return false;
 		break;
 	}
-	*new_pos=file_pos;
+	*new_pos = file_pos;
 	return true;
 }
 
@@ -146,32 +146,33 @@ Virtual_Drive::Virtual_Drive() {
 
 bool Virtual_Drive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 /* Scan through the internal list of files */
-	VFILE_Block * cur_file=first_file;
+	VFILE_Block * cur_file = first_file;
 	while (cur_file) {
-		if (strcasecmp(name,cur_file->name)==0) {
+		if (strcasecmp(name,cur_file->name) == 0) {
 		/* We have a match */
-			*file=new Virtual_File(cur_file->data,cur_file->size);
-			(*file)->flags=flags;
+			*file = new Virtual_File(cur_file->data, cur_file->size);
+			(*file)->flags = flags;
 			return true;
 		}
-		cur_file=cur_file->next;
+		cur_file = cur_file->next;
 	}
 	return false;
 }
 
-bool Virtual_Drive::FileCreate(DOS_File * * file,char * name,Bit16u attributes) {
+bool Virtual_Drive::FileCreate(DOS_File * * /*file*/,char * /*name*/,Bit16u /*attributes*/) {
 	return false;
 }
 
-bool Virtual_Drive::FileUnlink(char * name) {
+bool Virtual_Drive::FileUnlink(char * /*name*/) {
+	DOS_SetError(DOSERR_ACCESS_DENIED);
 	return false;
 }
 
-bool Virtual_Drive::RemoveDir(char * dir) {
+bool Virtual_Drive::RemoveDir(char * /*dir*/) {
 	return false;
 }
 
-bool Virtual_Drive::MakeDir(char * dir) {
+bool Virtual_Drive::MakeDir(char * /*dir*/) {
 	return false;
 }
 
@@ -181,25 +182,25 @@ bool Virtual_Drive::TestDir(char * dir) {
 }
 
 bool Virtual_Drive::FileStat(const char* name, FileStat_Block * const stat_block){
-	VFILE_Block * cur_file=first_file;
+	VFILE_Block * cur_file = first_file;
 	while (cur_file) {
-		if (strcasecmp(name,cur_file->name)==0) {
-			stat_block->attr=DOS_ATTR_ARCHIVE;
-			stat_block->size=cur_file->size;
-			stat_block->date=DOS_PackDate(2002,10,1);
-			stat_block->time=DOS_PackTime(12,34,56);
+		if (strcasecmp(name,cur_file->name) == 0) {
+			stat_block->attr = DOS_ATTR_ARCHIVE;
+			stat_block->size = cur_file->size;
+			stat_block->date = DOS_PackDate(2002,10,1);
+			stat_block->time = DOS_PackTime(12,34,56);
 			return true;
 		}
-		cur_file=cur_file->next;
+		cur_file = cur_file->next;
 	}
 	return false;
 }
 
 bool Virtual_Drive::FileExists(const char* name){
-	VFILE_Block * cur_file=first_file;
+	VFILE_Block * cur_file = first_file;
 	while (cur_file) {
-		if (strcasecmp(name,cur_file->name)==0) return true;
-		cur_file=cur_file->next;
+		if (strcasecmp(name, cur_file->name) == 0) return true;
+		cur_file = cur_file->next;
 	}
 	return false;
 }
@@ -250,13 +251,13 @@ bool Virtual_Drive::FindNext(DOS_DTA & dta) {
 }
 
 bool Virtual_Drive::GetFileAttr(char * name,Bit16u * attr) {
-	VFILE_Block * cur_file=first_file;
+	VFILE_Block * cur_file = first_file;
 	while (cur_file) {
-		if (strcasecmp(name,cur_file->name)==0) { 
+		if (strcasecmp(name, cur_file->name) == 0) {
 			*attr = DOS_ATTR_ARCHIVE;	//Maybe readonly ?
 			return true;
 		}
-		cur_file=cur_file->next;
+		cur_file = cur_file->next;
 	}
 	return false;
 }
@@ -274,15 +275,15 @@ HANDLE Virtual_Drive::CreateOpenFile(const char* name) {
 	return INVALID_HANDLE_VALUE;
 }
 
-bool Virtual_Drive::Rename(char * oldname,char * newname) {
+bool Virtual_Drive::Rename(char * /*oldname*/,char * /*newname*/) {
 	return false;
 }
 
 bool Virtual_Drive::AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters) {
-	*_bytes_sector=512;
-	*_sectors_cluster=32;
-	*_total_clusters=32765;	// total size is always 500 mb
-	*_free_clusters=0;		// nothing free here
+	*_bytes_sector = 512;
+	*_sectors_cluster = 32;
+	*_total_clusters = 32765; // total size is always 500 mb
+	*_free_clusters = 0;      // nothing free here
 	return true;
 }
 
@@ -306,3 +307,6 @@ Bits Virtual_Drive::UnMount(void) {
 	return 1;
 }
 
+char const* Virtual_Drive::GetLabel(void) {
+	return "DOSBOX";
+}

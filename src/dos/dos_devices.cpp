@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LPT support
  */
@@ -36,37 +36,6 @@
 
 DOS_Device * Devices[DOS_DEVICES];
 
-struct ExtDeviceData {
-	Bit16u attribute;
-	Bit16u segment;
-	Bit16u strategy;
-	Bit16u interrupt;
-};
-
-class DOS_ExtDevice : public DOS_Device {
-public:
-	DOS_ExtDevice(const char *name, Bit16u seg, Bit16u off) {
-		SetName(name);
-		ext.attribute = real_readw(seg, off + 4);
-		ext.segment = seg;
-		ext.strategy = real_readw(seg, off + 6);
-		ext.interrupt = real_readw(seg, off + 8);
-	}
-	virtual bool	Read(Bit8u * data,Bit16u * size);
-	virtual bool	Write(Bit8u * data,Bit16u * size);
-	virtual bool	Seek(Bit32u * pos,Bit32u type);
-	virtual bool	Close();
-	virtual Bit16u	GetInformation(void);
-	virtual bool	ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
-	virtual bool	WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
-	virtual Bit8u	GetStatus(bool input_flag);
-	bool CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off);
-private:
-	struct ExtDeviceData ext;
-
-	Bit16u CallDeviceFunction(Bit8u command, Bit8u length, PhysPt bufptr, Bit16u size);
-};
-
 bool DOS_ExtDevice::CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off) {
 	if(seg == ext.segment && s_off == ext.strategy && i_off == ext.interrupt) {
 		return true;
@@ -74,7 +43,7 @@ bool DOS_ExtDevice::CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off) {
 	return false;
 }
 
-Bit16u DOS_ExtDevice::CallDeviceFunction(Bit8u command, Bit8u length, PhysPt bufptr, Bit16u size) {
+Bit16u DOS_ExtDevice::CallDeviceFunction(Bit8u command, Bit8u length, Bit16u seg, Bit16u offset, Bit16u size) {
 	Bit16u oldbx = reg_bx;
 	Bit16u oldes = SegValue(es);
 
@@ -85,8 +54,8 @@ Bit16u DOS_ExtDevice::CallDeviceFunction(Bit8u command, Bit8u length, PhysPt buf
 	real_writed(dos.tables.dcp, 5, 0);
 	real_writed(dos.tables.dcp, 9, 0);
 	real_writeb(dos.tables.dcp, 13, 0);
-	real_writew(dos.tables.dcp, 14, (Bit16u)(bufptr & 0x000f));
-	real_writew(dos.tables.dcp, 16, (Bit16u)(bufptr >> 4));
+	real_writew(dos.tables.dcp, 14, offset);
+	real_writew(dos.tables.dcp, 16, seg);
 	real_writew(dos.tables.dcp, 18, size);
 
 	reg_bx = 0;
@@ -102,7 +71,7 @@ Bit16u DOS_ExtDevice::CallDeviceFunction(Bit8u command, Bit8u length, PhysPt buf
 bool DOS_ExtDevice::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) {
 	if(ext.attribute & 0x4000) {
 		// IOCTL INPUT
-		if((CallDeviceFunction(3, 26, bufptr, size) & 0x8000) == 0) {
+		if((CallDeviceFunction(3, 26, (Bit16u)(bufptr >> 4), (Bit16u)(bufptr & 0x000f), size) & 0x8000) == 0) {
 			*retcode = real_readw(dos.tables.dcp, 18);
 			return true;
 		}
@@ -113,7 +82,7 @@ bool DOS_ExtDevice::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * re
 bool DOS_ExtDevice::WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) { 
 	if(ext.attribute & 0x4000) {
 		// IOCTL OUTPUT
-		if((CallDeviceFunction(12, 26, bufptr, size) & 0x8000) == 0) {
+		if((CallDeviceFunction(12, 26, (Bit16u)(bufptr >> 4), (Bit16u)(bufptr & 0x000f), size) & 0x8000) == 0) {
 			*retcode = real_readw(dos.tables.dcp, 18);
 			return true;
 		}
@@ -122,10 +91,10 @@ bool DOS_ExtDevice::WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * ret
 }
 
 bool DOS_ExtDevice::Read(Bit8u * data,Bit16u * size) {
-	PhysPt bufptr = (dos.tables.dcp << 4) | 32;
+	PhysPt bufptr = (dos.tables.dcp + 2) << 4;
 	for(Bit16u no = 0 ; no < *size ; no++) {
 		// INPUT
-		if((CallDeviceFunction(4, 26, bufptr, 1) & 0x8000)) {
+		if((CallDeviceFunction(4, 26, dos.tables.dcp + 2, 0 , 1) & 0x8000)) {
 			return false;
 		} else {
 			if(real_readw(dos.tables.dcp, 18) != 1) {
@@ -138,11 +107,11 @@ bool DOS_ExtDevice::Read(Bit8u * data,Bit16u * size) {
 }
 
 bool DOS_ExtDevice::Write(Bit8u * data,Bit16u * size) {
-	PhysPt bufptr = (dos.tables.dcp << 4) | 32;
+	PhysPt bufptr = (dos.tables.dcp + 2) << 4;
 	for(Bit16u no = 0 ; no < *size ; no++) {
 		mem_writeb(bufptr, *data);
 		// OUTPUT
-		if((CallDeviceFunction(8, 26, bufptr, 1) & 0x8000)) {
+		if((CallDeviceFunction(8, 26, dos.tables.dcp + 2, 0, 1) & 0x8000)) {
 			return false;
 		} else {
 			if(real_readw(dos.tables.dcp, 18) != 1) {
@@ -171,10 +140,10 @@ Bit8u DOS_ExtDevice::GetStatus(bool input_flag) {
 	Bit16u status;
 	if(input_flag) {
 		// NON-DESTRUCTIVE INPUT NO WAIT
-		status = CallDeviceFunction(5, 14, 0, 0);
+		status = CallDeviceFunction(5, 14, 0, 0, 0);
 	} else {
 		// OUTPUT STATUS
-		status = CallDeviceFunction(10, 13, 0, 0);
+		status = CallDeviceFunction(10, 13, 0, 0, 0);
 	}
 	// check NO ERROR & BUSY
 	if((status & 0x8200) == 0) {
@@ -240,60 +209,30 @@ static void DOS_CheckOpenExtDevice(const char *name) {
 class device_NUL : public DOS_Device {
 public:
 	device_NUL() { SetName("NUL"); };
-	virtual bool Read(Bit8u * data,Bit16u * size) {
+	virtual bool Read(Bit8u * /*data*/,Bit16u * size) {
 		*size = 0; //Return success and no data read. 
 		LOG(LOG_IOCTL,LOG_NORMAL)("%s:READ",GetName());
 		return true;
 	}
-	virtual bool Write(Bit8u * data,Bit16u * size) {
+	virtual bool Write(Bit8u * /*data*/,Bit16u * /*size*/) {
 		LOG(LOG_IOCTL,LOG_NORMAL)("%s:WRITE",GetName());
 		return true;
 	}
-	virtual bool Seek(Bit32u * pos,Bit32u type) {
+	virtual bool Seek(Bit32u * /*pos*/,Bit32u /*type*/) {
 		LOG(LOG_IOCTL,LOG_NORMAL)("%s:SEEK",GetName());
 		return true;
 	}
 	virtual bool Close() { return true; }
 	virtual Bit16u GetInformation(void) { return 0x8084; }
-	virtual bool ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode){return false;}
-	virtual bool WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode){return false;}
+	virtual bool ReadFromControlChannel(PhysPt /*bufptr*/,Bit16u /*size*/,Bit16u * /*retcode*/){return false;}
+	virtual bool WriteToControlChannel(PhysPt /*bufptr*/,Bit16u /*size*/,Bit16u * /*retcode*/){return false;}
 };
 
 class device_LPT1 : public device_NUL {
 public:
    	device_LPT1() { SetName("LPT1");}
 	Bit16u GetInformation(void) { return 0x80A0; }
-	bool Read(Bit8u* data,Bit16u * size){
-		DOS_SetError(DOSERR_ACCESS_DENIED);
-		return false;
-	}	
-};
-
-class device_LPT2 : public device_NUL {
-public:
-   	device_LPT2() { SetName("LPT2");}
-	Bit16u GetInformation(void) { return 0x80A0; }
-	bool Read(Bit8u* data,Bit16u * size){
-		DOS_SetError(DOSERR_ACCESS_DENIED);
-		return false;
-	}	
-};
-
-class device_LPT3 : public device_NUL {
-public:
-   	device_LPT3() { SetName("LPT3");}
-	Bit16u GetInformation(void) { return 0x80A0; }
-	bool Read(Bit8u* data,Bit16u * size){
-		DOS_SetError(DOSERR_ACCESS_DENIED);
-		return false;
-	}	
-};
-
-class device_PRN : public device_NUL {
-public:
-   	device_PRN() { SetName("PRN");}
-	Bit16u GetInformation(void) { return 0x80A0; }
-	bool Read(Bit8u* data,Bit16u * size){
+	bool Read(Bit8u* /*data*/,Bit16u * /*size*/){
 		DOS_SetError(DOSERR_ACCESS_DENIED);
 		return false;
 	}	
@@ -377,7 +316,7 @@ Bit8u DOS_FindDevice(char const * name) {
 	} else {
 		if (!DOS_MakeName(name,fullname,&drive)) return DOS_DEVICES;
 	}
-	char* name_part = strrchr(fullname,'\\');
+	char* name_part = strrchr_dbcs(fullname,'\\');
 	if(name_part) {
 		*name_part++ = 0;
 		//Check validity of leading directory.
@@ -450,14 +389,6 @@ void DOS_DelDevice(DOS_Device * dev) {
 	}
 }
 
-void LPT_Init(Section* sec) {
-	Section_prop * secp=static_cast<Section_prop *>(sec);
-	if (!secp->Get_bool("lpt1pass")) DOS_AddDevice(new device_LPT1());
-	if (!secp->Get_bool("lpt2pass")) DOS_AddDevice(new device_LPT2());
-	if (!secp->Get_bool("lpt3pass")) DOS_AddDevice(new device_LPT3());
-	if (!secp->Get_bool("prnpass")) DOS_AddDevice(new device_PRN());
-}
-
 void DOS_SetupDevices(void) {
 	DOS_Device * newdev;
 	newdev=new device_CON();
@@ -465,6 +396,9 @@ void DOS_SetupDevices(void) {
 	DOS_Device * newdev2;
 	newdev2=new device_NUL();
 	DOS_AddDevice(newdev2);
+	DOS_Device * newdev3;
+	newdev3=new device_LPT1();
+	DOS_AddDevice(newdev3);
 }
 
 void DOS_ClearKeyMap()

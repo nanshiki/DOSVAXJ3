@@ -30,7 +30,6 @@
 #include "cross.h"
 #include "bios.h"
 #include "bios_disk.h"
-#include "jega.h"
 
 #if defined(WIN32)
 #define	fseek	_fseeki64
@@ -48,6 +47,7 @@
 static Bit16u dpos[256];
 static Bit32u dnum[256];
 extern bool wpcolon, force;
+extern bool isKanji1(Bit8u chr);
 extern int lfn_filefind_handle;
 void dos_ver_menu(bool start);
 char sfn[DOS_NAMELENGTH_ASCII];
@@ -878,7 +878,7 @@ fatDrive::fatDrive(const char *sysFilename, Bit32u bytesector, Bit32u cylsector,
 	filesize = (Bit32u)ftell(diskfile) / 1024L;
 
 	/* Load disk image */
-	loadedDisk = new imageDisk(diskfile, (Bit8u *)sysFilename, filesize, (filesize > 2880));
+	loadedDisk = new imageDisk(diskfile, sysFilename, filesize, (filesize > 2880));
 	if(!loadedDisk) {
 		created_successfully = false;
 		return;
@@ -1120,8 +1120,10 @@ bool fatDrive::FileCreate(DOS_File **file, char *name, Bit16u attributes) {
 bool fatDrive::FileExists(const char *name) {
 	direntry fileEntry;
 	Bit32u dummy1, dummy2;
-	if(!getFileDirEntry(name, &fileEntry, &dummy1, &dummy2)) return false;
-	return true;
+	Bit16u save_errorcode = dos.errorcode;
+	bool found = getFileDirEntry(name, &fileEntry, &dummy1, &dummy2);
+	dos.errorcode = save_errorcode;
+	return found;
 }
 
 bool fatDrive::FileOpen(DOS_File **file, char *name, Bit32u flags) {
@@ -1542,8 +1544,8 @@ bool fatDrive::addDirectoryEntry(Bit32u dirClustNumber, direntry useEntry,const 
 	}
 
 	for(;;) {
-		Bit32u logentsector = ((Bit32u)((size_t)dirPos / 16)); /* Logical entry sector */
-		Bit32u entryoffset = ((Bit32u)((size_t)dirPos % 16)); /* Index offset within sector */
+		logentsector = ((Bit32u)((size_t)dirPos / 16)); /* Logical entry sector */
+		entryoffset = ((Bit32u)((size_t)dirPos % 16)); /* Index offset within sector */
 
 		if(dirClustNumber==0) {
 			if(dirPos >= bootbuffer.rootdirentries) return false;

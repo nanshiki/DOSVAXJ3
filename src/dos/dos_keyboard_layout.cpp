@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *  Copyright (C) 2016 akm
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -12,9 +12,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -437,8 +437,9 @@ Bitu keyboard_layout::read_keyboard_file(const char* keyboard_file_name, Bit32s 
 					if (addmap>additional_planes+2) break;
 					Bitu charptr=read_buf_pos+addmap*((read_buf[read_buf_pos-2]&0x80)?2:1);
 					Bit16u kchar=read_buf[charptr];
-					if (read_buf[read_buf_pos - 2] & 0x80) kchar |= read_buf[charptr + 1] << 8;	// scancode/char pair
+
 					if (kchar!=0) {		// key remapped
+						if (read_buf[read_buf_pos-2]&0x80) kchar|=read_buf[charptr+1]<<8;	// scancode/char pair
 						// overwrite mapping
 						current_layout[scan*layout_pages+addmap]=kchar;
 						// clear command bit
@@ -1107,7 +1108,7 @@ class DOS_KeyboardLayout: public Module_base {
 public:
 	DOS_KeyboardLayout(Section* configuration):Module_base(configuration){
 		Section_prop * section=static_cast<Section_prop *>(configuration);
-		dos.loaded_codepage = 437;	// US codepage already initialized
+		dos.loaded_codepage=437;	// US codepage already initialized
 		loaded_layout=new keyboard_layout();
 
 		const char * layoutname=section->Get_string("keyboardlayout");
