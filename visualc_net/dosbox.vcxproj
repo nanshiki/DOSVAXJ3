@@ -100,6 +100,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <StringPooling>false</StringPooling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;sdl_net.lib;winmm.lib;zlib.lib;libpng.lib;sdlmain.lib;sdl.lib;pdcurses.lib;odbc32.lib;odbccp32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -150,6 +151,7 @@
       <CompileAs>Default</CompileAs>
       <AssemblerOutput>NoListing</AssemblerOutput>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;zlib.lib;libpng.lib;sdl_net.lib;sdlmain.lib;sdl.lib;pdcurses.lib;odbc32.lib;odbccp32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -202,6 +204,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <AssemblerOutput>NoListing</AssemblerOutput>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;winmm.lib;zlib.lib;libpng.lib;sdl_net.lib;sdlmain.lib;sdl.lib;pdcurses.lib;odbc32.lib;odbccp32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -279,6 +282,11 @@
     <ClCompile Include="..\src\hardware\ipxserver.cpp" />
     <ClCompile Include="..\src\hardware\joystick.cpp" />
     <ClCompile Include="..\src\hardware\keyboard.cpp" />
+    <ClCompile Include="..\src\hardware\mame\fmopl.cpp" />
+    <ClCompile Include="..\src\hardware\mame\saa1099.cpp" />
+    <ClCompile Include="..\src\hardware\mame\sn76496.cpp" />
+    <ClCompile Include="..\src\hardware\mame\ymdeltat.cpp" />
+    <ClCompile Include="..\src\hardware\mame\ymf262.cpp" />
     <ClCompile Include="..\src\hardware\memory.cpp" />
     <ClCompile Include="..\src\hardware\mixer.cpp" />
     <ClCompile Include="..\src\hardware\pci_bus.cpp" />
@@ -358,10 +366,15 @@
     <ResourceCompile Include="..\src\winres.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\cp437_uni.h" />
+    <ClInclude Include="..\include\cp932_uni.h" />
     <ClInclude Include="..\include\dosv.h" />
     <ClInclude Include="..\include\j3.h" />
     <ClInclude Include="..\include\jega.h" />
     <ClInclude Include="..\include\jfont.h" />
+    <ClInclude Include="..\src\cpu\core_dynrec\risc_armv8le.h" />
+    <ClInclude Include="..\src\cpu\core_dyn_x86\risc_x64.h" />
+    <ClInclude Include="..\src\cpu\dyn_cache.h" />
     <ClInclude Include="..\src\cpu\instructions.h" />
     <ClInclude Include="..\src\cpu\lazyflags.h" />
     <ClInclude Include="..\src\cpu\modrm.h" />
@@ -406,7 +419,14 @@
     <ClInclude Include="..\src\dos\scsidefs.h" />
     <ClInclude Include="..\src\dos\wnaspi32.h" />
     <ClInclude Include="..\src\dos\cdrom.h" />
+    <ClInclude Include="..\src\gui\render_glsl.h" />
     <ClInclude Include="..\src\hardware\font-switch.h" />
+    <ClInclude Include="..\src\hardware\mame\emu.h" />
+    <ClInclude Include="..\src\hardware\mame\fmopl.h" />
+    <ClInclude Include="..\src\hardware\mame\saa1099.h" />
+    <ClInclude Include="..\src\hardware\mame\sn76496.h" />
+    <ClInclude Include="..\src\hardware\mame\ymdeltat.h" />
+    <ClInclude Include="..\src\hardware\mame\ymf262.h" />
     <ClInclude Include="..\src\hardware\serialport\directserial.h" />
     <ClInclude Include="..\src\hardware\serialport\libserial.h" />
     <ClInclude Include="..\src\hardware\serialport\misc_util.h" />

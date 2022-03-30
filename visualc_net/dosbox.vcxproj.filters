@@ -72,6 +72,9 @@
       <UniqueIdentifier>{6984ed2c-5ac6-409c-971f-9a71e201ba4d}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
+    <Filter Include="Source Files\hardware\sound\mame">
+      <UniqueIdentifier>{9556760a-17f9-4d6d-be9b-dd6bd8267e0f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\dosbox.cpp">
@@ -434,6 +437,21 @@
     <ClCompile Include="..\src\misc\jfont.cpp">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\fmopl.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\saa1099.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\sn76496.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\ymdeltat.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\hardware\mame\ymf262.cpp">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\winres.rc">
@@ -740,6 +758,42 @@
     </ClInclude>
     <ClInclude Include="..\include\jfont.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\emu.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\fmopl.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\saa1099.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\sn76496.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\ymdeltat.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\hardware\mame\ymf262.h">
+      <Filter>Source Files\hardware\sound\mame</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\cp437_uni.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\cp932_uni.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cpu\core_dyn_x86\risc_x64.h">
+      <Filter>Source Files\cpu\core_dyn_x86</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cpu\core_dynrec\risc_armv8le.h">
+      <Filter>Source Files\cpu\core_dynrec</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cpu\dyn_cache.h">
+      <Filter>Source Files\cpu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gui\render_glsl.h">
+      <Filter>Source Files\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
