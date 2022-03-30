@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *  Copyright (C) 2016 akm
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -12,9 +12,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -270,38 +270,43 @@ VideoModeBlock ModeList_VGA_Paradise[]={
 
 VideoModeBlock ModeList_EGA[]={
 /* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
-{ 0x000  ,M_TEXT   ,360 ,400 ,40 ,25 ,9 ,16 ,8 ,0xB8000 ,0x0800 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK	},
-{ 0x001  ,M_TEXT   ,360 ,400 ,40 ,25 ,9 ,16 ,8 ,0xB8000 ,0x0800 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK	},
+{ 0x000  ,M_TEXT   ,320 ,350 ,40 ,25 ,8 ,14 ,8 ,0xB8000 ,0x0800 ,50  ,366 ,40 ,350 ,_EGA_HALF_CLOCK	},
+{ 0x001  ,M_TEXT   ,320 ,350 ,40 ,25 ,8 ,14 ,8 ,0xB8000 ,0x0800 ,50  ,366 ,40 ,350 ,_EGA_HALF_CLOCK	},
 { 0x002  ,M_TEXT   ,640 ,350 ,80 ,25 ,8 ,14 ,8 ,0xB8000 ,0x1000 ,96  ,366 ,80 ,350 ,0	},
 { 0x003  ,M_TEXT   ,640 ,350 ,80 ,25 ,8 ,14 ,8 ,0xB8000 ,0x1000 ,96  ,366 ,80 ,350 ,0	},
-{ 0x004  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
-{ 0x005  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
-{ 0x006  ,M_CGA2   ,640 ,200 ,80 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,100 ,449 ,80 ,400 ,_EGA_LINE_DOUBLE},
-{ 0x007  ,M_TEXT   ,720 ,400 ,80 ,25 ,9 ,16 ,8 ,0xB0000 ,0x1000 ,100 ,449 ,80 ,400 ,0	},
+{ 0x004  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
+{ 0x005  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
+{ 0x006  ,M_CGA2   ,640 ,200 ,80 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,117 ,262 ,80 ,200 ,_EGA_LINE_DOUBLE},
+{ 0x007  ,M_TEXT   ,720 ,350 ,80 ,25 ,9 ,14 ,8 ,0xB0000 ,0x1000 ,101 ,370 ,80 ,350 ,0	},
 
-{ 0x00D  ,M_EGA    ,320 ,200 ,40 ,25 ,8 ,8  ,8 ,0xA0000 ,0x2000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE	},
-{ 0x00E  ,M_EGA    ,640 ,200 ,80 ,25 ,8 ,8  ,4 ,0xA0000 ,0x4000 ,100 ,449 ,80 ,400 ,_EGA_LINE_DOUBLE },
-{ 0x00F  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,100 ,449 ,80 ,350 ,0	},/*was EGA_2*/
-{ 0x010  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,100 ,449 ,80 ,350 ,0	},
+{ 0x00D  ,M_EGA    ,320 ,200 ,40 ,25 ,8 ,8  ,8 ,0xA0000 ,0x2000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE	},
+{ 0x00E  ,M_EGA    ,640 ,200 ,80 ,25 ,8 ,8  ,4 ,0xA0000 ,0x4000 ,117 ,262 ,80 ,200 ,_EGA_LINE_DOUBLE },
+{ 0x00F  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,101 ,370 ,80 ,350 ,0	},/*was EGA_2*/
+{ 0x010  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,96  ,366 ,80 ,350 ,0	},
 
 {0xFFFF  ,M_ERROR  ,0   ,0   ,0  ,0  ,0 ,0  ,0 ,0x00000 ,0x0000 ,0   ,0   ,0  ,0   ,0 	},
 };
 
 VideoModeBlock ModeList_JEGA[]={
 /* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
-	{ 0x000  ,M_TEXT   ,360 ,400 ,40 ,25 ,9 ,16 ,8 ,0xB8000 ,0x0800 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK },
-	{ 0x001  ,M_TEXT   ,360 ,400 ,40 ,25 ,9 ,16 ,8 ,0xB8000 ,0x0800 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK },
-	{ 0x004  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK | _EGA_LINE_DOUBLE },
-	{ 0x005  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,50  ,449 ,40 ,400 ,_EGA_HALF_CLOCK | _EGA_LINE_DOUBLE },
-	{ 0x006  ,M_CGA2   ,640 ,200 ,80 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,100 ,449 ,80 ,400 ,_EGA_LINE_DOUBLE },
-	{ 0x007  ,M_TEXT   ,720 ,400 ,80 ,25 ,9 ,16 ,8 ,0xB0000 ,0x1000 ,100 ,449 ,80 ,400 ,0 },
-	{ 0x010  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,100 ,449 ,80 ,350 ,0 },
+{ 0x000  ,M_TEXT   ,320 ,350 ,40 ,25 ,8 ,14 ,8 ,0xB8000 ,0x0800 ,50  ,366 ,40 ,350 ,_EGA_HALF_CLOCK	},
+{ 0x001  ,M_TEXT   ,320 ,350 ,40 ,25 ,8 ,14 ,8 ,0xB8000 ,0x0800 ,50  ,366 ,40 ,350 ,_EGA_HALF_CLOCK	},
+{ 0x002  ,M_TEXT   ,640 ,350 ,80 ,25 ,8 ,14 ,8 ,0xB8000 ,0x1000 ,96  ,366 ,80 ,350 ,0	},
+{ 0x004  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
+{ 0x005  ,M_CGA4   ,320 ,200 ,40 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE},
+{ 0x006  ,M_CGA2   ,640 ,200 ,80 ,25 ,8 ,8  ,1 ,0xB8000 ,0x4000 ,117 ,262 ,80 ,200 ,_EGA_LINE_DOUBLE},
+{ 0x007  ,M_TEXT   ,720 ,350 ,80 ,25 ,9 ,14 ,8 ,0xB0000 ,0x1000 ,101 ,370 ,80 ,350 ,0	},
+{ 0x00D  ,M_EGA    ,320 ,200 ,40 ,25 ,8 ,8  ,8 ,0xA0000 ,0x2000 ,60  ,262 ,40 ,200 ,_EGA_HALF_CLOCK	| _EGA_LINE_DOUBLE	},
+{ 0x00E  ,M_EGA    ,640 ,200 ,80 ,25 ,8 ,8  ,4 ,0xA0000 ,0x4000 ,117 ,262 ,80 ,200 ,_EGA_LINE_DOUBLE },
+{ 0x00F  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,101 ,370 ,80 ,350 ,0	},/*was EGA_2*/
+{ 0x010  ,M_EGA    ,640 ,350 ,80 ,25 ,8 ,14 ,2 ,0xA0000 ,0x8000 ,96  ,366 ,80 ,350 ,0	},
 // JEGA modes for AX
 //{ 0x002  ,M_JEGA_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,96  ,525 ,80 ,480 ,0	},//AX-2 is not implemented;
-{ 0x003  ,M_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,96  ,525 ,80 ,480 ,0	},
+//{ 0x003  ,M_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,96  ,525 ,80 ,480 ,0	},
+{ 0x003  ,M_TEXT   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xB8000 ,0x1000 ,98  ,509 ,80 ,480 ,0	},//vtot must have been <512 because of CRT register
 //{ 0x052  ,M_JEGA_GFX   ,640 ,480 ,80 ,25 ,8 ,19 ,8 ,0xA0000 ,0x10000 ,96  ,525 ,80 ,480 ,0	},//AX-2 is not implemented;
 //{ 0x053  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0 },
-{ 0x053  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0 },
+{ 0x053  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,98 ,509 ,80 ,480 ,0 },
 };
 
 VideoModeBlock ModeList_OTHER[]={
@@ -563,19 +568,30 @@ static void FinishSetMode(bool clearmem) {
 	real_writew(BIOSMEM_SEG,BIOSMEM_NB_COLS,(Bit16u)CurMode->twidth);
 	real_writew(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE,(Bit16u)CurMode->plength);
 	real_writew(BIOSMEM_SEG,BIOSMEM_CRTC_ADDRESS,((CurMode->mode==7 )|| (CurMode->mode==0x0f)) ? 0x3b4 : 0x3d4);
-	real_writeb(BIOSMEM_SEG,BIOSMEM_NB_ROWS,(Bit8u)(CurMode->theight-1));
-	real_writew(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT,(Bit16u)CurMode->cheight);
-	real_writeb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL,(0x60|(clearmem?0:0x80)));
-	real_writeb(BIOSMEM_SEG,BIOSMEM_SWITCHES,0x09);
 
-	// this is an index into the dcc table:
-	if (IS_VGA_ARCH || IS_J3_ARCH) 
-		real_writeb(BIOSMEM_SEG,BIOSMEM_DCC_INDEX,0x0b);//VGA monitor 07
-		//real_writeb(BIOSMEM_SEG, BIOSMEM_DCC_INDEX, 0x04);//EGA compatible monior; for AX
+	if (IS_EGAVGA_ARCH || IS_J3_ARCH) {
+		real_writeb(BIOSMEM_SEG,BIOSMEM_NB_ROWS,(Bit8u)(CurMode->theight-1));
+		real_writew(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT,(Bit16u)CurMode->cheight);
+		real_writeb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL,(0x60|(clearmem?0:0x80)));
+		real_writeb(BIOSMEM_SEG,BIOSMEM_SWITCHES,0x09);
+		// this is an index into the dcc table:
+		if (IS_VGA_ARCH || IS_J3_ARCH) real_writeb(BIOSMEM_SEG,BIOSMEM_DCC_INDEX,0x0b);
+
+		/* Set font pointer */
+		if (CurMode->mode<=3 || CurMode->mode==7)
+			RealSetVec(0x43,int10.rom.font_8_first);
+		else {
+			switch (CurMode->cheight) {
+			case 8:RealSetVec(0x43,int10.rom.font_8_first);break;
+			case 14:RealSetVec(0x43,int10.rom.font_14);break;
+			case 16:RealSetVec(0x43,int10.rom.font_16);break;
+			}
+		}
+	}
 
 	// Set cursor shape
 	if (CurMode->type==M_TEXT) {
-		INT10_SetCursorShape(0x06,07);
+		INT10_SetCursorShape(0x06,0x07);
 	}
 	// Set cursor pos for page 0..7
 	for (Bit8u ct=0;ct<8;ct++) INT10_SetCursorPos(0,0,ct);
@@ -666,7 +682,7 @@ bool INT10_SetVideoMode_OTHER(Bit16u mode,bool clearmem) {
 	}
 	IO_WriteW(crtc_base,0x09 | (scanline-1) << 8);
 	//Setup the CGA palette using VGA DAC palette
-	for (Bit8u ct=0;ct<16;ct++) VGA_DAC_SetEntry(ct, cga_palette[ct][0], cga_palette[ct][1], cga_palette[ct][2]);
+	for (Bit8u ct=0;ct<16;ct++) VGA_DAC_SetEntry(ct,cga_palette[ct][0],cga_palette[ct][1],cga_palette[ct][2]);
 	//Setup the tandy palette
 	for (Bit8u ct=0;ct<16;ct++) VGA_DAC_CombineColor(ct,ct);
 	//Setup the special registers for each machine type
@@ -782,6 +798,7 @@ bool INT10_SetVideoMode_OTHER(Bit16u mode,bool clearmem) {
 		else if (mode == 7) crtc_block_index = 3; // MDA mono mode; invalid for others
 		else if (mode < 9) crtc_block_index = 2;
 		else crtc_block_index = 3; // Tandy/PCjr modes
+
 		// init CRTC registers
 		for (Bit16u i = 0; i < 16; i++)
 			IO_WriteW(crtc_base, i | (real_readb(RealSeg(vparams), 
@@ -846,36 +863,36 @@ bool INT10_SetVideoMode(Bit16u mode) {
 			if (!svga.accepts_mode(mode)) return false;
 		}
 
-		switch (svgaCard) {
+		switch(svgaCard) {
 		case SVGA_TsengET4K:
 		case SVGA_TsengET3K:
-			if (!SetCurMode(ModeList_VGA_Tseng, mode)) {
-				LOG(LOG_INT10, LOG_ERROR)("VGA:Trying to set illegal mode %X", mode);
+			if (!SetCurMode(ModeList_VGA_Tseng,mode)){
+				LOG(LOG_INT10,LOG_ERROR)("VGA:Trying to set illegal mode %X",mode);
 				return false;
 			}
 			break;
 		case SVGA_ParadisePVGA1A:
-			if (!SetCurMode(ModeList_VGA_Paradise, mode)) {
-				LOG(LOG_INT10, LOG_ERROR)("VGA:Trying to set illegal mode %X", mode);
+			if (!SetCurMode(ModeList_VGA_Paradise,mode)){
+				LOG(LOG_INT10,LOG_ERROR)("VGA:Trying to set illegal mode %X",mode);
 				return false;
 			}
 			break;
 		default:
-			if (!SetCurMode(ModeList_VGA, mode)) {
-				LOG(LOG_INT10, LOG_ERROR)("VGA:Trying to set illegal mode %X", mode);
+			if (!SetCurMode(ModeList_VGA,mode)){
+				LOG(LOG_INT10,LOG_ERROR)("VGA:Trying to set illegal mode %X",mode);
 				return false;
 			}
 		}
-		if (CurMode->type == M_TEXT) SetTextLines();
-	}
-	else {
-		if (!SetCurMode(ModeList_EGA, mode)) {
-			LOG(LOG_INT10, LOG_ERROR)("EGA:Trying to set illegal mode %X", mode);
+		if (CurMode->type==M_TEXT) SetTextLines();
+	} else {
+		if (!SetCurMode(ModeList_EGA,mode)){
+			LOG(LOG_INT10,LOG_ERROR)("EGA:Trying to set illegal mode %X",mode);
 			return false;
 		}
 	}
 
 	/* Setup the VGA to the correct mode */
+
 	Bit16u crtc_base;
 	bool mono_mode=(mode == 7) || (mode==0xf);  
 	if (mono_mode) crtc_base=0x3b4;
@@ -889,10 +906,17 @@ bool INT10_SetVideoMode(Bit16u mode) {
 
 	/* Setup MISC Output Register */
 	Bit8u misc_output=0x2 | (mono_mode ? 0x0 : 0x1);
-
-	if ((CurMode->type==M_TEXT) && (CurMode->cwidth==9)) {
-		// 28MHz (16MHz EGA) clock for 9-pixel wide chars
-		misc_output|=0x4;
+//r4467
+	if (IS_AX_ARCH) {
+		if ((CurMode->vdispend == 350) && (mode != 0xf)) misc_output |= 0x4;
+		else if(CurMode->vdispend == 480) misc_output |= 0x8;
+	}
+	else if (machine==MCH_EGA) {
+		// 16MHz clock for 350-line EGA modes except mode F
+		if ((CurMode->vdispend==350) && (mode!=0xf)) misc_output|=0x4;
+	} else {
+		// 28MHz clock for 9-pixel wide chars
+		if ((CurMode->type==M_TEXT) && (CurMode->cwidth==9)) misc_output|=0x4;
 	}
 
 	switch (CurMode->vdispend) {
@@ -1120,6 +1144,7 @@ bool INT10_SetVideoMode(Bit16u mode) {
 		/* Extended Vertical Overflow */
 		IO_Write(crtc_base,0x5e);IO_Write(crtc_base+1,ver_overflow);
 	}
+
 	/* Offset Register */
 	Bitu offset;
 	switch (CurMode->type) {
@@ -1518,27 +1543,19 @@ dac_text16:
 		real_writeb(RealSeg(dsapt),RealOff(dsapt)+0x10,0); // overscan
 	}
 	/* Setup some special stuff for different modes */
-	Bit8u feature=real_readb(BIOSMEM_SEG,BIOSMEM_INITIAL_MODE);
 	switch (CurMode->type) {
 	case M_DCGA:
-		feature=(feature&~0x30)|0x20;
 		real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x1e);
 		break;
 	case M_CGA2:
-		feature=(feature&~0x30)|0x20;
 		real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x1e);
 		break;
 	case M_CGA4:
-		feature=(feature&~0x30)|0x20;
 		if (CurMode->mode==4) real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x2a);
 		else if (CurMode->mode==5) real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x2e);
 		else real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x2);
 		break;
-	case M_TANDY16:
-		feature=(feature&~0x30)|0x20;
-		break;
 	case M_TEXT:
-		feature=(feature&~0x30)|0x20;
 		switch (CurMode->mode) {
 		case 0:real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x2c);break;
 		case 1:real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x28);break;
@@ -1547,14 +1564,7 @@ dac_text16:
 		case 7:real_writeb(BIOSMEM_SEG,BIOSMEM_CURRENT_MSR,0x29);break;
 		}
 		break;
-	case M_LIN4:
-	case M_EGA:	
-	case M_VGA:
-		feature=(feature&~0x30);
-		break;
 	}
-	// disabled, has to be set in bios.cpp exclusively
-//	real_writeb(BIOSMEM_SEG,BIOSMEM_INITIAL_MODE,feature);
 
 	if (svgaCard == SVGA_S3Trio) {
 		/* Setup the CPU Window */
@@ -1665,6 +1675,7 @@ dac_text16:
 	/* Set vga attrib register into defined state */
 	IO_Read(mono_mode ? 0x3ba : 0x3da);
 	IO_Write(0x3c0,0x20);
+	IO_Read(mono_mode ? 0x3ba : 0x3da); // Kukoo2 demo 
 
 	/* Load text mode font */
 	if (CurMode->type==M_TEXT) {
