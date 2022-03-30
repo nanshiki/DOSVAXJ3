@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *  Copyright (C) 2016-2019 akm
  *  Copyright (C) 2019 takapyu
  *
@@ -13,9 +13,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -444,7 +444,7 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 			/* try to retrieve key from symbolic key as scancode is zero */
 			if (keysym.sym<MAX_SDLKEYS) key=scancode_map[(Bitu)keysym.sym];
 		} 
-#if !defined (WIN32) && !defined (MACOSX) && !defined(OS2)
+#if !defined (WIN32) && !defined (MACOSX) && !defined(OS2) && !defined(__midipix__)
 		/* Linux adds 8 to all scancodes */
 		else {
 			key -= 8;
@@ -664,10 +664,10 @@ public:
 		positive = _positive;
 	}
 	void ConfigName(char * buf) {
-		sprintf(buf,"%s axis %d %d",group->ConfigStart(),axis,positive ? 1 : 0);
+		sprintf(buf,"%s axis %" sBitfs(d) " %d",group->ConfigStart(),axis,(positive ? 1 : 0));
 	}
 	void BindName(char * buf) {
-		sprintf(buf,"%s Axis %d%s",group->BindStart(),axis,positive ? "+" : "-");
+		sprintf(buf,"%s Axis %" sBitfs(d) "%s",group->BindStart(),axis,(positive ? "+" : "-"));
 	}
 protected:
 	CBindGroup * group;
@@ -682,10 +682,10 @@ public:
 		button=_button;
 	}
 	void ConfigName(char * buf) {
-		sprintf(buf,"%s button %d",group->ConfigStart(),button);
+		sprintf(buf,"%s button %" sBitfs(d),group->ConfigStart(),button);
 	}
 	void BindName(char * buf) {
-		sprintf(buf,"%s Button %d",group->BindStart(),button);
+		sprintf(buf,"%s Button %" sBitfs(d),group->BindStart(),button);
 	}
 protected:
 	CBindGroup * group;
@@ -706,10 +706,10 @@ public:
 		else E_Exit("MAPPER:JOYSTICK:Invalid hat position");
 	}
 	void ConfigName(char * buf) {
-		sprintf(buf,"%s hat %d %d",group->ConfigStart(),hat,dir);
+		sprintf(buf,"%s hat %" sBitfs(d) " %d",group->ConfigStart(),hat,dir);
 	}
 	void BindName(char * buf) {
-		sprintf(buf,"%s Hat %d %s",group->BindStart(),hat,(dir==SDL_HAT_UP)?"up":
+		sprintf(buf,"%s Hat %" sBitfs(d) " %s",group->BindStart(),hat,(dir==SDL_HAT_UP)?"up":
 														((dir==SDL_HAT_RIGHT)?"right":
 														((dir==SDL_HAT_DOWN)?"down":"left")));
 	}
@@ -726,7 +726,7 @@ public:
 	CStickBindGroup(Bitu _stick,Bitu _emustick,bool _dummy=false) : CBindGroup (){
 		stick=_stick;		// the number of the physical device (SDL numbering|)
 		emustick=_emustick;	// the number of the emulated device
-		sprintf(configname,"stick_%d",emustick);
+		sprintf(configname,"stick_%" sBitfs(d),emustick);
 
 		sdl_joystick=NULL;
 		axes=0;	buttons=0; hats=0;
@@ -779,7 +779,7 @@ public:
 		if (axes_cap>axes) axes_cap=axes;
 		hats_cap=emulated_hats;
 		if (hats_cap>hats) hats_cap=hats;
-		LOG_MSG("Using joystick %s with %d axes, %d buttons and %d hat(s)",SDL_JoystickName(stick),axes,buttons,hats);
+		LOG_MSG("Using joystick %s with %" sBitfs(d) " axes, %" sBitfs(d) " buttons and %" sBitfs(d) " hat%s",SDL_JoystickName(stick),axes,buttons,hats,(hats>1)?"s.":".");
 	}
 	~CStickBindGroup() {
 		SDL_JoystickClose(sdl_joystick);
@@ -816,7 +816,7 @@ public:
 			if (abs(event->jaxis.value)<25000) return 0;
 			return CreateAxisBind(event->jaxis.axis,event->jaxis.value>0);
 		} else if (event->type==SDL_JOYBUTTONDOWN) {
-			if (event->button.which!=stick) return 0;
+			if (event->jbutton.which!=stick) return 0;
 #if defined (REDUCE_JOYSTICK_POLLING)
 			return CreateButtonBind(event->jbutton.button%button_wrap);
 #else
@@ -973,6 +973,7 @@ private:
 		return NULL;
 	}
 	CBind * CreateHatBind(Bitu hat,Bit8u value) {
+		if (hat < hats_cap) return NULL;
 		Bitu hat_dir;
 		if (value&SDL_HAT_UP) hat_dir=0;
 		else if (value&SDL_HAT_RIGHT) hat_dir=1;
@@ -1714,7 +1715,7 @@ public:
 			key=SDLK_HOME; 
 			break;
 		}
-		sprintf(buf,"%s \"key %d%s%s%s\"",
+		sprintf(buf,"%s \"key %" sBitfs(d) "%s%s%s\"",
 			entry,
 			key,
 			defmod & 1 ? " mod1" : "",
@@ -1794,7 +1795,7 @@ static void SetActiveEvent(CEvent * event) {
 }
 
 static void DrawButtons(void) {
-	SDL_FillRect(mapper.surface,0,0);
+	SDL_FillRect(mapper.surface,0,CLR_BLACK);
 	SDL_LockSurface(mapper.surface);
 	for (CButton_it but_it = buttons.begin();but_it!=buttons.end();but_it++) {
 		(*but_it)->Draw();
@@ -1814,39 +1815,39 @@ static CKeyEvent * AddKeyButtonEvent(Bitu x,Bitu y,Bitu dx,Bitu dy,char const * 
 
 static CJAxisEvent * AddJAxisButton(Bitu x,Bitu y,Bitu dx,Bitu dy,char const * const title,Bitu stick,Bitu axis,bool positive,CJAxisEvent * opposite_axis) {
 	char buf[64];
-	sprintf(buf,"jaxis_%d_%d%s",stick,axis,positive ? "+" : "-");
+	sprintf(buf,"jaxis_%" sBitfs(d) "_%" sBitfs(d) "%s",stick,axis,(positive ? "+" : "-"));
 	CJAxisEvent	* event=new CJAxisEvent(buf,stick,axis,positive,opposite_axis);
 	new CEventButton(x,y,dx,dy,title,event);
 	return event;
 }
 static CJAxisEvent * AddJAxisButton_hidden(Bitu stick,Bitu axis,bool positive,CJAxisEvent * opposite_axis) {
 	char buf[64];
-	sprintf(buf,"jaxis_%d_%d%s",stick,axis,positive ? "+" : "-");
+	sprintf(buf,"jaxis_%" sBitfs(d) "_%" sBitfs(d) "%s",stick,axis, (positive ? "+" : "-") );
 	return new CJAxisEvent(buf,stick,axis,positive,opposite_axis);
 }
 
 static void AddJButtonButton(Bitu x,Bitu y,Bitu dx,Bitu dy,char const * const title,Bitu stick,Bitu button) {
 	char buf[64];
-	sprintf(buf,"jbutton_%d_%d",stick,button);
+	sprintf(buf,"jbutton_%" sBitfs(d) "_%" sBitfs(d),stick,button);
 	CJButtonEvent * event=new CJButtonEvent(buf,stick,button);
 	new CEventButton(x,y,dx,dy,title,event);
 }
 static void AddJButtonButton_hidden(Bitu stick,Bitu button) {
 	char buf[64];
-	sprintf(buf,"jbutton_%d_%d",stick,button);
+	sprintf(buf,"jbutton_%" sBitfs(d) "_%" sBitfs(d),stick,button);
 	new CJButtonEvent(buf,stick,button);
 }
 
 static void AddJHatButton(Bitu x,Bitu y,Bitu dx,Bitu dy,char const * const title,Bitu _stick,Bitu _hat,Bitu _dir) {
 	char buf[64];
-	sprintf(buf,"jhat_%d_%d_%d",_stick,_hat,_dir);
+	sprintf(buf,"jhat_%" sBitfs(d) "_%" sBitfs(d) "_%" sBitfs(d),_stick,_hat,_dir);
 	CJHatEvent * event=new CJHatEvent(buf,_stick,_hat,_dir);
 	new CEventButton(x,y,dx,dy,title,event);
 }
 
 static void AddModButton(Bitu x,Bitu y,Bitu dx,Bitu dy,char const * const title,Bitu _mod) {
 	char buf[64];
-	sprintf(buf,"mod_%d",_mod);
+	sprintf(buf,"mod_%" sBitfs(d),_mod);
 	CModEvent * event=new CModEvent(buf,_mod);
 	new CEventButton(x,y,dx,dy,title,event);
 }
@@ -2690,6 +2691,8 @@ void MAPPER_StartUp(Section * sec) {
 		sdlkey_map[0x41]=SDLK_KP6;
 #elif !defined (WIN32) /* => Linux & BSDs */
 		bool evdev_input = false;
+#ifdef SDL_VIDEO_DRIVER_X11
+//SDL needs to be compiled to use it, else the next makes no sense.
 #ifdef C_X11_XKB
 		SDL_SysWMinfo info;
 		SDL_VERSION(&info.version);
@@ -2712,6 +2715,7 @@ void MAPPER_StartUp(Section * sec) {
 			XkbFreeClientMap(desc,0,True);
 			}
 		}
+#endif
 #endif
 		if (evdev_input) {
 			sdlkey_map[0x67]=SDLK_UP;
