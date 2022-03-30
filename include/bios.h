@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 #ifndef DOSBOX_BIOS_H
@@ -108,7 +108,7 @@
 #define BIOS_DEFAULT_IRQ0_LOCATION		(RealMake(0xf000,0xfea5))
 #define BIOS_DEFAULT_IRQ1_LOCATION		(RealMake(0xf000,0xe987))
 #define BIOS_DEFAULT_IRQ2_LOCATION		(RealMake(0xf000,0xff55))
-#define BIOS_DEFAULT_RESET_LOCATION		(RealMake(0xf000,0xe05b))
+#define BIOS_DEFAULT_RESET_LOCATION		(RealMake(0xf000,(machine==MCH_PCJR)?0x0043:0xe05b))
 
 /* maximum of scancodes handled by keyboard bios routines */
 //#define MAX_SCAN_CODE 0x7f
@@ -133,6 +133,5 @@ bool BIOS_AddKeyToBuffer(Bit16u code);
 void INT10_ReloadRomFonts();
 
 void BIOS_SetComPorts (Bit16u baseaddr[]);
-void BIOS_SetLPTPort (Bitu port, Bit16u baseaddr);
 
 #endif

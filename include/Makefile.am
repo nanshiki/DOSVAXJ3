@@ -14,6 +14,7 @@ dosv.h \
 fpu.h \
 hardware.h \
 inout.h \
+joystick.h \
 ipx.h \
 ipxserver.h \
 j3.h \

@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *  Copyright (C) 2016 akm
- *  Copyright (C) 2019 takapyu
+ *  Copyright (C) 2019-2022 takapyu
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,9 +13,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#define	BUILD_VERSION	"JP220220"
+#define	BUILD_VERSION	"JP220330"
 #ifndef VERSION
 #define VERSION BUILD_VERSION
 #endif
@@ -67,7 +67,7 @@ enum SVGACards {
 
 extern SVGACards svgaCard;
 extern MachineType machine;
-extern bool SDLNetInited, uselfn, autolfn;;
+extern bool SDLNetInited, uselfn, autolfn;
 
 #define IS_TANDY_ARCH ((machine==MCH_TANDY) || (machine==MCH_PCJR))
 #define IS_EGAVGA_ARCH ((machine==MCH_EGA) || (machine==MCH_VGA))
