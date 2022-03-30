@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN support
  */
@@ -65,7 +65,7 @@ class DOS_DTA;
 
 class DOS_File {
 public:
-	DOS_File():flags(0)		{ name=0; refCtr = 0; hdrive=0xff; };
+	DOS_File():flags(0),time(0),date(0),attr(0),refCtr(0),open(false),name(0),hdrive(0xff) { };
 	DOS_File(const DOS_File& orig);
 	DOS_File & operator= (const DOS_File & orig);
 	virtual	~DOS_File(){if(name) delete [] name;};
@@ -121,21 +121,52 @@ private:
 	Bitu devnum;
 };
 
+struct ExtDeviceData {
+	Bit16u attribute;
+	Bit16u segment;
+	Bit16u strategy;
+	Bit16u interrupt;
+};
+
+class DOS_ExtDevice : public DOS_Device {
+public:
+	DOS_ExtDevice(const char *name, Bit16u seg, Bit16u off) {
+		SetName(name);
+		ext.attribute = real_readw(seg, off + 4);
+		ext.segment = seg;
+		ext.strategy = real_readw(seg, off + 6);
+		ext.interrupt = real_readw(seg, off + 8);
+	}
+	virtual bool	Read(Bit8u * data,Bit16u * size);
+	virtual bool	Write(Bit8u * data,Bit16u * size);
+	virtual bool	Seek(Bit32u * pos,Bit32u type);
+	virtual bool	Close();
+	virtual Bit16u	GetInformation(void);
+	virtual bool	ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
+	virtual bool	WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
+	virtual Bit8u	GetStatus(bool input_flag);
+	bool CheckSameDevice(Bit16u seg, Bit16u s_off, Bit16u i_off);
+	Bit16u CallDeviceFunction(Bit8u command, Bit8u length, Bit16u seg, Bit16u offset, Bit16u size);
+private:
+	struct ExtDeviceData ext;
+};
+
 /* The following variable can be lowered to free up some memory.
  * The negative side effect: The stored searches will be turned over faster.
  * Should not have impact on systems with few directory entries. */
+class DOS_Drive;
 #define MAX_OPENDIRS 2048
 //Can be high as it's only storage (16 bit variable)
 
 class DOS_Drive_Cache {
 public:
 	DOS_Drive_Cache					(void);
-	DOS_Drive_Cache					(const char* path);
+	DOS_Drive_Cache					(const char* path, DOS_Drive *drive);
 	~DOS_Drive_Cache				(void);
 
 	enum TDirSort { NOSORT, ALPHABETICAL, DIRALPHABETICAL, ALPHABETICALREV, DIRALPHABETICALREV };
 
-	void		SetBaseDir			(const char* path);
+	void		SetBaseDir			(const char* path, DOS_Drive *drive);
 	void		SetDirSort			(TDirSort sort) { sortDirType = sort; };
 	bool		OpenDir				(const char* path, Bit16u& id);
 	bool		ReadDir				(Bit16u id, char* &result, char * &lresult);
@@ -200,6 +231,7 @@ private:
 
 	CFileInfo*	dirBase;
 	char		dirPath				[CROSS_LEN];
+	DOS_Drive*	drive = NULL;
 	char		basePath			[CROSS_LEN];
 	bool		dirFirstTime;
 	TDirSort	sortDirType;
@@ -244,6 +276,10 @@ public:
 	virtual bool isRemovable(void)=0;
 	virtual bool isWriteProtected(void) = 0;
 	virtual Bits UnMount(void)=0;
+
+	virtual void *opendir(const char *dir) { (void)dir; return NULL; };
+    virtual bool read_directory_first(void *handle, char* entry_name, char* entry_sname, bool& is_directory) { (void)handle; (void)entry_name; (void)entry_sname; (void)is_directory; return false; };
+    virtual bool read_directory_next(void *handle, char* entry_name, char* entry_sname, bool& is_directory) { (void)handle; (void)entry_name; (void)entry_sname; (void)is_directory; return false; };
 
 	char * GetInfo(void);
 	char curdir[DOS_PATHLENGTH];
