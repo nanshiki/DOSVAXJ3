@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -63,7 +63,7 @@ static void DCGA_Text_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew) {
 }
 
 static void CGA2_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+((CurMode->twidth*rnew)*(cheight/2)+cleft);
 	PhysPt src=base+((CurMode->twidth*rold)*(cheight/2)+cleft);
 	Bitu copy=(cright-cleft);
@@ -76,7 +76,7 @@ static void CGA2_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt b
 }
 
 static void CGA4_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+((CurMode->twidth*rnew)*(cheight/2)+cleft)*2;
 	PhysPt src=base+((CurMode->twidth*rold)*(cheight/2)+cleft)*2;	
 	Bitu copy=(cright-cleft)*2;Bitu nextline=CurMode->twidth*2;
@@ -88,12 +88,12 @@ static void CGA4_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt b
 }
 
 static void TANDY16_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	Bit8u banks=CurMode->twidth/10;
 	PhysPt dest=base+((CurMode->twidth*rnew)*(cheight/banks)+cleft)*4;
 	PhysPt src=base+((CurMode->twidth*rold)*(cheight/banks)+cleft)*4;
 	Bitu copy=(cright-cleft)*4;Bitu nextline=CurMode->twidth*4;
-	for (Bit8u i=0;i<cheight/banks;i++) {
+	for (Bitu i=0;i<static_cast<Bitu>(cheight/banks);i++) {
 		for (Bitu b=0;b<banks;b++) MEM_BlockCopy(dest+b*8*1024,src+b*8*1024,copy);
 		dest+=nextline;src+=nextline;
 	}
@@ -270,7 +270,7 @@ static void EGA16_CopyRow_24(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,Phys
 
 static void VGA_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
 	PhysPt src,dest;Bitu copy;
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	dest=base+8*((CurMode->twidth*rnew)*cheight+cleft);
 	src=base+8*((CurMode->twidth*rold)*cheight+cleft);
 	Bitu nextline=8*CurMode->twidth;
@@ -317,7 +317,7 @@ static void DCGA_Text_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,Bit8u attr) {
 }
 
 static void CGA2_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u attr) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+((CurMode->twidth*row)*(cheight/2)+cleft);
 	Bitu copy=(cright-cleft);
 	Bitu nextline=CurMode->twidth;
@@ -332,7 +332,7 @@ static void CGA2_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u at
 }
 
 static void CGA4_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u attr) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+((CurMode->twidth*row)*(cheight/2)+cleft)*2;
 	Bitu copy=(cright-cleft)*2;Bitu nextline=CurMode->twidth*2;
 	attr=(attr & 0x3) | ((attr & 0x3) << 2) | ((attr & 0x3) << 4) | ((attr & 0x3) << 6);
@@ -346,12 +346,12 @@ static void CGA4_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u at
 }
 
 static void TANDY16_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u attr) {
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	Bit8u banks=CurMode->twidth/10;
 	PhysPt dest=base+((CurMode->twidth*row)*(cheight/banks)+cleft)*4;
 	Bitu copy=(cright-cleft)*4;Bitu nextline=CurMode->twidth*4;
 	attr=(attr & 0xf) | (attr & 0xf) << 4;
-	for (Bit8u i=0;i<cheight/banks;i++) {
+	for (Bitu i=0;i<static_cast<Bitu>(cheight/banks);i++) {
 		for (Bitu x=0;x<copy;x++) {
 			for (Bitu b=0;b<banks;b++) mem_writeb(dest+b*8*1024+x,attr);
 		}
@@ -367,7 +367,7 @@ static void EGA16_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u a
 	/* Enable all Write planes */
 	IO_Write(0x3c4,2);IO_Write(0x3c5,0xf);
 	/* Write some bytes */
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+(CurMode->twidth*row)*cheight+cleft;	
 	Bitu nextline=CurMode->twidth;
 	Bitu copy = cheight;Bitu rowsize=(cright-cleft);
@@ -380,7 +380,7 @@ static void EGA16_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u a
 
 static void VGA_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u attr) {
 	/* Write some bytes */
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	BIOS_CHEIGHT;
 	PhysPt dest=base+8*((CurMode->twidth*row)*cheight+cleft);
 	Bitu nextline=8*CurMode->twidth;
 	Bitu copy = cheight;Bitu rowsize=8*(cright-cleft);
@@ -731,7 +731,7 @@ void INT10_SetCursorShape(Bit8u first,Bit8u last) {
 	if (machine==MCH_CGA || (IS_J3_ARCH && J3_IsJapanese())) goto dowrite;
 	if (IS_TANDY_ARCH) goto dowrite;
 	/* Skip CGA cursor emulation if EGA/VGA system is active */
-	if (!(real_readb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL) & 0x8)) {
+	if (machine==MCH_HERC || !(real_readb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL) & 0x8)) {
 		/* Check for CGA type 01, invisible */
 		if ((first & 0x60) == 0x20) {
 			first=0x1e;
@@ -739,10 +739,10 @@ void INT10_SetCursorShape(Bit8u first,Bit8u last) {
 			goto dowrite;
 		}
 		/* Check if we need to convert CGA Bios cursor values */
-		if (!(real_readb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL) & 0x1)) { // set by int10 fun12 sub34
+		if (machine==MCH_HERC || !(real_readb(BIOSMEM_SEG,BIOSMEM_VIDEO_CTL) & 0x1)) { // set by int10 fun12 sub34
 //			if (CurMode->mode>0x3) goto dowrite;	//Only mode 0-3 are text modes on cga
 			if ((first & 0xe0) || (last & 0xe0)) goto dowrite;
-			Bit8u cheight=real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT)-1;
+			Bit8u cheight=((machine==MCH_HERC)?14:real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT))-1;
 			/* Creative routine i based of the original ibmvga bios */
 
 			if (last<first) {
@@ -810,15 +810,15 @@ void INT10_SetCursorPos(Bit8u row,Bit8u col,Bit8u page) {
 void ReadCharAttr(Bit16u col,Bit16u row,Bit8u page,Bit16u * result) {
 	/* Externally used by the mouse routine */
 	PhysPt fontdata;
-	Bitu x,y,pos = row*real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)+col;
-	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	Bit16u cols = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
+	BIOS_CHEIGHT;
 	bool split_chr = false;
 	switch (CurMode->type) {
 	case M_TEXT:
 		{	
 			// Compute the address  
 			Bit16u address=page*real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE);
-			address+=pos*2;
+			address+=(row*cols+col)*2;
 			// read the char 
 			PhysPt where = CurMode->pstart+address;
 			*result=mem_readw(where);
@@ -861,8 +861,7 @@ void ReadCharAttr(Bit16u col,Bit16u row,Bit8u page,Bit16u * result) {
 		break;
 	}
 
-	x=(pos%CurMode->twidth)*8;
-	y=(pos/CurMode->twidth)*cheight;
+	Bitu x=col*8,y=row*cheight*(cols/CurMode->twidth);
 
 	for (Bit16u chr=0;chr<256;chr++) {
 
@@ -992,25 +991,15 @@ void WriteCharJ31Sbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 	Bitu x, y, off, net, pos;
 	Bit8u data;
 	Bit8u *font;
-	RealPt fontdata;
 
 	net = ((attr & 0xf0) == 0xe0) ? 1 : 0;
 	pos = 0;
-	if(J3_IsJapanese() && chr >= 0x20) {
-		font = GetSbcsFont(chr);
-	} else {
-		fontdata = RealGetVec(0x43);
-		fontdata = RealMake(RealSeg(fontdata), RealOff(fontdata) + chr * 16);
-	}
+	font = GetSbcsFont(chr);
 	x = col;
 	y = row * 16;
 	off = (y >> 2) * 80 + 8 * 1024 * (y & 3) + x;
 	for(Bit8u h = 0 ; h < 16 ; h++) {
-		if(J3_IsJapanese() && chr >= 0x20) {
-			data = *font++;
-		} else {
-			data = mem_readb(Real2Phys(fontdata++));
-		}
+		data = *font++;
 		if((attr & 0x07) == 0x00) {
 			data ^= 0xff;
 		}
@@ -1631,15 +1620,16 @@ void WriteCharTopView(Bit16u off, int count)
 
 void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useattr) {
 	/* Externally used by the mouse routine */
-	PhysPt fontdata;
-	Bitu x,y,pos = row*real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)+col;
-	Bit8u back,cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
+	RealPt fontdata;
+	Bit16u cols = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
+	Bit8u back;
+	BIOS_CHEIGHT;
 	switch (CurMode->type) {
 	case M_TEXT:
 		{	
 			// Compute the address  
 			Bit16u address=page*real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE);
-			address+=pos*2;
+			address+=(row*cols+col)*2;
 			// Write the char 
 			PhysPt where = CurMode->pstart+address;
 			mem_writeb(where,chr);
@@ -1671,19 +1661,19 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 	case M_TANDY16:
 		if (chr>=128) {
 			chr-=128;
-			fontdata=Real2Phys(RealGetVec(0x1f));
+			fontdata=RealGetVec(0x1f);
 			break;
 		}
 		switch (machine) {
 		case MCH_CGA:
 		case MCH_HERC:
-			fontdata=PhysMake(0xf000,0xfa6e);
+			fontdata=RealMake(0xf000,0xfa6e);
 			break;
 		case TANDY_ARCH_CASE:
-			fontdata=Real2Phys(RealGetVec(0x44));
+			fontdata=RealGetVec(0x44);
 			break;
 		default:
-			fontdata=Real2Phys(RealGetVec(0x43));
+			fontdata=RealGetVec(0x43);
 			break;
 		}
 		break;
@@ -1718,10 +1708,10 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 			WriteCharDOSVSbcs(col, row, chr, attr);
 			return;
 		}
-		fontdata=Real2Phys(RealGetVec(0x43));
+		fontdata=RealGetVec(0x43);
 		break;
 	}
-	fontdata+=chr*cheight;
+	fontdata=RealMake(RealSeg(fontdata),RealOff(fontdata)+chr*cheight);
 
 	if(GCC_UNLIKELY(!useattr)) { //Set attribute(color) to a sensible value
 		static bool warned_use = false;
@@ -1766,13 +1756,13 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 		break;
 	}
 
-	x=(pos%CurMode->twidth)*8;
-	y=(pos/CurMode->twidth)*cheight;
+	Bitu x=col*8,y=row*cheight*(cols/CurMode->twidth);
 
 	Bit16u ty=(Bit16u)y;
 	for (Bit8u h=0;h<cheight;h++) {
 		Bit8u bitsel=128;
-		Bit8u bitline = mem_readb(fontdata++);
+		Bit8u bitline=mem_readb(Real2Phys(fontdata));
+		fontdata=RealMake(RealSeg(fontdata),RealOff(fontdata)+1);
 		Bit16u tx=(Bit16u)x;
 		while (bitsel) {
 			INT10_PutPixel(tx,ty,page,(bitline&bitsel)?attr:back);
@@ -1820,6 +1810,11 @@ void INT10_WriteChar(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr)
 			cur_col=0;
 			cur_row++;
 		}
+	}
+
+	if (CurMode->type==M_EGA) {
+		// Reset write ops for EGA graphics modes
+		IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x0);
 	}
 }
 
@@ -1875,8 +1870,7 @@ static void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr,Bit8u pag
 		Bit8u fill=0;
 		if(CurMode->type==M_TEXT || DOSV_CheckJapaneseVideoMode()) {
 			Bit16u chat;
-			ReadCharAttr(cur_col,cur_row - 1,page, &chat);
-			//INT10_ReadCharAttr(&chat,page);
+			INT10_ReadCharAttr(&chat,page);
 			fill=(Bit8u)(chat>>8);
 		}
 		INT10_ScrollWindow(0,0,(Bit8u)(nrows-1),(Bit8u)(ncols-1),-1,fill,page);
@@ -1891,13 +1885,13 @@ void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr) {
 }
 
 void INT10_TeletypeOutput(Bit8u chr,Bit8u attr) {
-	INT10_TeletypeOutputAttr(chr,attr, CurMode->type!=M_TEXT);
+	INT10_TeletypeOutputAttr(chr,attr,CurMode->type!=M_TEXT);
 }
 
 void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,Bit16u count,Bit8u page) {
 	Bit8u cur_row=CURSOR_POS_ROW(page);
 	Bit8u cur_col=CURSOR_POS_COL(page);
-
+	
 	// if row=0xff special case : use current cursor position
 	if (row==0xff) {
 		row=cur_row;

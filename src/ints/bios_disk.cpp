@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -31,19 +31,19 @@
 #define	fseek	_fseeki64
 #endif
 
-#define MAX_DISK_IMAGES 4
 
 diskGeo DiskGeometryList[] = {
-	{ 160,  8, 1, 40, 0},
-	{ 180,  9, 1, 40, 0},
-	{ 200, 10, 1, 40, 0},
-	{ 320,  8, 2, 40, 1},
-	{ 360,  9, 2, 40, 1},
-	{ 400, 10, 2, 40, 1},
-	{ 720,  9, 2, 80, 3},
-	{1200, 15, 2, 80, 2},
-	{1440, 18, 2, 80, 4},
-	{2880, 36, 2, 80, 6},
+	{ 160,  8, 1, 40, 0},	// SS/DD 5.25"
+	{ 180,  9, 1, 40, 0},	// SS/DD 5.25"
+	{ 200, 10, 1, 40, 0},	// SS/DD 5.25" (booters)
+	{ 320,  8, 2, 40, 1},	// DS/DD 5.25"
+	{ 360,  9, 2, 40, 1},	// DS/DD 5.25"
+	{ 400, 10, 2, 40, 1},	// DS/DD 5.25" (booters)
+	{ 720,  9, 2, 80, 3},	// DS/DD 3.5"
+	{1200, 15, 2, 80, 2},	// DS/HD 5.25"
+	{1440, 18, 2, 80, 4},	// DS/HD 3.5"
+	{1680, 21, 2, 80, 4},	// DS/HD 3.5"  (DMF)
+	{2880, 36, 2, 80, 6},	// DS/ED 3.5"
 	{0, 0, 0, 0, 0}
 };
 
@@ -57,7 +57,7 @@ DOS_DTA *imgDTA;
 bool killRead;
 static bool swapping_requested;
 
-void CMOS_SetRegister(Bitu regNr, Bit8u val); //For setting equipment word
+void BIOS_SetEquipment(Bit16u equipment);
 
 /* 2 floppys and 2 harddrives, max */
 imageDisk *imageDiskList[MAX_DISK_IMAGES];
@@ -99,8 +99,7 @@ void incrementFDD(void) {
 		equipment&=~0x00C0;
 		equipment|=(numofdisks<<6);
 	} else equipment|=1;
-	mem_writew(BIOS_CONFIGURATION,equipment);
-	CMOS_SetRegister(0x14, (Bit8u)(equipment&0xff));
+	BIOS_SetEquipment(equipment);
 }
 
 void swapInDisks(void) {
@@ -200,7 +199,7 @@ Bit8u imageDisk::Write_AbsoluteSector(Bit32u sectnum, void *data) {
 
 }
 
-imageDisk::imageDisk(FILE *imgFile, Bit8u *imgName, Bit32u imgSizeK, bool isHardDisk) {
+imageDisk::imageDisk(FILE *imgFile, const char *imgName, Bit32u imgSizeK, bool isHardDisk) {
 	heads = 0;
 	cylinders = 0;
 	sectors = 0;
@@ -209,14 +208,8 @@ imageDisk::imageDisk(FILE *imgFile, Bit8u *imgName, Bit32u imgSizeK, bool isHard
 	last_action = NONE;
 	diskimg = imgFile;
 	fseek(diskimg,0,SEEK_SET);
-	
 	memset(diskname,0,512);
-	if(strlen((const char *)imgName) > 511) {
-		memcpy(diskname, imgName, 511);
-	} else {
-		strcpy((char *)diskname, (const char *)imgName);
-	}
-
+	safe_strncpy(diskname, imgName, sizeof(diskname));
 	active = false;
 	hardDrive = isHardDisk;
 	if(!isHardDisk) {
@@ -348,13 +341,14 @@ static Bitu INT13_DiskHandler(void) {
 	for(i = 0;i < MAX_DISK_IMAGES;i++) {
 		if(imageDiskList[i]) any_images=true;
 	}
-	//LOG(LOG_BIOS, LOG_ERROR)("INT13: Function %x called on drive %x (dos drive %d)", reg_ah, reg_dl, drivenum);
 
 	// unconditionally enable the interrupt flag
 	CALLBACK_SIF(true);
 
 	//drivenum = 0;
 	//LOG_MSG("INT13: Function %x called on drive %x (dos drive %d)", reg_ah,  reg_dl, drivenum);
+
+	// NOTE: the 0xff error code returned in some cases is questionable; 0x01 seems more correct
 	switch(reg_ah) {
 	case 0x0: /* Reset disk */
 		{
@@ -396,8 +390,19 @@ static Bitu INT13_DiskHandler(void) {
 			return CBRET_NONE;
 		}
 		if (!any_images) {
-			// Inherit the Earth cdrom (uses it as disk test)
+			if (drivenum >= DOS_DRIVES || !Drives[drivenum] || Drives[drivenum]->isRemovable()) {
+				reg_ah = 0x01;
+				CALLBACK_SCF(true);
+				return CBRET_NONE;
+			}
+			// Inherit the Earth cdrom and Amberstar use it as a disk test
 			if (((reg_dl&0x80)==0x80) && (reg_dh==0) && ((reg_cl&0x3f)==1)) {
+				if (reg_ch==0) {
+					PhysPt ptr = PhysMake(SegValue(es),reg_bx);
+					// write some MBR data into buffer for Amberstar installer
+					mem_writeb(ptr+0x1be,0x80); // first partition is active
+					mem_writeb(ptr+0x1c2,0x06); // first partition is FAT16B
+				}
 				reg_ah = 0;
 				CALLBACK_SCF(false);
 				return CBRET_NONE;
@@ -425,7 +430,6 @@ static Bitu INT13_DiskHandler(void) {
 				bufptr++;
 			}
 		}
-//		LOG(LOG_BIOS, LOG_ERROR)("INT13: Read data, Drive:%d, DH:%x, CX:%x", drivenum, reg_dh, reg_cx);
 		reg_ah = 0x00;
 		CALLBACK_SCF(false);
 		break;
@@ -455,7 +459,6 @@ static Bitu INT13_DiskHandler(void) {
 				return CBRET_NONE;
 			}
         }
-//		LOG(LOG_BIOS, LOG_ERROR)("INT13: Write data, Drive:%d, DH:%x, CX:%x", drivenum, reg_dh, reg_cx);
 		reg_ah = 0x00;
 		CALLBACK_SCF(false);
         break;
@@ -465,7 +468,10 @@ static Bitu INT13_DiskHandler(void) {
 			CALLBACK_SCF(true);
 			return CBRET_NONE;
 		}
-		if(driveInactive(drivenum)) return CBRET_NONE;
+		if(driveInactive(drivenum)) {
+			reg_ah = last_status;
+			return CBRET_NONE;
+		}
 
 		/* TODO: Finish coding this section */
 		/*

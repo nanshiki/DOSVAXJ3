@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LPT support
  */
@@ -589,16 +589,12 @@ static Bitu INT8_Handler(void) {
 			SetIMPosition();
 		}
 	}
-	/* decrease floppy motor timer */
+	/* decrement FDD motor timeout counter; roll over on earlier PC, stop at zero on later PC */
 	Bit8u val = mem_readb(BIOS_DISK_MOTOR_TIMEOUT);
-	if (val > 0) {
-		val--;
-		mem_writeb(BIOS_DISK_MOTOR_TIMEOUT,val);
-		/* and running drive */
-		if(val == 0) {
-			mem_writeb(BIOS_DRIVE_RUNNING,mem_readb(BIOS_DRIVE_RUNNING) & 0xF0);
-		}
-	}
+	if (val || !IS_EGAVGA_ARCH) mem_writeb(BIOS_DISK_MOTOR_TIMEOUT,val-1);
+	/* clear FDD motor bits when counter reaches zero */
+	if (val == 1) mem_writeb(BIOS_DRIVE_RUNNING,mem_readb(BIOS_DRIVE_RUNNING) & 0xF0);
+
 	if(debug_flag) {
 		if(mem_readw(0x42) != 0xf000) {
 			Bit16u temp_es = SegValue(es);
@@ -794,8 +790,31 @@ static Bitu INT14_Handler(void) {
 static Bitu INT15_Handler(void) {
 	static Bit16u biosConfigSeg=0;
 	switch (reg_ah) {
-	case 0x06:
-		LOG(LOG_BIOS,LOG_NORMAL)("INT15 Unkown Function 6");
+	case 0x24:		//A20 stuff
+		switch (reg_al) {
+		case 0:	//Disable a20
+			MEM_A20_Enable(false);
+			reg_ah = 0;                   //call successful
+			CALLBACK_SCF(false);             //clear on success
+			break;
+		case 1:	//Enable a20
+			MEM_A20_Enable( true );
+			reg_ah = 0;                   //call successful
+			CALLBACK_SCF(false);             //clear on success
+			break;
+		case 2:	//Query a20
+			reg_al = MEM_A20_Enabled() ? 0x1 : 0x0;
+			reg_ah = 0;                   //call successful
+			CALLBACK_SCF(false);
+			break;
+		case 3:	//Get a20 support
+			reg_bx = 0x3;		//Bitmask, keyboard and 0x92
+			reg_ah = 0;         //call successful
+			CALLBACK_SCF(false);
+			break;
+		default:
+			goto unhandled;
+		}
 		break;
 	case 0xC0:	/* Get Configuration*/
 		{
@@ -901,13 +920,24 @@ static Bitu INT15_Handler(void) {
 				break;
 			}
 			Bit32u count=(reg_cx<<16)|reg_dx;
+			double timeout=PIC_FullIndex()+((double)count/1000.0)+1.0;
 			mem_writed(BIOS_WAIT_FLAG_POINTER,RealMake(0,BIOS_WAIT_FLAG_TEMP));
 			mem_writed(BIOS_WAIT_FLAG_COUNT,count);
 			mem_writeb(BIOS_WAIT_FLAG_ACTIVE,1);
+			/* Unmask IRQ 8 if masked */
+			Bit8u mask=IO_Read(0xa1);
+			if (mask&1) IO_Write(0xa1,mask&~1);
 			/* Reprogram RTC to start */
 			IO_Write(0x70,0xb);
 			IO_Write(0x71,IO_Read(0x71)|0x40);
 			while (mem_readd(BIOS_WAIT_FLAG_COUNT)) {
+				if (PIC_FullIndex()>timeout) {
+					/* RTC timer not working for some reason */
+					mem_writeb(BIOS_WAIT_FLAG_ACTIVE,0);
+					IO_Write(0x70,0xb);
+					IO_Write(0x71,IO_Read(0x71)&~0x40);
+					break;
+				}
 				CALLBACK_Idle();
 			}
 			CALLBACK_SCF(false);
@@ -982,6 +1012,12 @@ static Bitu INT15_Handler(void) {
 			reg_bx=0x00aa;	// mouse
 			// fall through
 		case 0x05:		// initialize
+			if ((reg_al==0x05) && (reg_bh!=0x03)) {
+				// non-standard data packet sizes not supported
+				CALLBACK_SCF(true);
+				reg_ah=2;
+				break;
+			}
 			Mouse_SetPS2State(false);
 			CALLBACK_SCF(false);
 			reg_ah=0;
@@ -1082,6 +1118,7 @@ static Bitu INT15_Handler(void) {
 		}
 		break;
 	default:
+	unhandled:
 		LOG(LOG_BIOS,LOG_ERROR)("INT15:Unknown call %4X",reg_ax);
 		reg_ah=0x86;
 		CALLBACK_SCF(true);
@@ -1133,6 +1170,12 @@ static Bitu Reboot_Handler(void) {
 	return CBRET_NONE;
 }
 
+void BIOS_SetEquipment(Bit16u equipment) {
+	mem_writew(BIOS_CONFIGURATION,equipment);
+	if (IS_EGAVGA_ARCH) equipment &= ~0x30; //EGA/VGA startup display mode differs in CMOS
+	CMOS_SetRegister(0x14,(Bit8u)(equipment&0xff)); //Should be updated on changes
+}
+
 void BIOS_ZeroExtendedSize(bool in) {
 	if(in) other_memsystems++; 
 	else other_memsystems--;
@@ -1149,9 +1192,6 @@ public:
 	BIOS(Section* configuration):Module_base(configuration){
 		/* tandy DAC can be requested in tandy_sound.cpp by initializing this field */
 		bool use_tandyDAC=(real_readb(0x40,0xd4)==0xff);
-
-		// Disney workaround
-		Bit16u disney_port = mem_readw(BIOS_ADDRESS_LPT1);
 
 		/* Clear the Bios Data Area (0x400-0x5ff, 0x600- is accounted to DOS) */
 		for (Bit16u i=0;i<0x200;i++) real_writeb(0x40,i,0);
@@ -1355,8 +1395,9 @@ public:
 		
 		// port timeouts
 		// always 1 second even if the port does not exist
-		BIOS_SetLPTPort(0, disney_port);
-		for(Bitu i = 1; i < 3; i++) BIOS_SetLPTPort(i, 0);
+		mem_writeb(BIOS_LPT1_TIMEOUT,1);
+		mem_writeb(BIOS_LPT2_TIMEOUT,1);
+		mem_writeb(BIOS_LPT3_TIMEOUT,1);
 		mem_writeb(BIOS_COM1_TIMEOUT,1);
 		mem_writeb(BIOS_COM2_TIMEOUT,1);
 		mem_writeb(BIOS_COM3_TIMEOUT,1);
@@ -1435,8 +1476,7 @@ public:
 		if (machine==MCH_PCJR) config |= 0x100;
 		// Gameport
 		config |= 0x1000;
-		mem_writew(BIOS_CONFIGURATION,config);
-		CMOS_SetRegister(0x14,(Bit8u)(config&0xff)); //Should be updated on changes
+		BIOS_SetEquipment(config);
 		/* Setup extended memory size */
 		IO_Write(0x70,0x30);
 		size_extended=IO_Read(0x71);
@@ -1489,37 +1529,9 @@ void BIOS_SetComPorts(Bit16u baseaddr[]) {
 	equipmentword = mem_readw(BIOS_CONFIGURATION);
 	equipmentword &= (~0x0E00);
 	equipmentword |= (portcount << 9);
-	mem_writew(BIOS_CONFIGURATION,equipmentword);
-	CMOS_SetRegister(0x14,(Bit8u)(equipmentword&0xff)); //Should be updated on changes
+	BIOS_SetEquipment(equipmentword);
 }
 
-void BIOS_SetLPTPort(Bitu port, Bit16u baseaddr) {
-	switch(port) {
-	case 0:
-		mem_writew(BIOS_ADDRESS_LPT1,baseaddr);
-		mem_writeb(BIOS_LPT1_TIMEOUT, 10);
-		break;
-	case 1:
-		mem_writew(BIOS_ADDRESS_LPT2,baseaddr);
-		mem_writeb(BIOS_LPT2_TIMEOUT, 10);
-		break;
-	case 2:
-		mem_writew(BIOS_ADDRESS_LPT3,baseaddr);
-		mem_writeb(BIOS_LPT3_TIMEOUT, 10);
-		break;
-	}
-
-	// set equipment word: count ports
-	Bit16u portcount=0;
-	if(mem_readw(BIOS_ADDRESS_LPT1) != 0) portcount++;
-	if(mem_readw(BIOS_ADDRESS_LPT2) != 0) portcount++;
-	if(mem_readw(BIOS_ADDRESS_LPT3) != 0) portcount++;
-	
-	Bit16u equipmentword = mem_readw(BIOS_CONFIGURATION);
-	equipmentword &= (~0xC000);
-	equipmentword |= (portcount << 14);
-	mem_writew(BIOS_CONFIGURATION,equipmentword);
-}
 
 static BIOS* test;
 

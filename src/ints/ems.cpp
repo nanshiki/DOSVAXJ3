@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 
@@ -54,6 +54,8 @@
 #define ENABLE_VCPI 1
 #define ENABLE_V86_STARTUP 0
 
+#define EMM_VOLATILE 0
+#define EMM_NONVOLATILE 1
 
 /* EMM errors */
 #define EMM_NO_ERROR			0x00
@@ -71,6 +73,7 @@
 #define EMM_PAGE_MAP_SAVED		0x8d
 #define EMM_NO_SAVED_PAGE_MAP	0x8e
 #define EMM_INVALID_SUB			0x8f
+#define EMM_ATTR_UNDEF			0x90
 #define EMM_FEAT_NOSUP			0x91
 #define EMM_MOVE_OVLAP			0x92
 #define EMM_MOVE_OVLAPI			0x97
@@ -107,8 +110,8 @@ public:
 		GEMMIS_seg=0;
 	}
 	bool Read(Bit8u * /*data*/,Bit16u * /*size*/) { return false;}
-	bool Write(Bit8u * /*data*/,Bit16u * /*size*/){ 
-		LOG(LOG_IOCTL,LOG_NORMAL)("EMS: Write to device");	
+	bool Write(Bit8u * /*data*/,Bit16u * /*size*/){
+		LOG(LOG_IOCTL,LOG_NORMAL)("EMS:Write to device");
 		return false;
 	}
 	bool Seek(Bit32u * /*pos*/,Bit32u /*type*/){return false;}
@@ -121,7 +124,7 @@ private:
 	bool is_emm386;
 };
 
-bool device_EMM::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) { 
+bool device_EMM::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) {
 	Bitu subfct=mem_readb(bufptr);
 	switch (subfct) {
 		case 0x00:
@@ -303,19 +306,19 @@ static Bit8u EMM_MapPage(Bitu phys_page,Bit16u handle,Bit16u log_page) {
 		/* Unmapping */
 		emm_mappings[phys_page].handle=NULL_HANDLE;
 		emm_mappings[phys_page].page=NULL_PAGE;
-		for (Bitu i=0;i<4;i++) 
+		for (Bitu i=0;i<4;i++)
 			PAGING_MapPage(EMM_PAGEFRAME4K+phys_page*4+i,EMM_PAGEFRAME4K+phys_page*4+i);
 		PAGING_ClearTLB();
 		return EMM_NO_ERROR;
 	}
 	/* Check for valid handle */
 	if (!ValidHandle(handle)) return EMM_INVALID_HANDLE;
-	
+
 	if (log_page<emm_handles[handle].pages) {
 		/* Mapping it is */
 		emm_mappings[phys_page].handle=handle;
 		emm_mappings[phys_page].page=log_page;
-		
+
 		MemHandle memh=MEM_NextHandleAt(emm_handles[handle].mem,log_page*4);;
 		for (Bitu i=0;i<4;i++) {
 			PAGING_MapPage(EMM_PAGEFRAME4K+phys_page*4+i,memh);
@@ -361,14 +364,14 @@ static Bit8u EMM_MapSegment(Bitu segment,Bit16u handle,Bit16u log_page) {
 				emm_segmentmappings[segment>>10].handle=NULL_HANDLE;
 				emm_segmentmappings[segment>>10].page=NULL_PAGE;
 			}
-			for (Bitu i=0;i<4;i++) 
+			for (Bitu i=0;i<4;i++)
 				PAGING_MapPage(segment*16/4096+i,segment*16/4096+i);
 			PAGING_ClearTLB();
 			return EMM_NO_ERROR;
 		}
 		/* Check for valid handle */
 		if (!ValidHandle(handle)) return EMM_INVALID_HANDLE;
-		
+
 		if (log_page<emm_handles[handle].pages) {
 			/* Mapping it is */
 			if ((tphysPage>=0) && (tphysPage<EMM_MAX_PHYS)) {
@@ -378,7 +381,7 @@ static Bit8u EMM_MapSegment(Bitu segment,Bit16u handle,Bit16u log_page) {
 				emm_segmentmappings[segment>>10].handle=handle;
 				emm_segmentmappings[segment>>10].page=log_page;
 			}
-			
+
 			MemHandle memh=MEM_NextHandleAt(emm_handles[handle].mem,log_page*4);;
 			for (Bitu i=0;i<4;i++) {
 				PAGING_MapPage(segment*16/4096+i,memh);
@@ -583,6 +586,32 @@ static Bit8u GetSetHandleName(void) {
 
 }
 
+static Bit8u GetSetHandleAttributes(void) {
+	switch (reg_al) {
+	case 0x00:	// Get handle attribubtes
+		if (!ValidHandle(reg_dx)) return EMM_INVALID_HANDLE;
+		reg_al = EMM_VOLATILE;	// We only support volatile
+		break;
+	case 0x01:	// Set handle attributes
+		if (!ValidHandle(reg_dx)) return EMM_INVALID_HANDLE;
+		switch (reg_bl) {
+		case EMM_VOLATILE:
+			break;
+		case EMM_NONVOLATILE:
+			return EMM_FEAT_NOSUP;
+		default:
+			return EMM_ATTR_UNDEF;
+		}
+		break;
+	case 0x02:	// Get attribute capability
+		reg_al = EMM_VOLATILE;	// We only support volatile
+		break;
+	default:
+		LOG(LOG_MISC,LOG_ERROR)("EMS:Call %2X Subfunction %2X not supported",reg_ah,reg_al);
+		return EMM_INVALID_SUB;			
+	}
+	return EMM_NO_ERROR;
+}
 
 static void LoadMoveRegion(PhysPt data,MoveRegion & region) {
 	region.bytes=mem_readd(data+0x0);
@@ -699,7 +728,7 @@ static Bitu INT67_Handler(void) {
 	Bitu i;
 	switch (reg_ah) {
 	case 0x40:		/* Get Status */
-		reg_ah=EMM_NO_ERROR;	
+		reg_ah=EMM_NO_ERROR;
 		break;
 	case 0x41:		/* Get PageFrame Segment */
 		reg_bx=emm_pageframe;
@@ -756,7 +785,7 @@ static Bitu INT67_Handler(void) {
 			MEM_BlockWrite(SegPhys(es)+reg_di,emm_mappings,sizeof(emm_mappings));
 			MEM_BlockRead(SegPhys(ds)+reg_si,emm_mappings,sizeof(emm_mappings));
 			reg_ah=EMM_RestoreMappingTable();
-			break;	
+			break;
 		case 0x03:	/* Get Page Map Array Size */
 			reg_al=sizeof(emm_mappings);
 			reg_ah=EMM_NO_ERROR;
@@ -782,7 +811,7 @@ static Bitu INT67_Handler(void) {
 						if (reg_ah!=EMM_NO_ERROR) break;
 					};
 				} break;
-			case 0x01: // use segment address 
+			case 0x01: // use segment address
 				{	PhysPt data = SegPhys(ds)+reg_si;
 					for (int i=0; i<reg_cx; i++) {
 						Bit16u logPage	= mem_readw(data); data+=2;
@@ -800,6 +829,9 @@ static Bitu INT67_Handler(void) {
 	case 0x51:	/* Reallocate Pages */
 		reg_ah=EMM_ReallocatePages(reg_dx,reg_bx);
 		break;
+	case 0x52: // Set/Get Handle attributes
+		reg_ah=GetSetHandleAttributes();
+		break;	
 	case 0x53: // Set/Get Handlename
 		reg_ah=GetSetHandleName();
 		break;
@@ -822,6 +854,29 @@ static Bitu INT67_Handler(void) {
 		// Set number of pages
 		reg_cx = EMM_MAX_PHYS;
 		reg_ah = EMM_NO_ERROR;
+		break;
+	case 0x59: // Get hardware information
+		reg_ah=EMM_NO_ERROR;
+		switch (reg_al) {
+		case 0x00:	// Get hardware configuration
+			{
+				PhysPt data=SegPhys(es)+reg_di;
+				mem_writew(data,0x0400); data+=2;		// 1 page is 1K paragraphs (16KB)
+				mem_writew(data,0x0000); data+=2;		// No alternate register sets
+				mem_writew(data,sizeof(emm_mappings)); data+=2;	// Context save area size
+				mem_writew(data,0x0000); data+=2;		// No DMA channels
+				mem_writew(data,0x0000);			// Always 0 for LIM standard
+			}
+			break;
+		case 0x01:	// get unallocated raw page count
+			reg_dx=(Bit16u)(MEM_TotalPages()/4);		//Not entirely correct but okay
+			reg_bx=EMM_GetFreePages();
+			break;
+		default:
+			LOG(LOG_MISC,LOG_ERROR)("EMS:Call 59 subfct %2X not supported",reg_al);
+			reg_ah=EMM_INVALID_SUB;
+			break;
+		}
 		break;
 	case 0x5A:              /* Allocate standard/raw Pages */
 		if (reg_al<=0x01) {
@@ -860,7 +915,7 @@ static Bitu INT67_Handler(void) {
 					real_writeb(SegValue(es),reg_di+ct*4+0x03,0x00);
 				}
 				/* adjust paging entries for page frame (if mapped) */
-				for (ct=0; ct<4; ct++) { 
+				for (ct=0; ct<4; ct++) {
 					Bit16u handle=emm_mappings[ct].handle;
 					if (handle!=0xffff) {
 						Bit16u memh=(Bit16u)MEM_NextHandleAt(emm_handles[handle].mem,emm_mappings[ct].page*4);
@@ -872,7 +927,7 @@ static Bitu INT67_Handler(void) {
 					}
 				}
 				reg_di+=0x400;		// advance pointer by 0x100*4
-				
+
 				/* Set up three descriptor table entries */
 				Bit32u cbseg_low=(CALLBACK_GetBase()&0xffff)<<16;
 				Bit32u cbseg_high=(CALLBACK_GetBase()&0x1f0000)>>16;
@@ -1000,14 +1055,14 @@ static Bitu INT67_Handler(void) {
 				}
 				break;
 			default:
-				LOG(LOG_MISC,LOG_ERROR)("EMS: VCPI Call %x not supported",reg_ax);
+				LOG(LOG_MISC,LOG_ERROR)("EMS:VCPI Call %x not supported",reg_ax);
 				reg_ah=EMM_FUNC_NOSUP;
 				break;
 			}
 		}
 		break;
 	default:
-		LOG(LOG_MISC,LOG_ERROR)("EMS: Call %2X not supported",reg_ah);
+		LOG(LOG_MISC,LOG_ERROR)("EMS:Call %2X not supported",reg_ah);
 		reg_ah=EMM_FUNC_NOSUP;
 		break;
 	}
@@ -1324,7 +1379,7 @@ public:
 
 		vcpi.enabled=false;
 		GEMMIS_seg=0;
-		
+
 		Section_prop * section=static_cast<Section_prop *>(configuration);
 		ems_type=GetEMSType(section);
 		if (ems_type<=0) return;
@@ -1418,13 +1473,13 @@ public:
 			}
 		}
 	}
-	
+
 	~EMS() {
 		if (ems_type<=0) return;
 
 		/* Undo Biosclearing */
 		BIOS_ZeroExtendedSize(false);
- 
+
 		/* Remove ems device */
 		if (emm_device!=NULL) {
 			DOS_DelDevice(emm_device);
@@ -1457,11 +1512,11 @@ public:
 		}
 	}
 };
-		
+
 static EMS* test;
 
 void EMS_ShutDown(Section* /*sec*/) {
-	delete test;	
+	delete test;
 }
 
 void EMS_Init(Section* sec) {

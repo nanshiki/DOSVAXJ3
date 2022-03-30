@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2015  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *  Copyright (C) 2016 akm
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -12,9 +12,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 #include "jega.h"//for AX
 
@@ -284,9 +284,11 @@ bool check_key(Bit16u &code) {
 	Bit16u head,tail;
 	head =mem_readw(BIOS_KEYBOARD_BUFFER_HEAD);
 	tail =mem_readw(BIOS_KEYBOARD_BUFFER_TAIL);
-	if (head==tail) return false;
 	code = real_readw(0x40,head);
-	return true;
+	// cpu flags from instruction comparing head and tail pointers
+	CALLBACK_SZF(head==tail);
+	CALLBACK_SCF(head<tail);
+	return (head!=tail);
 }
 
 //for AX
@@ -357,7 +359,8 @@ static Bitu IRQ1_Handler(void) {
 //LOG_MSG("key input %d %d %d %d",scancode,flags1,flags2,flags3);
 	switch (scancode) {
 	/* First the hard ones  */
-	case 0xfa:	/* ack. Do nothing for now */
+	case 0xfa:	/* Acknowledge */
+		leds |=0x10;
 		break;
 	case 0xe1:	/* Extended key special. Only pause uses this */
 		flags3 |=0x01;
@@ -487,7 +490,7 @@ static Bitu IRQ1_Handler(void) {
 	case 0x46:flags2 |=0x10;break;				/* Scroll Lock SDL Seems to do this one fine (so break and make codes) */
 	case 0xc6:flags1 ^=0x10;flags2 &=~0x10;leds ^=0x01;break;
 //	case 0x52:flags2|=128;break;//See numpad					/* Insert */
-//	case 0xd2:	
+	case 0xd2:	
 		if(flags3&0x02) { /* Maybe honour the insert on keypad as well */
 			flags1^=0x80;
 			flags2&=~0x80;
@@ -647,10 +650,8 @@ static bool IsEnhancedKey(Bit16u &key) {
 	return false;
 }
 
-static Bitu 
-INT16_Handler(void) {
+static Bitu INT16_Handler(void) {
 	Bit16u temp=0;
-
 	switch (reg_ah) {
 	case 0x00: /* GET KEYSTROKE */
 		if ((get_key(temp)) && (!IsEnhancedKey(temp))) {
@@ -685,37 +686,32 @@ INT16_Handler(void) {
 		// enable interrupt-flag after IRET of this int16
 		CALLBACK_SIF(true);
 		for (;;) {
-			if (check_key(temp)) {
+			if (check_key(temp)) { //  check_key changes ZF and CF as required
 				if (!IsEnhancedKey(temp)) {
 					/* normal key, return translated key in ax */
-					CALLBACK_SZF(false);
-					reg_ax=temp;
 					break;
 				} else {
 					/* remove enhanced key from buffer and ignore it */
 					get_key(temp);
 				}
 			} else {
-				/* no key available */
-				CALLBACK_SZF(true);
+				/* no key available, return key at buffer head anyway */
 				break;
 			}
 //			CALLBACK_Idle();
 		}
+		reg_ax=temp;
 		break;
 	case 0x11: /* CHECK FOR KEYSTROKE (enhanced keyboards only) */
 		// enable interrupt-flag after IRET of this int16
 		CALLBACK_SIF(true);
-		if (!check_key(temp)) {
-			CALLBACK_SZF(true);
-		} else {
-			CALLBACK_SZF(false);
+		if (check_key(temp)) { // check_key changes ZF and CF as required
 			if (((temp&0xff)==0xf0) && (temp>>8)) {
 				/* special enhanced key, clear low part before returning key */
 				temp&=0xff00;
 			}
-			reg_ax=temp;
 		}
+		reg_ax=temp;
 		break;
 	case 0x02:	/* GET SHIFT FLAGS */
 		reg_al=mem_readb(BIOS_KEYBOARD_FLAGS1);
@@ -851,7 +847,7 @@ bit AH
 		}
 		break;
 	default:
-		//LOG(LOG_BIOS,LOG_ERROR)("INT16:Unhandled call %02X",reg_ah);
+		LOG(LOG_BIOS,LOG_ERROR)("INT16:Unhandled call %02X",reg_ah);
 		break;
 
 	};
