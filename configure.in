@@ -362,6 +362,25 @@ else
   AC_MSG_WARN([Can't find libpng, screenshot support disabled])
 fi
 
+AH_TEMPLATE(C_SRECORD,[Define to 1 to enable movie recording, requires zlib built without Z_SOLO])
+AC_ARG_ENABLE(recording,AC_HELP_STRING([--disable-recording],[Disable movie recording]),,enable_recording=yes)
+AC_CHECK_HEADER(zlib.h,have_zlib_h=yes)
+AC_CHECK_LIB(z,compress,have_z_lib=yes,,)
+AC_MSG_CHECKING([whether recording will be enabled])
+if test x$enable_recording = xyes; then
+  if test x$have_z_lib = xyes -a x$have_zlib_h = xyes ; then
+    if test x$enable_screenshots = xno -o x$have_png_h = xno -o x$have_png_lib = xno ; then
+      LIBS="$LIBS -lz"
+    fi
+    AC_DEFINE(C_SRECORD,1)
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT([no, can't find zlib.])
+  fi
+else
+  AC_MSG_RESULT([no])
+fi
+
 AH_TEMPLATE(C_MODEM,[Define to 1 to enable internal modem support, requires SDL_net])
 AH_TEMPLATE(C_IPX,[Define to 1 to enable IPX over Internet networking, requires SDL_net])
 AC_CHECK_HEADER(SDL_net.h,have_sdl_net_h=yes,)
@@ -523,6 +542,7 @@ src/dos/Makefile
 src/fpu/Makefile
 src/gui/Makefile
 src/hardware/Makefile
+src/hardware/mame/Makefile
 src/hardware/serialport/Makefile
 src/ints/Makefile
 src/libs/Makefile
