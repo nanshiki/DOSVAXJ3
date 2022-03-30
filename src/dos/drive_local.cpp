@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN support
  */
@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "dosbox.h"
 #include "dos_inc.h"
@@ -32,15 +33,25 @@
 #include "cross.h"
 #include "inout.h"
 #include "jega.h"
+#include "cp437_uni.h"
+#include "cp932_uni.h"
 
 #if defined(WIN32)
 #define	fseek	_fseeki64
 #define	ftell	_ftelli64
 #endif
 
+#if defined(WIN32)
+#define host_cnv_use_wchar
+typedef wchar_t host_cnv_char_t;
+#else
+typedef char host_cnv_char_t;
+#endif
+
 static uint16_t ldid[256];
 static std::string ldir[256];
 extern int lfn_filefind_handle;
+static host_cnv_char_t cpcnv_temp[4096], cpcnv_ltemp[4096];
 
 class localFile : public DOS_File {
 public:
@@ -59,6 +70,440 @@ private:
 	enum { NONE,READ,WRITE } last_action;
 };
 
+enum {
+	UTF8ERR_INVALID=-1,
+	UTF8ERR_NO_ROOM=-2
+};
+
+int utf8_encode(char **ptr, const char *fence, uint32_t code) {
+    int uchar_size=1;
+    char *p = *ptr;
+
+    if (!p) return UTF8ERR_NO_ROOM;
+    if (code >= (uint32_t)0x80000000UL) return UTF8ERR_INVALID;
+    if (p >= fence) return UTF8ERR_NO_ROOM;
+
+    if (code >= 0x4000000) uchar_size = 6;
+    else if (code >= 0x200000) uchar_size = 5;
+    else if (code >= 0x10000) uchar_size = 4;
+    else if (code >= 0x800) uchar_size = 3;
+    else if (code >= 0x80) uchar_size = 2;
+
+    if ((p+uchar_size) > fence) return UTF8ERR_NO_ROOM;
+
+    switch (uchar_size) {
+        case 1: *p++ = (char)code;
+            break;
+        case 2: *p++ = (char)(0xC0 | (code >> 6));
+            *p++ = (char)(0x80 | (code & 0x3F));
+            break;
+        case 3: *p++ = (char)(0xE0 | (code >> 12));
+            *p++ = (char)(0x80 | ((code >> 6) & 0x3F));
+            *p++ = (char)(0x80 | (code & 0x3F));
+            break;
+        case 4: *p++ = (char)(0xF0 | (code >> 18));
+            *p++ = (char)(0x80 | ((code >> 12) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 6) & 0x3F));
+            *p++ = (char)(0x80 | (code & 0x3F));
+            break;
+        case 5: *p++ = (char)(0xF8 | (code >> 24));
+            *p++ = (char)(0x80 | ((code >> 18) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 12) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 6) & 0x3F));
+            *p++ = (char)(0x80 | (code & 0x3F));
+            break;
+        case 6: *p++ = (char)(0xFC | (code >> 30));
+            *p++ = (char)(0x80 | ((code >> 24) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 18) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 12) & 0x3F));
+            *p++ = (char)(0x80 | ((code >> 6) & 0x3F));
+            *p++ = (char)(0x80 | (code & 0x3F));
+            break;
+    }
+
+    *ptr = p;
+    return 0;
+}
+
+int utf8_decode(const char **ptr,const char *fence) {
+    const char *p = *ptr;
+    int uchar_size=1;
+    int ret = 0,c;
+
+    if (!p) return UTF8ERR_NO_ROOM;
+    if (p >= fence) return UTF8ERR_NO_ROOM;
+
+    ret = (unsigned char)(*p);
+    if (ret >= 0xFE) { p++; return UTF8ERR_INVALID; }
+    else if (ret >= 0xFC) uchar_size=6;
+    else if (ret >= 0xF8) uchar_size=5;
+    else if (ret >= 0xF0) uchar_size=4;
+    else if (ret >= 0xE0) uchar_size=3;
+    else if (ret >= 0xC0) uchar_size=2;
+    else if (ret >= 0x80) { p++; return UTF8ERR_INVALID; }
+
+    if ((p+uchar_size) > fence)
+        return UTF8ERR_NO_ROOM;
+
+    switch (uchar_size) {
+        case 1: p++;
+            break;
+        case 2: ret = (ret&0x1F)<<6; p++;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= c&0x3F;
+            break;
+        case 3: ret = (ret&0xF)<<12; p++;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<6;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= c&0x3F;
+            break;
+        case 4: ret = (ret&0x7)<<18; p++;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<12;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<6;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= c&0x3F;
+            break;
+        case 5: ret = (ret&0x3)<<24; p++;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<18;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<12;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<6;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= c&0x3F;
+            break;
+        case 6: ret = (ret&0x1)<<30; p++;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<24;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<18;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<12;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= (c&0x3F)<<6;
+            c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+            ret |= c&0x3F;
+            break;
+    }
+
+    *ptr = p;
+    return ret;
+}
+
+template <class MT> bool String_SBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const char* df = d + CROSS_LEN - 1;
+	const char *sf = s + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        unsigned char ic = (unsigned char)(*s++);
+        if (ic >= map_max) return false; // non-representable
+        MT wc;
+            wc = map[ic]; // output: unicode character
+
+        if (utf8_encode(&d,df,(uint32_t)wc) < 0) // will advance d by however many UTF-8 bytes are needed
+            return false; // non-representable, or probably just out of room
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> bool String_SBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const uint16_t* df = d + CROSS_LEN - 1;
+	const char *sf = s + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        unsigned char ic = (unsigned char)(*s++);
+        if (ic >= map_max) return false; // non-representable
+        MT wc;
+            wc = map[ic]; // output: unicode character
+
+        *d++ = (uint16_t)wc;
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> int SBCS_From_Host_Find(int c,const MT *map,const size_t map_max) {
+    for (size_t i=0;i < map_max;i++) {
+        if ((MT)c == map[i])
+            return (int)i;
+    }
+
+    return -1;
+}
+
+template <class MT> bool String_HOST_TO_SBCS_UTF8(char *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const char *sf = s + CROSS_LEN - 1;
+    const char* df = d + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        int ic;
+        if ((ic=utf8_decode(&s,sf)) < 0)
+            return false; // non-representable
+
+        int oc = SBCS_From_Host_Find<MT>(ic,map,map_max);
+        if (oc < 0)
+            return false; // non-representable
+
+        if (d >= df) return false;
+        *d++ = (char)oc;
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> bool String_HOST_TO_SBCS_UTF16(char *d/*CROSS_LEN*/,const uint16_t *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const uint16_t *sf = s + CROSS_LEN - 1;
+    const char* df = d + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        int ic;
+        ic = (int)(*s++);
+
+        int oc = SBCS_From_Host_Find<MT>(ic,map,map_max);
+        if (oc < 0)
+            return false; // non-representable
+
+        if (d >= df) return false;
+        *d++ = (char)oc;
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> int DBCS_From_Host_Find(int c,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    for (size_t h=0;h < 1024;h++) {
+        MT ofs = hitbl[h];
+
+        if (ofs == 0xFFFF) continue;
+        if ((size_t)(ofs+ (Bitu)0x40) > rawtbl_max) return -1;
+
+        for (size_t l=0;l < 0x40;l++) {
+            if ((MT)c == rawtbl[ofs+l])
+                return (int)((h << 6) + l);
+        }
+    }
+
+    return -1;
+}
+
+template <class MT> bool String_HOST_TO_DBCS_UTF8(char *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const char *sf = s + CROSS_LEN - 1;
+    const char* df = d + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        int ic;
+        if ((ic=utf8_decode(&s,sf)) < 0)
+            return false; // non-representable
+
+        int oc = DBCS_From_Host_Find<MT>(ic,hitbl,rawtbl,rawtbl_max);
+        if (oc < 0)
+            return false; // non-representable
+
+        if (oc >= 0x100) {
+            if ((d+1) >= df) return false;
+            *d++ = (char)(oc >> 8U);
+            *d++ = (char)oc;
+        }
+        else {
+            if (d >= df) return false;
+            *d++ = (char)oc;
+        }
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> bool String_HOST_TO_DBCS_UTF16(char *d/*CROSS_LEN*/,const uint16_t *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const uint16_t *sf = s + CROSS_LEN - 1;
+    const char* df = d + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        int ic;
+        ic = (int)(*s++);
+
+        int oc = DBCS_From_Host_Find<MT>(ic,hitbl,rawtbl,rawtbl_max);
+        if (oc < 0)
+            return false; // non-representable
+
+        if (oc >= 0x100) {
+            if ((d+1) >= df) return false;
+            *d++ = (char)(oc >> 8U);
+            *d++ = (char)oc;
+        }
+        else {
+            if (d >= df) return false;
+            *d++ = (char)oc;
+        }
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> bool String_DBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const char* df = d + CROSS_LEN - 1;
+	const char *sf = s + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        uint16_t ic = (unsigned char)(*s++);
+        if ((dos.loaded_codepage==932 &&((ic & 0xE0) == 0x80 || (ic & 0xE0) == 0xE0)) && (ic & 0x80) == 0x80) {
+            if (*s == 0) return false;
+            ic <<= 8U;
+            ic += (unsigned char)(*s++);
+        }
+
+        MT rawofs = hitbl[ic >> 6];
+        if (rawofs == 0xFFFF)
+            return false;
+
+        if ((size_t)(rawofs+ (Bitu)0x40) > rawtbl_max)
+            return false;
+        MT wc = rawtbl[rawofs + (ic & 0x3F)];
+        if (wc == 0x0000)
+            return false;
+
+        if (utf8_encode(&d,df,(uint32_t)wc) < 0) // will advance d by however many UTF-8 bytes are needed
+            return false; // non-representable, or probably just out of room
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+template <class MT> bool String_DBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const uint16_t* df = d + CROSS_LEN - 1;
+	const char *sf = s + CROSS_LEN - 1;
+
+    while (*s != 0 && s < sf) {
+        uint16_t ic = (unsigned char)(*s++);
+        if ((dos.loaded_codepage==932 &&((ic & 0xE0) == 0x80 || (ic & 0xE0) == 0xE0)) && (ic & 0x80) == 0x80) {
+            if (*s == 0) return false;
+            ic <<= 8U;
+            ic += (unsigned char)(*s++);
+        }
+
+        MT rawofs = hitbl[ic >> 6];
+        if (rawofs == 0xFFFF)
+            return false;
+
+        if ((size_t)(rawofs+ (Bitu)0x40) > rawtbl_max)
+            return false;
+        MT wc = rawtbl[rawofs + (ic & 0x3F)];
+        if (wc == 0x0000)
+            return false;
+
+        *d++ = (uint16_t)wc;
+    }
+
+    if (d > df) return false;
+    *d = 0;
+
+    return true;
+}
+
+#if defined(host_cnv_use_wchar)
+char *CodePageHostToGuestUTF16(char *d, const uint16_t *s) {
+    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF16<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+        return (char*)cpcnv_temp;
+    else if (String_HOST_TO_SBCS_UTF16<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+        return (char*)cpcnv_temp;
+    return NULL;
+}
+#else
+char *CodePageHostToGuestUTF8(char *d, const char *s) {
+    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF8<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+        return (char*)cpcnv_temp;
+    else if (String_HOST_TO_SBCS_UTF8<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+        return (char*)cpcnv_temp;
+    return NULL;
+}
+#endif
+
+char *CodePageHostToGuest(const host_cnv_char_t *s) {
+#if defined(host_cnv_use_wchar)
+    if (!CodePageHostToGuestUTF16((char *)cpcnv_temp,(const uint16_t *)s))
+#else
+    if (!CodePageHostToGuestUTF8((char *)cpcnv_temp,(char *)s))
+#endif
+        return NULL;
+
+    return (char*)cpcnv_temp;
+}
+
+char *CodePageHostToGuestL(const host_cnv_char_t *s) {
+#if defined(host_cnv_use_wchar)
+    if (!CodePageHostToGuestUTF16((char *)cpcnv_ltemp,(const uint16_t *)s))
+#else
+    if (!CodePageHostToGuestUTF8((char *)cpcnv_ltemp,(char *)s))
+#endif
+        return NULL;
+
+    return (char*)cpcnv_ltemp;
+}
+
+#if defined(host_cnv_use_wchar)
+wchar_t *CodePageGuestToHostUTF16(uint16_t *d, const char *s) {
+    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF16<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+        return cpcnv_temp;
+    else if (String_SBCS_TO_HOST_UTF16<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+        return cpcnv_temp;
+    return NULL;
+}
+#else
+char *CodePageGuestToHostUTF8(char *d, const char *s) {
+    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF8<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+        return cpcnv_temp;
+    else if (String_SBCS_TO_HOST_UTF8<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+        return cpcnv_temp;
+    return NULL;
+}
+#endif
+
+host_cnv_char_t *CodePageGuestToHost(const char *s) {
+#if defined(host_cnv_use_wchar)
+    if (!CodePageGuestToHostUTF16((uint16_t *)cpcnv_temp,s))
+#else
+    if (!CodePageGuestToHostUTF8((char *)cpcnv_temp,s))
+#endif
+        return NULL;
+
+    return cpcnv_temp;
+}
+
+host_cnv_char_t *CodePageGuestToHostL(const char *s) {
+#if defined(host_cnv_use_wchar)
+    if (!CodePageGuestToHostUTF16((uint16_t *)cpcnv_ltemp,s))
+#else
+    if (!CodePageGuestToHostUTF8((char *)cpcnv_ltemp,s))
+#endif
+        return NULL;
+
+    return cpcnv_ltemp;
+}
 
 bool localDrive::FileCreate(DOS_File * * file,char * name,Bit16u /*attributes*/) {
 //TODO Maybe care for attributes but not likely
@@ -70,14 +515,25 @@ bool localDrive::FileCreate(DOS_File * * file,char * name,Bit16u /*attributes*/)
 	/* Test if file exists (so we need to truncate it). don't add to dirCache then */
 	bool existing_file=false;
 	
-	FILE * test=fopen(temp_name,"rb+");
+    const host_cnv_char_t* host_name = CodePageGuestToHost(temp_name);
+    FILE * test;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	if (host_name) test = _wfopen(host_name,L"rb+");
+	else
+#endif
+	test=fopen(temp_name,"rb+");
 	if(test) {
 		fclose(test);
 		existing_file=true;
 
 	}
 	
-	FILE * hand=fopen(temp_name,"wb+");
+    FILE * hand;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	if (host_name) hand = _wfopen(host_name,L"wb+");
+	else
+#endif
+	hand=fopen(temp_name,"wb+");
 	if (!hand){
 		LOG_MSG("Warning: file creation failed: %s",newname);
 		return false;
@@ -93,11 +549,12 @@ bool localDrive::FileCreate(DOS_File * * file,char * name,Bit16u /*attributes*/)
 
 bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 	const char* type;
+	const wchar_t* wtype;
 	switch (flags&0xf) {
-	case OPEN_READ:        type = "rb" ; break;
-	case OPEN_WRITE:       type = "rb+"; break;
-	case OPEN_READWRITE:   type = "rb+"; break;
-	case OPEN_READ_NO_MOD: type = "rb" ; break; //No modification of dates. LORD4.07 uses this
+	case OPEN_READ:        type = "rb" ; wtype = L"rb" ;break;
+	case OPEN_WRITE:       type = "rb+"; wtype = L"rb+"; break;
+	case OPEN_READWRITE:   type = "rb+"; wtype = L"rb+"; break;
+	case OPEN_READ_NO_MOD: type = "rb" ; wtype = L"rb"; break; //No modification of dates. LORD4.07 uses this
 	default:
 		DOS_SetError(DOSERR_ACCESS_CODE_INVALID);
 		return false;
@@ -107,6 +564,7 @@ bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
+    const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
 
 	//Flush the buffer of handles for the same file. (Betrayal in Antara)
 	Bit8u i,drive=DOS_DRIVES;
@@ -124,7 +582,12 @@ bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 		}
 	}
 
-	FILE * hand=fopen(newname,type);
+	FILE * hand = NULL;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	if (host_name) hand = _wfopen(host_name,wtype);
+	else
+#endif
+	hand=fopen(newname,type);
 //	Bit32u err=errno;
 	if (!hand) { 
 		if((flags&0xf) != OPEN_READ) {
@@ -172,7 +635,12 @@ bool localDrive::FileUnlink(char * name) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	char *fullname = dirCache.GetExpandName(newname);
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	const wchar_t* host_name = CodePageGuestToHost(fullname);
+	if (host_name == NULL && unlink(fullname) || host_name != NULL && _wunlink(host_name)) {
+#else
 	if (unlink(fullname)) {
+#endif
 		//Unlink failed for some reason try finding it.
 #if defined (WIN32)
 		if (uselfn&&strlen(fullname)>1&&!strcmp(fullname+strlen(fullname)-2,"\\*")||strlen(fullname)>3&&!strcmp(fullname+strlen(fullname)-4,"\\*.*"))
@@ -189,10 +657,18 @@ bool localDrive::FileUnlink(char * name) {
 			}
 #endif
 		struct stat buffer;
-		if(stat(fullname,&buffer)) return false; // File not found.
+		if(stat(fullname,&buffer)) {
+			//file not found
+			DOS_SetError(DOSERR_FILE_NOT_FOUND);
+			return false;
+		}
 
-		FILE* file_writable = fopen(fullname,"rb+");
-		if(!file_writable) return false; //No acces ? ERROR MESSAGE NOT SET. FIXME ?
+		//Do we have access?
+		FILE* file_writable = fopen_wrap(fullname,"rb+");
+		if(!file_writable) {
+			DOS_SetError(DOSERR_ACCESS_DENIED);
+			return false;
+		}
 		fclose(file_writable);
 
 		//File exists and can technically be deleted, nevertheless it failed.
@@ -209,11 +685,15 @@ bool localDrive::FileUnlink(char * name) {
 				found_file=true;
 			}
 		}
-		if(!found_file) return false;
+		if(!found_file) {
+			DOS_SetError(DOSERR_ACCESS_DENIED);
+			return false;
+		}
 		if (!unlink(fullname)) {
 			dirCache.DeleteEntry(newname);
 			return true;
 		}
+		DOS_SetError(DOSERR_ACCESS_DENIED);
 		return false;
 	} else {
 		dirCache.DeleteEntry(newname);
@@ -227,6 +707,9 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 	strcat(tempDir,_dir);
 	CROSS_FILENAME(tempDir);
 
+#if defined(LINUX)
+	ChangeUtf8FileName(tempDir);
+#endif
 	for (unsigned int i=0;i<strlen(tempDir);i++) tempDir[i]=toupper(tempDir[i]);
 	if (allocation.mediaid==0xF0 ) {
 		EmptyCache(); //rescan floppie-content on each findfirst
@@ -286,7 +769,7 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 
 	char *dir_ent, *ldir_ent;
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
-	struct _stat64 stat_block;
+	struct _stat64 stat_block64;
 #else
 	struct stat stat_block;
 #endif
@@ -327,15 +810,21 @@ again:
 	strcpy(dir_entcopy,dir_ent);
 	strcpy(ldir_entcopy,ldir_ent);
 #endif
+	char *temp_name = dirCache.GetExpandName(full_name);
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
-	if (_stat64(dirCache.GetExpandName(full_name),&stat_block)!=0) { 
+	const wchar_t* host_name = CodePageGuestToHost(temp_name);
+	if (host_name == NULL && _stat64(temp_name,&stat_block64)!=0 || host_name != NULL && _wstat64(host_name,&stat_block64)!=0) {
 #else
-	if (stat(dirCache.GetExpandName(full_name),&stat_block)!=0) { 
+	if (stat(temp_name,&stat_block)!=0) {
 #endif
 		goto again;//No symlinks and such
 	}	
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	if(stat_block64.st_mode & S_IFDIR) find_attr=DOS_ATTR_DIRECTORY;
+#else
 	if(stat_block.st_mode & S_IFDIR) find_attr=DOS_ATTR_DIRECTORY;
+#endif
 	else find_attr=DOS_ATTR_ARCHIVE;
  	if (~srch_attr & find_attr & (DOS_ATTR_DIRECTORY | DOS_ATTR_HIDDEN | DOS_ATTR_SYSTEM)) goto again;
 	
@@ -350,9 +839,18 @@ again:
 	strcpy(lfind_name,ldir_entcopy);
 	lfind_name[LFN_NAMELENGTH]=0;
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    find_size = (Bit32u)stat_block64.st_size;
+#else
 	find_size=(Bit32u) stat_block.st_size;
+#endif
 	struct tm *time;
-	if((time=localtime(&stat_block.st_mtime))!=0){
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    time=localtime(&stat_block64.st_mtime);
+#else
+    time=localtime(&stat_block.st_mtime);
+#endif
+	if(time!=0){
 		find_date=DOS_PackDate((Bit16u)(time->tm_year+1900),(Bit16u)(time->tm_mon+1),(Bit16u)time->tm_mday);
 		find_time=DOS_PackTime((Bit16u)time->tm_hour,(Bit16u)time->tm_min,(Bit16u)time->tm_sec);
 	} else {
@@ -369,17 +867,20 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
-#if defined(LINUX)
-	ChangeUtf8FileName(newname);
-#endif
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-	struct _stat64 status;
-	if (_stat64(newname,&status)==0) {
-#else
 	struct stat status;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	struct _stat64 status64;
+	const wchar_t* host_name = CodePageGuestToHost(newname);
+	if (host_name == NULL && stat(newname,&status)==0 || host_name != NULL && _wstat64(host_name,&status64)==0) {
+#else
 	if (stat(newname,&status)==0) {
 #endif
 		*attr=DOS_ATTR_ARCHIVE;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+        if(host_name != NULL) {
+            if(status64.st_mode & S_IFDIR) *attr|=DOS_ATTR_DIRECTORY;
+        } else
+#endif
 		if(status.st_mode & S_IFDIR) *attr|=DOS_ATTR_DIRECTORY;
 		return true;
 	}
@@ -398,7 +899,9 @@ bool localDrive::GetFileAttrEx(char* name, struct stat *status) {
 	dirCache.ExpandName(newname);
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 	struct _stat64 status64;
-	int flag = _stat64(newname,&status64);
+	const wchar_t* host_name = CodePageGuestToHost(newname);
+	if (host_name == NULL) return !stat(newname,status);
+	int flag = _wstat64(host_name,&status64);
 	status->st_dev = status64.st_dev;
 	status->st_ino = status64.st_ino;
 	status->st_mode = status64.st_mode;
@@ -473,12 +976,21 @@ bool localDrive::MakeDir(char * dir) {
 #if defined(LINUX)
 	ChangeUtf8FileName(newdir);
 #endif
+    std::string newstr = newdir;
+    dirCache.GetExpandName(newdir);
+    const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
+    int temp=0;
 #if defined (WIN32)						/* MS Visual C++ */
-	int temp=mkdir(dirCache.GetExpandName(newdir));
-#else
-	int temp=mkdir(dirCache.GetExpandName(newdir),0700);
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    if (host_name != NULL)
+        temp=_wmkdir(host_name);
+    else
 #endif
-	if (temp==0) dirCache.CacheOut(newdir,true);
+	temp=mkdir(newdir);
+#else
+	temp=mkdir(newdir,0700);
+#endif
+	if (temp==0) dirCache.CacheOut(newstr.c_str(),true);
 
 	return (temp==0);// || ((temp!=0) && (errno==EEXIST));
 }
@@ -491,8 +1003,17 @@ bool localDrive::RemoveDir(char * dir) {
 #if defined(LINUX)
 	ChangeUtf8FileName(newdir);
 #endif
-	int temp=rmdir(dirCache.GetExpandName(newdir));
-	if (temp==0) dirCache.DeleteEntry(newdir,true);
+    std::string newstr = newdir;
+    dirCache.GetExpandName(newdir);
+    const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
+    int temp=0;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    if (host_name != NULL)
+        temp=_wrmdir(host_name);
+    else
+#endif
+        temp=rmdir(newdir);
+	if (temp==0) dirCache.DeleteEntry(newstr.c_str(),true);
 	return (temp==0);
 }
 
@@ -507,13 +1028,28 @@ bool localDrive::TestDir(char * dir) {
 	dirCache.ExpandName(newdir);
 	// Skip directory test, if "\"
 	size_t len = strlen(newdir);
+	const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
 	if (len && (newdir[len-1]!='\\')) {
 		// It has to be a directory !
 		struct stat test;
-		if (stat(newdir,&test))			return false;
-		if ((test.st_mode & S_IFDIR)==0)	return false;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+        struct _stat64 test64;
+        if (host_name != NULL) {
+            if (_wstat64(host_name,&test64)) return false;
+            if ((test64.st_mode & S_IFDIR)==0) return false;
+        } else
+#endif
+        {
+            if (stat(newdir,&test)) return false;
+            if ((test.st_mode & S_IFDIR)==0) return false;
+        }
 	};
-	int temp=access(newdir,F_OK);
+    int temp=0;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    if (host_name != NULL) temp=_waccess(host_name,F_OK);
+    else
+#endif
+	temp=access(newdir,F_OK);
 	return (temp==0);
 }
 
@@ -533,8 +1069,18 @@ bool localDrive::Rename(char * oldname,char * newname) {
 #if defined(LINUX)
 	ChangeUtf8FileName(newnew);
 #endif
-	int temp=rename(newold,dirCache.GetExpandName(newnew));
-	if (temp==0) dirCache.CacheOut(newnew);
+    std::string newstr = newnew;
+    dirCache.GetExpandName(newnew);
+	const host_cnv_char_t* host_oname = CodePageGuestToHost(newold);
+	const host_cnv_char_t* host_nname = CodePageGuestToHostL(newnew);
+	int temp=0;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    if (host_oname != NULL && host_nname != NULL)
+        temp=_wrename(host_oname,host_nname);
+    else
+#endif
+    temp=rename(newold,newnew);
+	if (temp==0) dirCache.CacheOut(newstr.c_str());
 	return (temp==0);
 
 }
@@ -556,9 +1102,19 @@ bool localDrive::FileExists(const char* name) {
 #if defined(LINUX)
 	ChangeUtf8FileName(newname);
 #endif
+	const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
 	struct stat temp_stat;
-	if(stat(newname,&temp_stat)!=0) return false;
-	if(temp_stat.st_mode & S_IFDIR) return false;
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+    struct _stat64 temp_stat64;
+    if (host_name != NULL) {
+        if (_wstat64(host_name,&temp_stat64)!=0) return false;
+        if (temp_stat64.st_mode & S_IFDIR) return false;
+    } else
+#endif
+    {
+        if(stat(newname,&temp_stat)!=0) return false;
+        if(temp_stat.st_mode & S_IFDIR) return false;
+    }
 	return true;
 }
 
@@ -606,6 +1162,103 @@ Bits localDrive::UnMount(void) {
 	return 0; 
 }
 
+#if defined(PATH_MAX) && !defined(MAX_PATH)
+#define MAX_PATH PATH_MAX
+#endif
+
+#ifndef WIN32
+#define open_directoryw open_directory
+#define read_directory_firstw read_directory_first
+#define read_directory_nextw read_directory_next
+#endif
+
+dir_information* open_directoryw(const host_cnv_char_t* dirname);
+void *localDrive::opendir(const char *name) {
+    // guest to host code page translation
+    const host_cnv_char_t* host_name = CodePageGuestToHost(name);
+    if (host_name == NULL) {
+        LOG_MSG("%s: Filename '%s' from guest is non-representable on the host filesystem through code page conversion",__FUNCTION__,name);
+        return open_directory(name);
+    }
+
+	return open_directoryw(host_name);
+}
+
+bool read_directory_first(dir_information* dirp, char* entry_name, char* entry_sname, bool& is_directory);
+bool read_directory_next(dir_information* dirp, char* entry_name, char* entry_sname, bool& is_directory);
+bool read_directory_firstw(dir_information* dirp, host_cnv_char_t* entry_name, host_cnv_char_t* entry_sname, bool& is_directory);
+bool read_directory_nextw(dir_information* dirp, host_cnv_char_t* entry_name, host_cnv_char_t* entry_sname, bool& is_directory);
+bool localDrive::read_directory_first(void *handle, char* entry_name, char* entry_sname, bool& is_directory) {
+    host_cnv_char_t tmp[MAX_PATH+1], stmp[MAX_PATH+1];
+
+    if (::read_directory_firstw((dir_information*)handle, tmp, stmp, is_directory)) {
+        // guest to host code page translation
+        const char* n_stemp_name = CodePageHostToGuest(stmp);
+        if (n_stemp_name == NULL) {
+#ifdef host_cnv_use_wchar
+            LOG_MSG("%s: Filename '%ls' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,stmp);
+#else
+            LOG_MSG("%s: Filename '%s' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,stmp);
+#endif
+            char ctmp[MAX_PATH+1], cstmp[MAX_PATH+1];
+            return ::read_directory_first((dir_information*)handle, ctmp, cstmp, is_directory);
+        }
+		{
+			const char* n_temp_name = CodePageHostToGuestL(tmp);
+			if (n_temp_name == NULL) {
+#ifdef host_cnv_use_wchar
+				LOG_MSG("%s: Filename '%ls' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,tmp);
+#else
+				LOG_MSG("%s: Filename '%s' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,tmp);
+#endif
+				strcpy(entry_name,n_stemp_name);
+			} else {
+				strcpy(entry_name,n_temp_name);
+			}
+		}
+		strcpy(entry_sname,n_stemp_name);
+		return true;
+    }
+
+    return false;
+}
+
+bool localDrive::read_directory_next(void *handle, char* entry_name, char* entry_sname, bool& is_directory) {
+    host_cnv_char_t tmp[MAX_PATH+1], stmp[MAX_PATH+1];
+
+    if (::read_directory_nextw((dir_information*)handle, tmp, stmp, is_directory)) {
+        // guest to host code page translation
+        const char* n_stemp_name = CodePageHostToGuest(stmp);
+        if (n_stemp_name == NULL) {
+#ifdef host_cnv_use_wchar
+            LOG_MSG("%s: Filename '%ls' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,stmp);
+#else
+            LOG_MSG("%s: Filename '%s' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,stmp);
+#endif
+            char ctmp[MAX_PATH+1], cstmp[MAX_PATH+1];
+            return ::read_directory_next((dir_information*)handle, ctmp, cstmp, is_directory);
+
+        }
+		{
+			const char* n_temp_name = CodePageHostToGuestL(tmp);
+			if (n_temp_name == NULL) {
+#ifdef host_cnv_use_wchar
+				LOG_MSG("%s: Filename '%ls' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,tmp);
+#else
+				LOG_MSG("%s: Filename '%s' from host is non-representable on the guest filesystem through code page conversion",__FUNCTION__,tmp);
+#endif
+				strcpy(entry_name,n_stemp_name);
+			} else {
+				strcpy(entry_name,n_temp_name);
+			}
+		}
+        strcpy(entry_sname,n_stemp_name);
+        return true;
+    }
+
+    return false;
+}
+
 localDrive::localDrive(const char * startdir,Bit16u _bytes_sector,Bit8u _sectors_cluster,Bit16u _total_clusters,Bit16u _free_clusters,Bit8u _mediaid) {
 	strcpy(basedir,startdir);
 	sprintf(info,"local directory %s",startdir);
@@ -615,7 +1268,7 @@ localDrive::localDrive(const char * startdir,Bit16u _bytes_sector,Bit8u _sectors
 	allocation.free_clusters=_free_clusters;
 	allocation.mediaid=_mediaid;
 
-	dirCache.SetBaseDir(basedir);
+	dirCache.SetBaseDir(basedir,this);
 }
 
 
@@ -637,7 +1290,8 @@ bool localFile::Read(Bit8u * data,Bit16u * size) {
 }
 
 bool localFile::Write(Bit8u * data,Bit16u * size) {
-	if ((this->flags & 0xf) == OPEN_READ) {	// check if file opened in read-only mode
+	Bit32u lastflags = this->flags & 0xf;
+	if (lastflags == OPEN_READ || lastflags == OPEN_READ_NO_MOD) {	// check if file opened in read-only mode
 		DOS_SetError(DOSERR_ACCESS_DENIED);
 		return false;
 	}
@@ -745,7 +1399,10 @@ bool MSCDEX_GetVolumeName(Bit8u subUnit, char* name);
 
 
 cdromDrive::cdromDrive(const char driveLetter, const char * startdir,Bit16u _bytes_sector,Bit8u _sectors_cluster,Bit16u _total_clusters,Bit16u _free_clusters,Bit8u _mediaid, int& error)
-		   :localDrive(startdir,_bytes_sector,_sectors_cluster,_total_clusters,_free_clusters,_mediaid) {
+		   :localDrive(startdir,_bytes_sector,_sectors_cluster,_total_clusters,_free_clusters,_mediaid),
+		    subUnit(0),
+		    driveLetter('\0')
+{
 	// Init mscdex
 	error = MSCDEX_AddDrive(driveLetter,startdir,subUnit);
 	strcpy(info, "CDRom ");
