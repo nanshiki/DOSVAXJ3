@@ -76,9 +76,10 @@ void ReadVTRAMChar(Bit16u col, Bit16u row, Bit16u * result);
 void SetVTRAMChar(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr);
 void WriteCharJ(Bit16u col, Bit16u row, Bit8u page, Bit8u chr, Bit8u attr, bool useattr);
 
+bool isKanji1(Bit8u chr);
+bool isKanji2(Bit8u chr);
+
 //inline functions
-inline bool isKanji1(Bit8u chr) { return (chr >= 0x81 && chr <= 0x9f) || (chr >= 0xe0 && chr <= 0xfc); }
-inline bool isKanji2(Bit8u chr) { return (chr >= 0x40 && chr <= 0x7e) || (chr >= 0x80 && chr <= 0xfc); }
 inline bool isJEGAEnabled() {
 	if (!IS_AX_ARCH) return false;
 	return !(jega.RMOD1 & 0x40);
