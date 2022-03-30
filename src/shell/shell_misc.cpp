@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN and AUTO MOUNT support
  */
@@ -516,7 +516,7 @@ void DOS_Shell::InputCommand(char * line) {
 
 					char *path;
 					if ((path = strrchr(line+completion_index,':'))) completion_index = (Bit16u)(path-line+1);
-					if ((path = strrchr(line+completion_index,'\\'))) completion_index = (Bit16u)(path-line+1);
+					if ((path = strrchr_dbcs(line+completion_index,'\\'))) completion_index = (Bit16u)(path-line+1);
 					if ((path = strrchr(line+completion_index,'/'))) completion_index = (Bit16u)(path-line+1);
 
 					// build the completion list
@@ -524,7 +524,7 @@ void DOS_Shell::InputCommand(char * line) {
 					if (p_completion_start) {
 						strcpy(mask, p_completion_start);
 						char* dot_pos=strrchr(mask,'.');
-						char* bs_pos=strrchr(mask,'\\');
+						char* bs_pos=strrchr_dbcs(mask,'\\');
 						char* fs_pos=strrchr(mask,'/');
 						char* cl_pos=strrchr(mask,':');
 						// not perfect when line already contains wildcards, but works
@@ -725,7 +725,7 @@ bool DOS_Shell::Execute(char * name,char * args) {
 	/* check for a drive change */
 	if (((strcmp(name + 1, ":") == 0) || (strcmp(name + 1, ":\\") == 0)) && isalpha(*name))
 	{
-		if (strrchr(name,'\\')) { WriteOut(MSG_Get("SHELL_EXECUTE_ILLEGAL_COMMAND"),name); return true; }
+		if (strrchr_dbcs(name,'\\')) { WriteOut(MSG_Get("SHELL_EXECUTE_ILLEGAL_COMMAND"),name); return true; }
 		if (!DOS_SetDrive(toupper(name[0])-'A')) {
 #ifdef WIN32
 			Section_prop * sec=0; sec=static_cast<Section_prop *>(control->GetSection("dos"));

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN and LPT support
  */
@@ -34,6 +34,7 @@
 #include "support.h"
 #include "video.h"
 #include "cross.h"
+#include "dos_inc.h"
 #include "jega.h"
 
 
@@ -46,7 +47,67 @@ void lowcase(std::string &str) {
 	int (*tf)(int) = std::tolower;
 	std::transform(str.begin(), str.end(), str.begin(), tf);
 }
-  
+
+void trim(std::string &str) {
+	std::string::size_type loc = str.find_first_not_of(" \r\t\f\n");
+	if (loc != std::string::npos) str.erase(0,loc);
+	loc = str.find_last_not_of(" \r\t\f\n");
+	if (loc != std::string::npos) str.erase(loc+1);
+}
+
+char *strchr_dbcs(char *str, char ch) {
+    bool lead = false;
+    int lastpos = -1;
+    if ((IS_DOSV || IS_J3_ARCH) && (ch == '\\' || ch == '|')) {
+        for (size_t i=0; i<strlen(str); i++) {
+            if (lead) lead = false;
+            else if (isKanji1(str[i])) lead = true;
+            else if (str[i] == ch) {lastpos = i;break;}
+        }
+        return lastpos>-1 ? str + lastpos : NULL;
+    } else
+        return strchr(str, ch);
+}
+
+char *strrchr_dbcs(char *str, char ch) {
+    bool lead = false;
+    int lastpos = -1;
+    if ((IS_DOSV || IS_J3_ARCH) && (ch == '\\' || ch == '|')) {
+        for (size_t i=0; i<strlen(str); i++) {
+            if (lead) lead = false;
+            else if (isKanji1(str[i])) lead = true;
+            else if (str[i] == ch) lastpos = i;
+        }
+        return lastpos>-1 ? str + lastpos : NULL;
+    } else
+        return strrchr(str, ch);
+}
+
+char *strtok_dbcs(char *s, const char *d) {
+    if (!IS_DOSV && !IS_J3_ARCH) return strtok(s, d);
+    static char* input = NULL;
+    if (s != NULL) input = s;
+    if (input == NULL) return NULL;
+    char* result = new char[strlen(input) + 1];
+    int i = 0;
+    bool lead = false;
+    for (; input[i] != '\0'; i++) {
+        if (!lead && isKanji1(input[i])) {
+            result[i] = input[i];
+            lead = true;
+        } else if (input[i] != d[0] || lead) {
+            result[i] = input[i];
+            lead = false;
+        } else {
+            result[i] = '\0';
+            input = input + i + 1;
+            return result;
+        }
+    }
+    result[i] = '\0';
+    input = NULL;
+    return result;
+}
 
 /* 
 	Ripped some source from freedos for this one.
@@ -224,9 +285,11 @@ void E_Exit(const char * format,...) {
 #endif
 	va_list msg;
 	va_start(msg,format);
-	vsprintf(buf,format,msg);
+	vsnprintf(buf,sizeof(buf),format,msg);
 	va_end(msg);
-	strcat(buf,"\n");
+
+	buf[sizeof(buf) - 1] = '\0';
+	//strcat(buf,"\n"); catcher should handle the end of line.. 
 
 	throw(buf);
 }

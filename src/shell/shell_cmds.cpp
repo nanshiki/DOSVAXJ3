@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2017  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,9 +11,9 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  *  Wengier: LFN support
  */
@@ -96,21 +96,21 @@ static void StripSpaces(char*&args,char also) {
 		args++;
 }
 
-static char* ExpandDot(char*args, char* buffer) {
+static char* ExpandDot(char*args, char* buffer , size_t bufsize) {
 	if(*args == '.') {
 		if(*(args+1) == 0){
-			strcpy(buffer,"*.*");
+			safe_strncpy(buffer, "*.*", bufsize);
 			return buffer;
 		}
 		if( (*(args+1) != '.') && (*(args+1) != '\\') ) {
 			buffer[0] = '*';
 			buffer[1] = 0;
-			strcat(buffer,args);
+			if (bufsize > 2) strncat(buffer,args,bufsize - 1 /*used buffer portion*/ - 1 /*trailing zero*/  );
 			return buffer;
 		} else
-			strcpy (buffer, args);
+			safe_strncpy (buffer, args, bufsize);
 	}
-	else strcpy(buffer,args);
+	else safe_strncpy(buffer,args, bufsize);
 	return buffer;
 }
 
@@ -228,7 +228,7 @@ void DOS_Shell::CMD_DELETE(char * args) {
 
 	char full[DOS_PATHLENGTH],sfull[DOS_PATHLENGTH+2];
 	char buffer[CROSS_LEN];
-	args = ExpandDot(args,buffer);
+	args = ExpandDot(args,buffer, CROSS_LEN);
 	StripSpaces(args);
 	if (!DOS_Canonicalize(args,full)) { WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));return; }
 	Bit16u fattr;
@@ -248,7 +248,7 @@ void DOS_Shell::CMD_DELETE(char * args) {
 		dos.dta(save_dta);
 		return;
 	}
-	char *p=strrchr(full,'\\');
+	char *p=strrchr_dbcs(full,'\\');
 	if ((!strcmp(full,"*.*") || uselfn && !strcmp(full,"*") || p!=NULL && (!strcmp(p+1,"*.*") || uselfn && !strcmp(p+1,"*")))) {
 		WriteOut("Are you sure to delete all files in directory (Y/N)?");
 		Bit8u c;
@@ -260,7 +260,7 @@ void DOS_Shell::CMD_DELETE(char * args) {
 		if (c=='N') return;
 	}
 	//end can't be 0, but if it is we'll get a nice crash, who cares :)
-	char * end=strrchr(full,'\\')+1;*end=0;
+	char * end=strrchr_dbcs(full,'\\')+1;*end=0;
 	char name[DOS_NAMELENGTH_ASCII],lname[LFN_NAMELENGTH+1];
 	Bit32u size;Bit16u time,date;Bit8u attr;
 	DOS_DTA dta(dos.dta());
@@ -300,7 +300,7 @@ void DOS_Shell::CMD_RENAME(char * args){
 	char * arg1=StripArg(args);
 	StripSpaces(args);
 	if (!*args) {SyntaxError();return;}
-	char* slash = strrchr(arg1,'\\');
+	char* slash = strrchr_dbcs(arg1,'\\');
 	if (slash) { 
 		/* If directory specified (crystal caves installer)
 		 * rename from c:\X : rename c:\abc.exe abc.shr. 
@@ -310,7 +310,7 @@ void DOS_Shell::CMD_RENAME(char * args){
 		char dir_source[DOS_PATHLENGTH + 4] = {0}; //not sure if drive portion is included in pathlength
 		//Copy first and then modify, makes GCC happy
 		safe_strncpy(dir_source,arg1,DOS_PATHLENGTH + 4);
-		char* dummy = strrchr(dir_source,'\\');
+		char* dummy = strrchr_dbcs(dir_source,'\\');
 		if (!dummy) { //Possible due to length
 			WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));
 			return;
@@ -529,7 +529,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 			break;
 		}
 	}
-	args = ExpandDot(args,buffer);
+	args = ExpandDot(args,buffer,CROSS_LEN);
 
 	if (!strrchr(args,'*') && !strrchr(args,'?')) {
 		Bit16u attribute=0;
@@ -558,7 +558,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 		WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));
 		return;
 	}
-	*(strrchr(path,'\\')+1)=0;
+	*(strrchr_dbcs(path,'\\')+1)=0;
 	if (!DOS_GetSFNPath(path,sargs,true)) {
 		WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));
 		return;
@@ -804,7 +804,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 		strcpy(pathSource,pathSourcePre);
 		if (uselfn) sprintf(pathSource,"\"%s\"",pathSourcePre);
 		// cut search pattern
-		char* pos = strrchr(pathSource,'\\');
+		char* pos = strrchr_dbcs(pathSource,'\\');
 		if (pos) *(pos+1) = 0;
 
 		if (!DOS_Canonicalize(const_cast<char*>(target.filename.c_str()),pathTarget)) {
@@ -1507,7 +1507,7 @@ void DOS_Shell::CMD_FOR(char *args){
 			char name[DOS_NAMELENGTH_ASCII];												// File name and extension
 			char lname[LFN_NAMELENGTH];
 			char path[DOS_PATHLENGTH], tmp[DOS_PATHLENGTH+LFN_NAMELENGTH];
-			char *r=strrchr(fp, '\\');
+			char *r=strrchr_dbcs(fp, '\\');
 			strcpy(path, "");
 			if (r!=NULL) {
 				*r=0;
