@@ -2194,7 +2194,7 @@ void ClipKeySelect(int sym) {
         if (sym==SDLK_LEFT && (selmark?selecol:selscol)>0) (selmark?selecol:selscol)--;
         else if (sym==SDLK_RIGHT && (selmark?selecol:selscol)<real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)-1) (selmark?selecol:selscol)++;
         else if (sym==SDLK_UP && (selmark?selerow:selsrow)>0) (selmark?selerow:selsrow)--;
-        else if (sym==SDLK_DOWN && (selmark?selerow:selsrow)<(IS_EGAVGA_ARCH?real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS):24)) (selmark?selerow:selsrow)++;
+        else if (sym==SDLK_DOWN && (selmark?selerow:selsrow)<((IS_EGAVGA_ARCH||IS_J3_ARCH)?real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS):24)) (selmark?selerow:selsrow)++;
         Mouse_Select(selscol, selsrow, selmark?selecol:selscol, selmark?selerow:selsrow, -1, -1);
     }
 }
