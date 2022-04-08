@@ -230,6 +230,9 @@ static Bitu dosv_cursor_16[] = {
 	0, 3, 5, 7, 9, 11, 13, 15
 };
 
+Bit8u StartBankSelect(Bitu &off);
+Bit8u CheckBankSelect(Bit8u select, Bitu &off);
+
 void DOSV_CursorXor24(Bitu x, Bitu y, Bitu start, Bitu end)
 {
 	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
@@ -239,140 +242,37 @@ void DOSV_CursorXor24(Bitu x, Bitu y, Bitu start, Bitu end)
 	Bitu width = (real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) == 85) ? 128 : 160;
 	volatile Bit8u dummy;
 	Bitu off = (y + start) * width + (x * 12) / 8;
-	Bit8u select;
-	if(svgaCard == SVGA_TsengET4K) {
-		if(off >= 0x20000) {
-			select = 0x22;
-			off -= 0x20000;
-		} else if(off >= 0x10000) {
-			select = 0x11;
-			off -= 0x10000;
-		} else {
-			select = 0x00;
-		}
-		IO_Write(0x3cd, select);
-	}
+	Bit8u select = StartBankSelect(off);
 	while(start <= end) {
 		if(dosv_cursor_stat == 2) {
-			if(x & 1) {
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0x0f);
-				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
+			const Bit8u cursor_data[2][4] = {{ 0xff, 0xff, 0xff, 0x00 }, { 0x0f, 0xff, 0xff, 0xf0 }};
+			for(Bit8u i = 0 ; i < 4 ; i++) {
+				if(cursor_data[x & 1][i] != 0) {
+					dummy = real_readb(0xa000, off);
+					real_writeb(0xa000, off, cursor_data[x & 1][i]);
 				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
 				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xf0);
-				off += width - 3;
-			} else {
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-				off += width - 2;
+				select = CheckBankSelect(select, off);
 			}
+			off += width - 4;
 		} else {
-			if(x & 1) {
+			const Bit8u cursor_data[2][2] = { { 0xff, 0xf0 }, { 0x0f, 0xff }};
+			for(Bit8u i = 0 ; i < 2 ; i++) {
 				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0x0f);
+				real_writeb(0xa000, off, cursor_data[x & 1][i]);
 				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-			} else {
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xff);
-				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-				dummy = real_readb(0xa000, off);
-				real_writeb(0xa000, off, 0xf0);
+				select = CheckBankSelect(select, off);
 			}
-			off += width - 1;
+			off += width - 2;
 		}
-		if(svgaCard == SVGA_TsengET4K) {
-			if(off >= 0x10000) {
-				if(select == 0x00) {
-					select = 0x11;
-				} else if(select == 0x11) {
-					select = 0x22;
-				}
-				IO_Write(0x3cd, select);
-				off -= 0x10000;
-			}
-		}
+		select = CheckBankSelect(select, off);
 		start++;
 	}
 	IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
 	if(svgaCard == SVGA_TsengET4K) {
 		IO_Write(0x3cd, 0);
+	} else {
+		IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0);
 	}
 }
 
@@ -402,55 +302,27 @@ void DOSV_CursorXor(Bitu x, Bitu y)
 
 		volatile Bit8u dummy;
 		Bitu off = (y + start) * width + x;
-		Bit8u select;
-		if(svgaCard == SVGA_TsengET4K) {
-			if(off >= 0x20000) {
-				select = 0x22;
-				off -= 0x20000;
-			} else if(off >= 0x10000) {
-				select = 0x11;
-				off -= 0x10000;
-			} else {
-				select = 0x00;
-			}
-			IO_Write(0x3cd, select);
-		}
+		Bit8u select = StartBankSelect(off);
 		while(start <= end) {
 			dummy = real_readb(0xa000, off);
 			real_writeb(0xa000, off, 0xff);
 			if(dosv_cursor_stat == 2) {
 				off++;
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
+				select = CheckBankSelect(select, off);
 				dummy = real_readb(0xa000, off);
 				real_writeb(0xa000, off, 0xff);
 				off += width - 1;
 			} else {
 				off += width;
 			}
-			if(svgaCard == SVGA_TsengET4K) {
-				if(off >= 0x10000) {
-					if(select == 0x00) {
-						select = 0x11;
-					} else if(select == 0x11) {
-						select = 0x22;
-					}
-					IO_Write(0x3cd, select);
-					off -= 0x10000;
-				}
-			}
+			select = CheckBankSelect(select, off);
 			start++;
 		}
 		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
 		if(svgaCard == SVGA_TsengET4K) {
 			IO_Write(0x3cd, 0);
+		} else if(svgaCard == SVGA_S3Trio) {
+			IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0);
 		}
 	}
 }
@@ -501,7 +373,7 @@ enum DOSV_VTEXT_MODE DOSV_StringVtextMode(std::string vtext)
 {
 	if(vtext == "vga") {
 		return DOSV_VTEXT_VGA;
-	} else if(svgaCard == SVGA_TsengET4K) {
+	} else if(svgaCard == SVGA_TsengET4K || svgaCard == SVGA_S3Trio) {
 		if(vtext == "xga") {
 			return DOSV_VTEXT_XGA;
 		} else if(vtext == "xga24") {
