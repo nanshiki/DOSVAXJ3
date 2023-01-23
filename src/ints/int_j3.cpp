@@ -423,6 +423,11 @@ void J3_OffCursor()
 static Bitu im_x, im_y;
 static Bit32u last_ticks;
 
+void ResetIMPosition()
+{
+	im_x = -1;
+}
+
 void SetIMPosition()
 {
 	Bitu x = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS);
@@ -436,13 +441,25 @@ void SetIMPosition()
 		y++;
 #endif
 		Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
+#if defined(MACOSX)
+		SDL_SetIMValues(SDL_IM_FONT_SIZE, height, NULL);
+		y++;
+#endif
 		if(height == 24) {
 			SDL_SetIMPosition(x * 12, y * 24);
 		} else {
 			if(J3_IsJapanese()) {
+#if defined(MACOSX)
+				SDL_SetIMPosition(x * 8, y * height + 2);
+#else
 				SDL_SetIMPosition(x * 8, y * height - 2);
+#endif
 			} else {
+#if defined(MACOSX)
+				SDL_SetIMPosition(x * 8, y * height + ((height == 16) ? 2 : 1));
+#else
 				SDL_SetIMPosition(x * 8, y * height + ((height == 16) ? 0 : 1));
+#endif
 			}
 		}
 	}
