@@ -63,7 +63,7 @@ void trim(std::string& str);
 void upcase(std::string &str);
 void lowcase(std::string &str);
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 void utf8_to_sjis_copy(char *dst, const char *src, int len);
 void sjis_to_utf8_copy(char *dst, const char *src, int len);
 void sjis_to_utf16_copy(char *dst, const char *src, int len);
