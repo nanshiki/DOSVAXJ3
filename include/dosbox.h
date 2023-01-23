@@ -24,10 +24,11 @@
 
 #include "config.h"
 
-#define	BUILD_VERSION	"JP220408"
-#ifndef VERSION
-#define VERSION BUILD_VERSION
+#define	BUILD_VERSION	"JP230123"
+#ifdef VERSION
+#undef VERSION
 #endif
+#define VERSION BUILD_VERSION
 
 GCC_ATTRIBUTE(noreturn) void E_Exit(const char * message,...) GCC_ATTRIBUTE( __format__(__printf__, 1, 2));
 
