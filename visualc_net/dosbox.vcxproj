@@ -59,16 +59,16 @@
     <OutDir>.\Debug\</OutDir>
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)..\..\Lib\SDL-1.2.15\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)..\..\Lib\SDL-IM-plus\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\Release\</OutDir>
     <IntDir>.\Release\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)..\..\Lib\SDL-1.2.15\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)..\..\Lib\SDL-IM-plus\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <TargetName>$(ProjectName)j</TargetName>
   </PropertyGroup>
@@ -76,8 +76,8 @@
     <OutDir>.\Release_debug\</OutDir>
     <IntDir>.\Release_debug\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir)..\..\Lib\SDL-1.2.15\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-1.2.15\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)..\..\Lib\SDL-IM-plus\include;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\include;$(ProjectDir)..\..\Lib\PDCurses-3.4;$(ProjectDir)..\..\Lib\libpng\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\SDLmain\Release;$(ProjectDir)..\..\Lib\SDL-IM-plus\VisualC\Release;$(ProjectDir)..\..\Lib\SDL_net-1.2.8\lib\x86;$(ProjectDir)..\..\Lib\PDCurses-3.4\win32;$(ProjectDir)..\..\Lib\libpng\lib;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)j_debug</TargetName>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
   </PropertyGroup>
