@@ -12,7 +12,7 @@ DOSBox [README](https://github.com/nanshiki/DOSVAXJ3/blob/master/README_DOSBox.t
 
 ## ビルド
 ### Windows  
-Visual Studio 2015 で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
+Visual Studio の 2015 以降で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
 SDL_net, zlib, libpng, pdcurses 等のライブラリをビルドし、リンクできるようにしておいてください。  
 
 ### Linux  
@@ -22,9 +22,21 @@ $ make
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
 Debian 系の場合、automake libsdl-sound1.2 libsdl-net1.2 あたりをインストールしておいてください。  
-CentOS、Fedora 等で日本語が表示されない場合、xorg-x11-fonts-misc をインストールしてください。  
-Raspberry Pi で日本語が表示されない場合 xfonts-base をインストールしてください。Raspberry Pi OS 2021-1-11版で日本語表示を確認しています。  
-実行ファイル名は dosboxj に、設定ファイル名も dosboxj-conf に変更になっています。  
+東雲フォントを内蔵したため日本語の 8x16, 8x19, 16x16 ドットフォントについては Xorg のフォントのインストールは不要です。  
+CentOS、Fedora の場合 xorg-x11-fonts-misc、Raspberry Pi の場合 xfonts-base をインストールすると Xorg のフォントを使用します。  
+日本語の 12x24, 24x24 ドットフォントについては Xorg フォントのインストールもしくは別途 FONTX2 のフォントファイルが必要です。
+実行ファイル名は dosboxj、設定ファイルは ~/.dosboxj/dosboxj.conf です。
+
+### macOS  
+$ ./autogen.sh  
+$ ./configure LIBS="-liconv"
+$ make  
+$ sudo make install  
+SDL-IM-plus をビルド、インストールしておく必要があります。  
+Homebrew で libiconv をインストールしておいてください。  
+東雲フォントを内蔵したため日本語の 8x16, 8x19, 16x16 ドットフォントについては不要です。  
+日本語の 12x24, 24x24 ドットフォントについては別途 FONTX2 のフォントファイルが必要です。  
+実行ファイル名は dosboxj、設定ファイルは ~/Library/Preferences/dosboxj.conf です。  
 
 ## ライセンス
 GPL v2
