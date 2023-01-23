@@ -71,7 +71,6 @@ bool INT16_AX_SetKBDBIOSMode(Bitu mode);
 Bitu INT16_AX_GetKBDBIOSMode(void);
 
 //int10_char.cpp
-extern Bit8u prevchr;
 void ReadVTRAMChar(Bit16u col, Bit16u row, Bit16u * result);
 void SetVTRAMChar(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr);
 void WriteCharJ(Bit16u col, Bit16u row, Bit8u page, Bit8u chr, Bit8u attr, bool useattr);
