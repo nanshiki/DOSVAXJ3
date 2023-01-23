@@ -294,7 +294,7 @@ void E_Exit(const char * format,...) {
 	throw(buf);
 }
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 #include <iconv.h>
 
 void utf8_to_sjis_copy(char *dst, const char *src, int len)
@@ -302,7 +302,7 @@ void utf8_to_sjis_copy(char *dst, const char *src, int len)
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
-	ic = iconv_open("Shift_JIS", "UTF-8");
+	ic = iconv_open("CP932", "UTF-8");
 	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
@@ -317,7 +317,7 @@ void sjis_to_utf8_copy(char *dst, const char *src, int len)
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
-	ic = iconv_open("UTF-8", "Shift_JIS");
+	ic = iconv_open("UTF-8", "CP932");
 	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
@@ -332,7 +332,7 @@ void sjis_to_utf16_copy(char *dst, const char *src, int len)
 	iconv_t ic;
 	char *psrc, *pdst;
 	size_t srcsize, dstsize;
-	ic = iconv_open("UTF-16LE", "Shift_JIS");
+	ic = iconv_open("UTF-16LE", "CP932");
 	psrc = (char *)src;
 	pdst = dst;
 	srcsize = strlen(src);
