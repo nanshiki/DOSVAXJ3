@@ -34,6 +34,7 @@
 #include "SDL_events.h"
 
 Bit8u prevchr = 0;
+Bit8u prevattr = 0;
 
 static void DCGA_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
 	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
@@ -1037,15 +1038,25 @@ void WriteCharJ31Sbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 	Bitu x, y, off, net, pos;
 	Bit8u data;
 	Bit8u *font;
+	RealPt fontdata;
 
 	net = ((attr & 0xf0) == 0xe0) ? 1 : 0;
 	pos = 0;
-	font = GetSbcsFont(chr);
+	if(J3_IsJapanese() && chr >= 0x20) {
+		font = GetSbcsFont(chr);
+	} else {
+		fontdata = RealGetVec(0x43);
+		fontdata = RealMake(RealSeg(fontdata), RealOff(fontdata) + chr * 16);
+	}
 	x = col;
 	y = row * 16;
 	off = (y >> 2) * 80 + 8 * 1024 * (y & 3) + x;
 	for(Bit8u h = 0 ; h < 16 ; h++) {
-		data = *font++;
+		if(J3_IsJapanese() && chr >= 0x20) {
+			data = *font++;
+		} else {
+			data = mem_readb(Real2Phys(fontdata++));
+		}
 		if((attr & 0x07) == 0x00) {
 			data ^= 0xff;
 		}
@@ -1102,16 +1113,6 @@ void WriteCharJ31Dbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 			off += 80;
 		}
 	}
-}
-
-static bool CheckJapaneseGraphicsMode(Bit8u attr)
-{
-	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
-		if(attr & 0x80) {
-			return true;
-		}
-	}
-	return false;
 }
 
 Bit8u StartBankSelect(Bitu &off)
@@ -1282,30 +1283,33 @@ void WriteCharDOSVSbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 		return;
 	}
 
-	if(CheckJapaneseGraphicsMode(attr)) {
-		IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
-		IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
-		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
+	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
+		if(attr & 0x80) {
+			IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
+			IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
+			IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
 
-		volatile Bit8u dummy;
-		Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
-		Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
-		if(height == 16) {
-			font = GetSbcsFont(chr);
-		} else {
-			font = GetSbcs19Font(chr);
+			volatile Bit8u dummy;
+			Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+			Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
+			if(height == 16) {
+				font = GetSbcsFont(chr);
+			} else {
+				font = GetSbcs19Font(chr);
+			}
+			off = row * width * height + col;
+			select = StartBankSelect(off);
+			for(Bit8u h = 0 ; h < height ; h++) {
+				dummy = real_readb(0xa000, off);
+				data = *font++;
+				real_writeb(0xa000, off, data);
+				off += width;
+				select = CheckBankSelect(select, off);
+			}
+			IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
+			return;
 		}
-		off = row * width * height + col;
-		select = StartBankSelect(off);
-		for(Bit8u h = 0 ; h < height ; h++) {
-			dummy = real_readb(0xa000, off);
-			data = *font++;
-			real_writeb(0xa000, off, data);
-			off += width;
-			select = CheckBankSelect(select, off);
-		}
-		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
-		return;
+		attr &= 0x0f;
 	}
 	volatile Bit8u dummy;
 	Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
@@ -1330,54 +1334,49 @@ void WriteCharDOSVSbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 	}
 }
 
-void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
+static void DrawCharDOSVDbcsHalf(Bitu off, Bit8u *font, Bit8u attr, Bitu width, Bit8u height, Bit8u select, bool xor_flag)
 {
-	Bitu off;
-	Bit16u data;
-	Bit16u *font;
-	Bit8u select = 0;
-
-	if(real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) == 24) {
-		WriteCharDOSVDbcs24(col, row, chr, attr);
-		return;
-	}
-
-	if(CheckJapaneseGraphicsMode(attr)) {
+	volatile Bit8u dummy;
+	Bit8u data;
+	if(xor_flag) {
 		IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 		IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
 		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
-
-		volatile Bit16u dummy;
-		Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
-		Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
-		font = (Bit16u *)GetDbcsFont(chr);
-		off = row * width * height + col;
-		select = StartBankSelect(off);
-		for(Bit8u h = 0 ; h < height ; h++) {
-			dummy = real_readw(0xa000, off);
-			if(height == 19 && (h == 0 || h > 16)) {
-				data = 0;
-			} else {
-				data = *font++;
-			}
-			real_writew(0xa000, off, data);
-			off += width;
-			select = CheckBankSelect(select, off);
-		}
-		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
-		return;
+	} else {
+		IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
+		IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr >> 4);
+		real_writeb(0xa000, off, 0xff); dummy = real_readb(0xa000, off);
+		IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
 	}
+	for(Bit8u h = 0 ; h < height ; h++) {
+		if(xor_flag) {
+			dummy = real_readb(0xa000, off);
+		}
+		if(height == 19 && (h == 0 || h > 16)) {
+			data = 0;
+		} else {
+			data = *font;
+			font += 2;
+		}
+		real_writeb(0xa000, off, data);
+		off += width;
+		select = CheckBankSelect(select, off);
+	}
+	if(xor_flag) {
+		IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
+	}
+}
+
+static inline void DrawCharDOSVDbcs(Bitu off, Bit16u *font, Bit8u attr, Bitu width, Bit8u height, Bit8u select)
+{
 	volatile Bit16u dummy;
-	Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
-	Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
-	font = (Bit16u *)GetDbcsFont(chr);
-	off = row * width * height + col;
-	select = StartBankSelect(off);
+	Bit16u data;
 
 	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 	IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr >> 4);
 	real_writew(0xa000, off, 0xffff); dummy = real_readw(0xa000, off);
 	IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
+
 	for(Bit8u h = 0 ; h < height ; h++) {
 		if(height == 19 && (h == 0 || h > 16)) {
 			data = 0;
@@ -1387,6 +1386,50 @@ void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 		real_writew(0xa000, off, data);
 		off += width;
 		select = CheckBankSelect(select, off);
+	}
+}
+
+void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
+{
+	if(real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) == 24) {
+		WriteCharDOSVDbcs24(col, row, chr, attr);
+		return;
+	}
+
+	Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+	Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
+	if(col == 0xffff) {
+		col = width - 1;
+		row--;
+	}
+	Bit8u *font = GetDbcsFont(chr);
+	Bitu off = row * width * height + col;
+	Bit8u select = StartBankSelect(off);
+	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
+		if(attr & 0x80) {
+			DrawCharDOSVDbcsHalf(off, font, prevattr, width, height, select, true);
+			if(col != width - 1) {
+				off++;
+				select = StartBankSelect(off);
+				DrawCharDOSVDbcsHalf(off, font + 1, attr, width, height, select, true);
+			}
+			return;
+		}
+	}
+	if(attr != prevattr || col == width - 1) {
+		DrawCharDOSVDbcsHalf(off, font, prevattr, width, height, select, false);
+		if(col == width - 1) {
+			off = (row + 1) * width * height;
+		} else {
+			off++;
+		}
+		select = StartBankSelect(off);
+		DrawCharDOSVDbcsHalf(off, font + 1, attr, width, height, select, false);
+	} else {
+		if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
+			attr &= 0x0f;
+		}
+		DrawCharDOSVDbcs(off, (Bit16u *)font, attr, width, height, select);
 	}
 }
 
@@ -1408,6 +1451,8 @@ void WriteCharTopView(Bit16u off, int count)
 			if(IS_J3_ARCH && J3_IsJapanese()) {
 				WriteCharJ31Dbcs(col, row, ((Bit16u)code << 8) | real_readb(seg, off), attr);
 			} else {
+				prevattr = attr;
+				attr = real_readb(seg, off + 1);
 				WriteCharDOSVDbcs(col, row, ((Bit16u)code << 8) | real_readb(seg, off), attr);
 			}
 			count--;
@@ -1437,6 +1482,28 @@ void WriteCharTopView(Bit16u off, int count)
 	}
 }
 
+void WriteCharV(Bit16u col,Bit16u row,Bit8u chr,Bit8u attr,bool useattr)
+{
+	DOSV_OffCursor();
+
+	Bit16u seg = GetTextSeg();
+	Bit16u width = real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS);
+	real_writeb(seg, row * width * 2 + col * 2, chr);
+	if(useattr) {
+		real_writeb(seg, row * width * 2 + col * 2 + 1, attr);
+	}
+	if (isKanji1(chr) && prevchr == 0) {
+		prevchr = chr;
+		prevattr = attr;
+	} else if (isKanji2(chr) && prevchr != 0) {
+		WriteCharDOSVDbcs(col - 1, row, (prevchr << 8) | chr, attr);
+		prevchr = 0;
+	} else {
+		WriteCharDOSVSbcs(col, row, chr, attr);
+	}
+	return;
+}
+
 void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useattr) {
 	/* Externally used by the mouse routine */
 	RealPt fontdata;
@@ -1457,22 +1524,26 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 		return;
 	case M_DCGA:
 		{
-			Bit16u seg = GetTextSeg();
-			J3_OffCursor();
-			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE) | 0x20);
-			real_writeb(seg, row * 80 * 2 + col * 2, chr);
-			if(useattr) {
-				real_writeb(seg, row * 80 * 2 + col * 2 + 1, attr);
+			if(J3_IsJapanese()) {
+				Bit16u seg = GetTextSeg();
+				J3_OffCursor();
+				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE) | 0x20);
+				real_writeb(seg, row * 80 * 2 + col * 2, chr);
+				if(useattr) {
+					real_writeb(seg, row * 80 * 2 + col * 2 + 1, attr);
+				}
+				if (isKanji1(chr) && prevchr == 0) {
+					prevchr = chr;
+				} else if (isKanji2(chr) && prevchr != 0) {
+					WriteCharJ31Dbcs(col - 1, row, (prevchr << 8) | chr, attr);
+					prevchr = 0;
+				} else {
+					WriteCharJ31Sbcs(col, row, chr, attr);
+				}
+				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE) & 0xdf);
+			} else {
+				WriteCharJ31Sbcs(col, row, chr, attr);
 			}
-			if (isKanji1(chr) && prevchr == 0) {
-				prevchr = chr;
-			} else if (isKanji2(chr) && prevchr != 0) {
-				WriteCharJ31Dbcs(col - 1, row, (prevchr << 8) | chr, attr);
-				prevchr = 0;
-				return;
-			}
-			WriteCharJ31Sbcs(col, row, chr, attr);
-			real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE) & 0xdf);
 		}
 		return;
 	case M_CGA4:
@@ -1519,6 +1590,7 @@ void WriteChar(Bit16u col,Bit16u row,Bit8u page,Bit8u chr,Bit8u attr,bool useatt
 			}
 			if (isKanji1(chr) && prevchr == 0) {
 				prevchr = chr;
+				prevattr = attr;
 			} else if (isKanji2(chr) && prevchr != 0) {
 				WriteCharDOSVDbcs(col - 1, row, (prevchr << 8) | chr, attr);
 				prevchr = 0;
@@ -1676,7 +1748,11 @@ static void INT10_TeletypeOutputAttr(Bit8u chr,Bit8u attr,bool useattr,Bit8u pag
 			cur_col = CURSOR_POS_COL(page);
 		}
 		/* Draw the actual Character */
-		WriteChar(cur_col,cur_row,page,chr,attr,useattr);
+		if(DOSV_CheckJapaneseVideoMode()) {
+			WriteCharV(cur_col,cur_row,chr,attr,useattr);
+		} else {
+			WriteChar(cur_col,cur_row,page,chr,attr,useattr);
+		}
 		cur_col++;
 	}
 	if(cur_col==ncols) {
@@ -1723,9 +1799,13 @@ void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,B
 		if((flag & 2) != 0 || flag == 0x20) {
 			attr=mem_readb(string);
 			string++;
-		};
+		}
 		if(flag == 0x20) {
-			WriteChar(col, row, page, chr, attr, true);
+			if(DOSV_CheckJapaneseVideoMode()) {
+				WriteCharV(col, row, chr, attr, true);
+			} else {
+				WriteChar(col, row, page, chr, attr, true);
+			}
 			col++;
 			if(col == real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)) {
 				col = 0;
