@@ -707,7 +707,7 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 	strcat(tempDir,_dir);
 	CROSS_FILENAME(tempDir);
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(tempDir);
 #endif
 	for (unsigned int i=0;i<strlen(tempDir);i++) tempDir[i]=toupper(tempDir[i]);
@@ -782,7 +782,7 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 	dta.GetSearchParams(srch_attr,srch_pattern,false);
 	uint16_t id = lfn_filefind_handle>=LFN_FILEFIND_MAX?dta.GetDirID():ldid[lfn_filefind_handle];
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(srch_pattern);
 #endif
 
@@ -803,7 +803,7 @@ again:
 	//GetExpandName might indirectly destroy dir_ent (by caching in a new directory 
 	//and due to its design dir_ent might be lost.)
 	//Copying dir_ent first
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	utf8_to_sjis_copy(dir_entcopy,dir_ent, CROSS_LEN);
 	utf8_to_sjis_copy(ldir_entcopy,ldir_ent, CROSS_LEN);
 #else
@@ -893,7 +893,7 @@ bool localDrive::GetFileAttrEx(char* name, struct stat *status) {
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newname);
 #endif
 	dirCache.ExpandName(newname);
@@ -928,7 +928,7 @@ DWORD localDrive::GetCompressedSize(char* name)
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newname);
 #endif
 	dirCache.ExpandName(newname);
@@ -954,7 +954,7 @@ HANDLE localDrive::CreateOpenFile(const char* name)
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newname);
 #endif
 	dirCache.ExpandName(newname);
@@ -973,7 +973,7 @@ bool localDrive::MakeDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newdir);
 #endif
     std::string newstr = newdir;
@@ -1000,7 +1000,7 @@ bool localDrive::RemoveDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newdir);
 #endif
     std::string newstr = newdir;
@@ -1022,7 +1022,7 @@ bool localDrive::TestDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newdir);
 #endif
 	dirCache.ExpandName(newdir);
@@ -1058,7 +1058,7 @@ bool localDrive::Rename(char * oldname,char * newname) {
 	strcpy(newold,basedir);
 	strcat(newold,oldname);
 	CROSS_FILENAME(newold);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newold);
 #endif
 	dirCache.ExpandName(newold);
@@ -1066,7 +1066,7 @@ bool localDrive::Rename(char * oldname,char * newname) {
 	strcpy(newnew,basedir);
 	strcat(newnew,newname);
 	CROSS_FILENAME(newnew);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newnew);
 #endif
     std::string newstr = newnew;
@@ -1099,7 +1099,7 @@ bool localDrive::FileExists(const char* name) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newname);
 #endif
 	const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
@@ -1124,7 +1124,7 @@ bool localDrive::FileStat(const char* name, FileStat_Block * const stat_block) {
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
 	dirCache.ExpandName(newname);
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(newname);
 #endif
 	struct stat temp_stat;

@@ -713,7 +713,7 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
 		return false;
 	}
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(fullname);
 #endif
 	bool foundit=Drives[drive]->FileCreate(&Files[handle],fullname,attributes);
@@ -787,7 +787,7 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	if (device) {
 		Files[handle]=new DOS_Device(*Devices[devnum]);
 	} else {
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 		ChangeUtf8FileName(fullname);
 #endif
 		exists=Drives[drive]->FileOpen(&Files[handle],fullname,flags)||Drives[drive]->FileOpen(&Files[handle],upcase(fullname),flags);
@@ -879,7 +879,7 @@ bool DOS_UnlinkFile(char const * const name) {
 bool DOS_GetFileAttr(char const * const name,Bit16u * attr) {
 	char fullname[DOS_PATHLENGTH];Bit8u drive;
 	if (!DOS_MakeName(name,fullname,&drive)) return false;
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(fullname);
 #endif
 	if (Drives[drive]->GetFileAttr(fullname,attr)) {
