@@ -3,11 +3,11 @@
 
 ●概要
 　DOSBox 派生版の DOSVAX を元に作成した AX & J-3100 & DOS/V Emulator です。
-　東芝 DOS or PC-DOS/V or MS-DOS/V、J-3100 or DOS/V 用 FEP、FONTX2 形式のフォ
+　東芝 DOS or PC DOS/V or MS-DOS/V、J-3100 or DOS/V 用 FEP、FONTX2 形式のフォ
 ントファイル、Visual C++ のランタイム等は不要です。フォントファイルを使用して
 画面を実機に近づける事も可能です。
 　日本語キーボードに対応しています。
-　Windows の IME、Linux の XIM を使用して日本語入力ができます。
+　Windows, macOS の IME、Linux の XIM を使用して日本語入力ができます。
 　Wengier Wu 氏による DOSBox-lfn の修正を取り込み、ロングファイルネームや画面
 上の文字のクリップボードへのコピー等に対応しています。
 
@@ -16,6 +16,7 @@
 存在しない場合 %APPDATA%\DOSBoxJ\dosboxj.conf を作成し、それを使用します。
 　Linux の場合 ~/.dosboxj/dosboxj.conf を読み込みます。存在しない場合は
 ~/.dosboxj/dosboxj.conf を作成し、それを使用します。
+　macOS の場合 ~/Library/Preferences/dosboxj.conf となります。
 
 ・[sdl] セクション
 clipboardmodifier  クリップボードのコピー・ペーストの指定をします。
@@ -53,7 +54,7 @@ jfontname      描画に使用する Windows フォント名
                フォントファイル名は Shift JIS で記述してください。
                Windows の場合、IME の変換中文字列の表示フォントの指定にも使用
                されます。
-               Linux では使用しません。
+               macOS, Linux では使用しません。
 jfontsbcs      半角表示用 FONTX2 フォントファイルへのパス サイズ:8×19
 jfontsbcs16    半角表示用 FONTX2 フォントファイルへのパス サイズ:8×16
 jfontdbcs      全角表示用 FONTX2 フォントファイルへのパス サイズ:16×16
@@ -64,9 +65,11 @@ jfontdbcs24    全角表示用 FONTX2 フォントファイルへのパス サ�
                Windows の場合フォントファイルは dosboxj.exe と同じフォルダに
                置いてください。
                Linux の場合、フォントファイルは ~/.dosboxj に置いてください。
+               macOS の場合、フォントファイルは ~/Library/Preferences に置いて
+               ください。
 jfontuse20     true とすると Windows のフォントを使用する場合に 24 ドットフォ
                ントを 20 ドットフォントで代用します。
-               Linux では使用しません。
+               macOS, Linux では使用しません。
 
 gaijistart     外字領域の開始コードを指定します。未定義の場合 f040 となります。
 gaijiend       外字領域の終了コードを指定します。未定義の場合 f0a3 となります
@@ -82,8 +85,8 @@ languagejp     日本語メッセージ定義ファイルを指定します。
                内容は Shift JIS で記述する必要があります。
                Windows の場合、dosboxj.exe と同じフォルダのファイルが読み込ま
                れます。japanese.lng が添付されています。
-               Linux の場合、make install で /usr/local/share/dosboxj に
-               japanese.lng がコピーされ、それを使用します。
+               macOS, Linux の場合、make install で /usr/local/share/dosboxj
+               に japanese.lng がコピーされ、それを使用します。
 
 j3textcolor    J-3100 の文字色  RRGGBB でそれぞれ 0～ff まで指定できます。
 j3backcolor    J-3100 の背景色  RRGGBB でそれぞれ 0～ff まで指定できます。
@@ -131,8 +134,8 @@ keyboardlayout 日本語キーボードの場合 jp、英語キーボードの�
                さい。jp と設定した場合、ファイル jp.kl を読み込みます。
                Windows の場合、dosboxj.exe と同じフォルダのファイルが読み込ま
                れます。jp.kl が添付されています。
-               Linux の場合、make install で /usr/local/share/dosboxj に jp.kl
-               がコピーされ、それを使用します。
+               macOS, Linux の場合、make install で /usr/local/share/dosboxj
+               に jp.kl がコピーされ、それを使用します。
 
 ver            DOS のバージョンを指定します。指定がない場合 7.10 となります。
                起動後に ver set コマンドで変更できます。
@@ -146,7 +149,7 @@ automount      オートマウントの設定を行います。
                ント、false で無効です。
                オートマウント有効の場合、C: [enter] で実 PC 上の C ドライブを
                C:\ にマウントします。
-               Linux では使用できません。
+               macOS, Linux では使用できません。
 
 autoreload     オートリロード(ディレクトリキャッシュ更新)の設定を行います。
                カレントディレクトリもしくは使用ファイルのドライブのディレクト
@@ -204,8 +207,8 @@ chev を使用します。
 合、mapperj.map (Windows の場合 dosboxj.exe と同じフォルダ、Linux の場合
 ~/.dosboxj にあります)を削除して起動し、再度割り当て直してください。
 
-　MS-DOS 用の FEP を入手するのは困難と思われましたので、Windows の IME, Linux
-の XIM を使用可能としています。
+　MS-DOS 用の FEP を入手するのは困難と思われましたので、Windows や macOS の IME,
+Linux の XIM を使用可能としています。
 　Windows 10 で MS-IME を使用する場合、Windows 10 のバージョンを 1803 以上にアッ
 プデートしてください。バージョン1709 以前の MS-IME の場合、$IAS.SYS や MS-KANJI
 のファンクションによる FEP 制御ができません。
@@ -217,16 +220,16 @@ chev を使用します。
 ジからブートした場合でもキーの表記通りに入力可能ですが、Windows で 半角/全角 
 キーを有効にしたい場合、[dosbox] im=false とするか、Ctrl+F1 で呼び出される
 mapper で 半角/全角キーの機能を他のキーに割り当ててください。
-　Linux で 半角/全角 キーを使用したい場合も mapper で他のキーに割り当ててくだ
-さい。
+　macOS, Linux で 半角/全角 キーを使用したい場合も mapper で他のキーに割り当て
+てください。
 
 　imgmount は 8G までのイメージファイルをマウントできますが、拡張 DOS 区画は使
 用できず、基本 DOS 領域の 2G までしか使用できません。
-　Vmware 等で作成したイメージファイルは、固定サイズかつ MBR が書き込まれている
+　VMware 等で作成したイメージファイルは、固定サイズかつ MBR が書き込まれている
 状態であれば、オプション指定なしでマウント可能です。
 　bximage で作成した 528M より大きいサイズのイメージファイルをマウントする場合、
 通常通りに -size 512,63,16,cyl (cyl は cyl= で表示される値) と指定してください。
-　bximage で作成した 2G 前後のサイズのイメージファイルをマウントして PC-DOS 等
+　bximage で作成した 2G 前後のサイズのイメージファイルをマウントして PC DOS 等
 をインストールする場合、ハードディスクの空き容量の一部を DOS に割り振るを選択
 し、基本DOS 区画の作成の最大容量で作成しますかは N として手動でサイズを入力し
 てください。割り当てを自動で行うと、小さいサイズで確保されてしまう可能性があり
@@ -289,7 +292,7 @@ AX モードにも反映しています。
 め、j3textcolor, j3backcolor の下位 2 bit は無効になり、ffffff は 3f3f3f 相当
 となります。
 　内蔵 DOS で東芝版日本語 Windows 3.1 をインストールする場合、loadfix を実行
-してコンベンショナルメモリを減らしてから setup.exe を実行してください。
+してコンベンショナルメモリを減らして setup.exe を実行してください。
 　[dosbox] j3colordriver=true とすれば J-3100 の DCGA モード上で CGA/EGA キッ
 トの setup.exe も使用可能です。カスタムセットアップを選択し、ディスプレイを東
 芝 CGA に変更してインストールしてください。
@@ -548,13 +551,25 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　J-3100 モードで起動した際に V-Text でのスクロール行数がおかしくなっていたの
 を修正しました。
 
+・build JP230123 (2023/1/23)
+　ビデオモード 72h で文字属性上位 4 ビットの解釈が正しくなかったのを修正しま
+した。
+　漢字の右半分と左半分で属性が異なる場合の描画を修正しました。
+　J-3100 モードの場合、ビデオモード 40h (DCGA Olivetti M24, AT&T 6300 日本語
+不可) が有効になるよう修正しました。
+　macOS でビルド、実行できるようにしました。ARM 機での動作は未確認です。
+　macOS の場合 8x16, 8x19, 16x16 フォントは内蔵の東雲フォントを使用します。
+　Linux でも X Window のフォントが取得できない場合東雲フォントを使用するよう
+に変更しました。
+
+
 ●ライセンス
 　GPL v2
 　ソースコードや ABOUT_LIB、README_AX.txt も参照してください。
 
 ●最後に
-　DOSBox, DOSVAX, DOSBox-lfn, DOSBox-X, SDL, libpng, zlib の作者の方々に感謝
-します。
+　DOSBox, DOSVAX, DOSBox-lfn, DOSBox-X, SDL, libpng, zlib, 東雲フォントの作者
+の方々に感謝します。
 
 
                                                                       takapyu
