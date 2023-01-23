@@ -347,18 +347,17 @@ static SDLKey sdlkey_map[]={
 	/*52-57*/ SDLK_KP0, SDLK_KP1, SDLK_KP2, SDLK_KP3, SDLK_KP4, SDLK_KP5, 
 	/*58-5C*/ SDLK_KP6, SDLK_KP7, Z, SDLK_KP8, SDLK_KP9, 
 
-	/*5D-5F*/ Z, Z, Z,
+	/*5D-5F*/ SDLK_WORLD_5, SDLK_UNDERSCORE, Z,
 	
 	/* Function keys and cursor blocks (F13 not supported, F14 =>
 	 * PRINT[SCREEN], F15 => SCROLLOCK, F16 => PAUSE, HELP => INSERT) */
 	/*60-64*/ SDLK_F5, SDLK_F6, SDLK_F7, SDLK_F3, SDLK_F8,
-	/*65-6A*/ SDLK_F9, Z, SDLK_F11, Z, SDLK_F13, SDLK_PAUSE /*==SDLK_F16*/,
+	/*65-6A*/ SDLK_F9, SDLK_MUHENKAN, SDLK_F11, SDLK_KANA, SDLK_F13, SDLK_PAUSE /*==SDLK_F16*/,
 	/*6B-70*/ SDLK_PRINT /*==SDLK_F14*/, Z, SDLK_F10, Z, SDLK_F12, Z,
 	/*71-72*/ SDLK_SCROLLOCK /*==SDLK_F15*/, SDLK_INSERT /*==SDLK_HELP*/, 
 	/*73-77*/ SDLK_HOME, SDLK_PAGEUP, SDLK_DELETE, SDLK_F4, SDLK_END,
 	/*78-7C*/ SDLK_F2, SDLK_PAGEDOWN, SDLK_F1, SDLK_LEFT, SDLK_RIGHT,
 	/*7D-7E*/ SDLK_DOWN, SDLK_UP,
-
 	/*7F-7F*/ Z,
 
 	/* 4 extra keys that don't really exist, but are needed for
@@ -366,8 +365,7 @@ static SDLKey sdlkey_map[]={
 	 * not really mapped to an emulated key) */
 	SDLK_RMETA, SDLK_RSHIFT, SDLK_RALT, SDLK_RCTRL,
 };
-//#define MAX_SCANCODES (0x80+4)
-#define MAX_SCANCODES (0x90+4)
+#define MAX_SCANCODES (0x80+4)
 /* Make sure that the table above has the expected size.  This
    expression will raise a compiler error if the condition is false.  */
 typedef char assert_right_size [MAX_SCANCODES == (sizeof(sdlkey_map)/sizeof(sdlkey_map[0]))	? 1 : -1];
@@ -2302,14 +2300,18 @@ static struct {
 	{"lessthan",SDLK_LESS},
 #endif
 	{ "yen",SDLK_WORLD_5 },{ "underscore",SDLK_UNDERSCORE },
+#if !defined (MACOSX)
 	{ "conv",SDLK_MENU },//for AX
+#endif
 	{ "Noconv", SDLK_MUHENKAN },
 	{ "hat_jp", SDLK_EQUALS }, // for Japanese keyboard
 	{ "colon_jp", SDLK_QUOTE },
 	{ "at_jp", SDLK_LEFTBRACKET },
 	{ "lb_jp", SDLK_RIGHTBRACKET },
 	{ "rb_jp", SDLK_BACKSLASH },
+#if !defined (MACOSX)
 	{ "hanzen", SDLK_HANZEN },
+#endif
 	{ "kana", SDLK_KANA },
 	{0,0}
 };

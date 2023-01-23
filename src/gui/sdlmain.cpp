@@ -326,6 +326,10 @@ struct SDL_Block {
 	// IME
 	Bit32u ime_ticks;
 #endif
+#if defined(MACOSX)
+	// IME
+	Bit32u ime_ticks;
+#endif
 	// state of alt-keys for certain special handlings
 	Bit8u laltstate;
 	Bit8u raltstate;
@@ -1534,8 +1538,19 @@ void GFX_Stop() {
 	sdl.active=false;
 }
 
+#if defined(MACOSX)
+void ResetIMPosition();
+#endif
+
 void GFX_Start() {
+#if defined(MACOSX)
+	if(dos.im_enable_flag) {
+		SDL_SetIMValues(SDL_IM_ENABLE, 1, NULL);
+		ResetIMPosition();
+	}
+#endif
 	sdl.active=true;
+
 }
 
 static void GUI_ShutDown(Section * /*sec*/) {
@@ -2600,6 +2615,47 @@ void GFX_Events() {
 			}
 #endif
 #if defined (MACOSX)
+			int onoff;
+			if(SDL_GetIMValues(SDL_IM_ONOFF, &onoff, NULL) == NULL) {
+				if(onoff != 0 && event.type == SDL_KEYDOWN) {
+					if(event.key.keysym.sym == 0x0d) {
+						if(sdl.ime_ticks != 0) {
+							if(GetTicks() - sdl.ime_ticks < 10) {
+								sdl.ime_ticks = 0;
+								break;
+							}
+						}
+					} else if(!CheckEnableImmOnKey(event.key)) {
+						sdl.ime_ticks = 0;
+						break;
+					}
+				}
+			}
+			sdl.ime_ticks = 0;
+			if(event.key.keysym.scancode == 0 && event.key.keysym.sym == 0) {
+				int len;
+				if(len = SDL_FlushIMString(NULL)) {
+					int flag = 0;
+					unsigned char *buff = (unsigned char *)malloc((len + 2)); 
+
+					SDL_FlushIMString(buff);
+					for(int no = 0 ; no < len ; no++) {
+						if(flag == 0) {
+							if(isKanji1(buff[no])) {
+								flag = 1;
+								BIOS_AddKeyToBuffer(0xf000 | buff[no]);
+							} else {
+								BIOS_AddKeyToBuffer(buff[no]);
+							}
+						} else {
+							BIOS_AddKeyToBuffer(0xf100 | buff[no]);
+							flag = 0;
+						}
+					}
+					free(buff);
+					sdl.ime_ticks = GetTicks();
+				}
+			}
 			/* On macs CMD-Q is the default key to close an application */
 			if (event.key.keysym.sym == SDLK_q && (event.key.keysym.mod == KMOD_RMETA || event.key.keysym.mod == KMOD_LMETA) ) {
 				KillSwitch(true);
