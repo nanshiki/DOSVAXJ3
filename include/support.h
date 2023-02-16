@@ -44,11 +44,13 @@ char *strchr_dbcs(char *str, char ch);
 char *strrchr_dbcs(char *str, char ch);
 char *strtok_dbcs(char *s, const char *d);
 void strreplace(char * str,char o,char n);
+void strreplace_dbcs(char * str,char o,char n);
 char *ltrim(char *str);
 char *rtrim(char *str);
 char *trim(char * str);
 char * upcase(char * str);
 char * lowcase(char * str);
+bool check_last_split_char(const char *name, size_t len, char split);
 
 bool ScanCMDBool(char * cmd,char const * const check);
 char * ScanCMDRemain(char * cmd);
