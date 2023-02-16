@@ -511,6 +511,9 @@ bool localDrive::FileCreate(DOS_File * * file,char * name,Bit16u /*attributes*/)
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
 	char* temp_name = dirCache.GetExpandName(newname); //Can only be used in till a new drive_cache action is preformed */
 	/* Test if file exists (so we need to truncate it). don't add to dirCache then */
 	bool existing_file=false;
@@ -563,7 +566,11 @@ bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
+
     const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
 
 	//Flush the buffer of handles for the same file. (Betrayal in Antara)
@@ -612,6 +619,9 @@ FILE * localDrive::GetSystemFilePtr(char const * const name, char const * const 
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
 
 	return fopen(newname,type);
@@ -622,6 +632,9 @@ bool localDrive::GetSystemFilename(char *sysName, char const * const dosName) {
 	strcpy(sysName, basedir);
 	strcat(sysName, dosName);
 	CROSS_FILENAME(sysName);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(sysName);
+#endif
 	dirCache.ExpandName(sysName);
 	return true;
 }
@@ -634,6 +647,9 @@ bool localDrive::FileUnlink(char * name) {
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
 	char *fullname = dirCache.GetExpandName(newname);
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 	const wchar_t* host_name = CodePageGuestToHost(fullname);
@@ -710,14 +726,26 @@ bool localDrive::FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst) {
 #if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(tempDir);
 #endif
-	for (unsigned int i=0;i<strlen(tempDir);i++) tempDir[i]=toupper(tempDir[i]);
+	size_t len = strlen(tempDir);
+#if defined (WIN32)
+	bool lead = false;
+#endif
+	for (unsigned int i=0;i<len;i++) {
+#if defined (WIN32)
+		if(lead) lead = false;
+		else if(isKanji1(tempDir[i])) lead = true;
+		else 
+#endif
+		tempDir[i]=toupper(tempDir[i]);
+	}
 	if (allocation.mediaid==0xF0 ) {
 		EmptyCache(); //rescan floppie-content on each findfirst
 	}
     
-	char end[2]={CROSS_FILESPLIT,0};
-	if (tempDir[strlen(tempDir)-1]!=CROSS_FILESPLIT) strcat(tempDir,end);
-	
+	if (!check_last_split_char(tempDir, len, CROSS_FILESPLIT)) {
+		char end[2]={CROSS_FILESPLIT,0};
+		strcat(tempDir,end);
+	}
 
 	Bit16u id;
 	if (!dirCache.FindFirst(tempDir,id)) {
@@ -866,6 +894,9 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	strcpy(newname,basedir);
 	strcat(newname,name);
 	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
 	dirCache.ExpandName(newname);
 	struct stat status;
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
@@ -1029,7 +1060,7 @@ bool localDrive::TestDir(char * dir) {
 	// Skip directory test, if "\"
 	size_t len = strlen(newdir);
 	const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
-	if (len && (newdir[len-1]!='\\')) {
+	if (len && !check_last_split_char(newdir, len, '\\')) {
 		// It has to be a directory !
 		struct stat test;
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)

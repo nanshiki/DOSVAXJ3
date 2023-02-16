@@ -55,7 +55,9 @@ bool SortByNameRev(DOS_Drive_Cache::CFileInfo* const &a, DOS_Drive_Cache::CFileI
 bool SortByDirName(DOS_Drive_Cache::CFileInfo* const &a, DOS_Drive_Cache::CFileInfo* const &b) {
 	// Directories first...
 	if (a->isDir!=b->isDir) return (a->isDir>b->isDir);	
-	return strcmp(a->shortname,b->shortname)<0;
+	int diff = strcmp(a->shortname,b->shortname);
+	if(!diff) return false;
+	return (diff < 0 && strcmp(b->shortname, ".") && strcmp(b->shortname, "..")) || !strcmp(a->shortname, ".") || (!strcmp(a->shortname,"..") && strcmp(b->shortname,"."));
 }
 
 bool SortByDirNameRev(DOS_Drive_Cache::CFileInfo* const &a, DOS_Drive_Cache::CFileInfo* const &b) {
@@ -197,9 +199,9 @@ char* DOS_Drive_Cache::GetExpandName(const char* path) {
 		size_t len = strlen(work);
 #if defined (WIN32) 
 		//What about OS/2 
-		if((work[len-1] == CROSS_FILESPLIT ) && (len >= 2) && (work[len-2] != ':')) {
+		if(check_last_split_char(work, len, CROSS_FILESPLIT) && (len >= 2) && (work[len-2] != ':')) {
 #else
-		if((len > 1) && (work[len-1] == CROSS_FILESPLIT )) {
+		if((len > 1) && check_last_split_char(work, len, CROSS_FILESPLIT)) {
 #endif       
 			work[len-1] = 0; // Remove trailing slashes except when in root
 		}

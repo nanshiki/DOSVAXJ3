@@ -48,6 +48,7 @@ DOS_Drive * Drives[DOS_DRIVES];
 bool force = false;
 int sdrive;
 
+extern bool lfn_space;
 extern Bitu autoreload;
 int lfn_filefind_handle = LFN_FILEFIND_NONE;
 
@@ -124,7 +125,7 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 		if (c=='/') c='\\';
 		else if (c=='"') {q++;continue;}
 		else if (uselfn&&!force) {
-			if (c==' ' && q/2*2 == q) continue;
+			if (c==' ' && q/2*2 == q && !lfn_space) continue;
 		} else {
 			if ((c>='a') && (c<='z')) c-=32;
 			else if (c==' ') continue; /* should be separator */
@@ -142,16 +143,22 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 	if (upname[0]!='\\') strcpy(fullname,Drives[*drive]->curdir);
 	else fullname[0]=0;
 	Bit32u lastdir=0;Bit32u t=0;
+	bool lead = false;
 	while (fullname[t]!=0) {
-		if ((fullname[t]=='\\') && (fullname[t+1]!=0)) lastdir=t;
+		if (lead) lead=false;
+		else if(isKanji1(fullname[t])) lead = true;
+		else if((fullname[t]=='\\') && (fullname[t+1]!=0)) lastdir=t;
 		t++;
 	};
 	r=0;w=0;
 	tempdir[0]=0;
 	bool stop=false;
+	lead = false;
 	while (!stop) {
 		if (upname[r]==0) stop=true;
-		if ((upname[r]=='\\') || (upname[r]==0)){
+		if (lead) lead = false;
+		else if(isKanji1(upname[r])) lead = true;
+		else if ((upname[r]=='\\') || (upname[r]==0)){
 			tempdir[w]=0;
 			if (tempdir[0]==0) { w=0;r++;continue;}
 			if (strcmp(tempdir,".")==0) {
@@ -172,6 +179,13 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 				Bit32s cDots = templen - 1;
 				for(iDown=(Bit32s)strlen(fullname)-1;iDown>=0;iDown--) {
 					if(fullname[iDown]=='\\' || iDown==0) {
+						if (iDown > 0) {
+							char c = fullname[iDown+1];
+							fullname[iDown+1] = 0;
+							char *p = strrchr_dbcs(fullname, '\\');
+							fullname[iDown+1] = c;
+							if (p==NULL || p-fullname<iDown) continue;
+						}
 						lastdir = iDown;
 						cDots--;
 						if(cDots==0)
@@ -180,8 +194,11 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 				}
 				fullname[lastdir]=0;
 				t=0;lastdir=0;
+				bool lead2 = false;
 				while (fullname[t]!=0) {
-					if ((fullname[t]=='\\') && (fullname[t+1]!=0)) lastdir=t;
+					if (lead2) lead2=false;
+					else if(isKanji1(upname[r])) lead2 = true;
+					else if ((fullname[t]=='\\') && (fullname[t+1]!=0)) lastdir=t;
 					t++;
 				}
 				tempdir[0]=0;
@@ -281,7 +298,7 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
 	int fbak=lfn_filefind_handle;
     for (char *s = strchr_dbcs(p,'\\'); s != NULL; s = strchr_dbcs(p,'\\')) {
 		*s = 0;
-		if (SFNPath[strlen(SFNPath)-1]=='\\')
+		if (check_last_split_char(SFNPath, strlen(SFNPath), '\\'))
 			sprintf(pdir,"\"%s%s\"",SFNPath,p);
 		else
 			sprintf(pdir,"\"%s\\%s\"",SFNPath,p);
@@ -373,7 +390,7 @@ bool DOS_ChangeDir(char const * const dir) {
 		Drives[drive]->EmptyCache();
 	}
 
-	if (strlen(fulldir) && testdir[len-1]=='\\') {
+	if (strlen(fulldir) && check_last_split_char(testdir, len, '\\')) {
 		DOS_SetError(DOSERR_PATH_NOT_FOUND);
 		return false;
 	}
@@ -390,7 +407,7 @@ bool DOS_ChangeDir(char const * const dir) {
 bool DOS_MakeDir(char const * const dir) {
 	Bit8u drive;char fulldir[DOS_PATHLENGTH];
 	size_t len = strlen(dir);
-	if(!len || dir[len-1] == '\\') {
+	if(!len || check_last_split_char(dir, len, '\\')) {
 		DOS_SetError(DOSERR_PATH_NOT_FOUND);
 		return false;
 	}
@@ -514,7 +531,7 @@ bool DOS_FindFirst(char * search,Bit16u attr,bool fcb_findfirst) {
 	Bit8u drive;char fullsearch[DOS_PATHLENGTH];
 	char dir[DOS_PATHLENGTH];char pattern[DOS_PATHLENGTH];
 	size_t len = strlen(search);
-	if(len && search[len - 1] == '\\' && !( (len > 2) && (search[len - 2] == ':') && (attr == DOS_ATTR_VOLUME) )) { 
+	if(len && check_last_split_char(search, len, '\\') && !( (len > 2) && (search[len - 2] == ':') && (attr == DOS_ATTR_VOLUME) )) { 
 		//Dark Forces installer, but c:\ is allright for volume labels(exclusively set)
 		DOS_SetError(DOSERR_NO_MORE_FILES);
 		return false;
@@ -713,9 +730,6 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
 		return false;
 	}
-#if defined(LINUX) || defined(MACOSX)
-	ChangeUtf8FileName(fullname);
-#endif
 	bool foundit=Drives[drive]->FileCreate(&Files[handle],fullname,attributes);
 	if (foundit) { 
 		Files[handle]->SetDrive(drive);
@@ -787,9 +801,6 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	if (device) {
 		Files[handle]=new DOS_Device(*Devices[devnum]);
 	} else {
-#if defined(LINUX) || defined(MACOSX)
-		ChangeUtf8FileName(fullname);
-#endif
 		exists=Drives[drive]->FileOpen(&Files[handle],fullname,flags)||Drives[drive]->FileOpen(&Files[handle],upcase(fullname),flags);
 		if (exists) Files[handle]->SetDrive(drive);
 	}
@@ -879,9 +890,6 @@ bool DOS_UnlinkFile(char const * const name) {
 bool DOS_GetFileAttr(char const * const name,Bit16u * attr) {
 	char fullname[DOS_PATHLENGTH];Bit8u drive;
 	if (!DOS_MakeName(name,fullname,&drive)) return false;
-#if defined(LINUX) || defined(MACOSX)
-	ChangeUtf8FileName(fullname);
-#endif
 	if (Drives[drive]->GetFileAttr(fullname,attr)) {
 		return true;
 	} else {
@@ -1017,7 +1025,7 @@ bool DOS_CreateTempFile(char * const name,Bit16u * entry) {
 		tempname[0]='\\';
 		tempname++;
 	} else {
-		if ((name[namelen-1]!='\\') && (name[namelen-1]!='/')) {
+		if (!check_last_split_char(name, namelen, '\\') && (name[namelen-1]!='/')) {
 			tempname[0]='\\';
 			tempname++;
 		}

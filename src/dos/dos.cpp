@@ -310,11 +310,6 @@ static Bitu DOS_21Handler(void) {
 			}
 			c = reg_dl;
 			n = 1;
-			if(CheckStayVz()) {
-				if(c == 0x0d) {
-					c = 0x0a;
-				}
-			}
 			DOS_WriteFile(STDOUT,&c,&n);
 			//Not in the official specs, but happens nonetheless. (last written character)
 			reg_al=(c==9)?0x20:c; //strangely, tab conversion to spaces is reflected here
@@ -976,18 +971,21 @@ static Bitu DOS_21Handler(void) {
 				}
 			}
 		}
-		force = true;
-		if (DOS_OpenFile(name1,reg_al,&reg_ax)) {
-			force = false;
-			CALLBACK_SCF(false);
-		} else {
-			force = false;
-			if (uselfn&&DOS_OpenFile(name1,reg_al,&reg_ax)) {
+		{
+			uint8_t oldal = reg_al;
+			force = true;
+			if (DOS_OpenFile(name1,reg_al,&reg_ax)) {
+				force = false;
 				CALLBACK_SCF(false);
-				break;
+			} else {
+				force = false;
+				if (uselfn&&DOS_OpenFile(name1,oldal,&reg_ax)) {
+					CALLBACK_SCF(false);
+					break;
+				}
+				reg_ax=dos.errorcode;
+				CALLBACK_SCF(true);
 			}
-			reg_ax=dos.errorcode;
-			CALLBACK_SCF(true);
 		}
 		break;
 	case 0x3e:		/* CLOSE Close file */
