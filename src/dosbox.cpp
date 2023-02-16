@@ -880,6 +880,9 @@ void DOSBOX_Init(void) {
 		"will be enabled if and only if the major DOS version is set to\n"
 		"at least 7.");
 
+    Pbool = secprop->Add_bool("lfn_space",Property::Changeable::OnlyAtStart,false);
+    Pbool->Set_help("Allow long file names with spaces in standard DOS functions when LFN is enabled.");
+
 	const char* automount_settings[] = { "true", "auto", "false", 0};
 	Pstring = secprop->Add_string("automount",Property::Changeable::WhenIdle,"true");
 	Pstring->Set_values(automount_settings);
