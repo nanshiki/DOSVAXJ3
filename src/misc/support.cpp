@@ -109,6 +109,22 @@ char *strtok_dbcs(char *s, const char *d) {
     return result;
 }
 
+bool check_last_split_char(const char *name, size_t len, char split)
+{
+	bool tail = false;
+	if(split == '\\') {
+		bool lead = false;
+		for(size_t pos = 0 ; pos < len ; pos++) {
+			if(lead) lead = false;
+			else if(isKanji1(name[pos])) lead = true;
+			else if(pos == len - 1 && name[pos] == split) tail = true;
+		}
+	} else if(len > 0) {
+		if(name[len - 1] == split) tail = true;
+	}
+	return tail;
+}
+
 /* 
 	Ripped some source from freedos for this one.
 
@@ -120,12 +136,23 @@ char *strtok_dbcs(char *s, const char *d) {
  */
 
 
+void strreplace_dbcs(char * str,char o,char n) {
+	bool lead = false;
+	while (*str) {
+		if(lead) lead = false;
+		else if(isKanji1(*str)) lead = true;
+		else if (*str==o) *str=n;
+		str++;
+	}
+}
+
 void strreplace(char * str,char o,char n) {
 	while (*str) {
 		if (*str==o) *str=n;
 		str++;
 	}
 }
+
 char *ltrim(char *str) { 
 	while (*str && isspace(*reinterpret_cast<unsigned char*>(str))) str++;
 	return str;
