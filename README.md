@@ -29,7 +29,7 @@ CentOS、Fedora の場合 xorg-x11-fonts-misc、Raspberry Pi の場合 xfonts-ba
 
 ### macOS  
 $ ./autogen.sh  
-$ ./configure LIBS="-liconv"
+$ ./configure LIBS="-liconv"  
 $ make  
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
