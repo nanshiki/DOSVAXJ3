@@ -31,6 +31,7 @@
 #include "callback.h"
 #include "support.h"
 #include "timer.h"
+#include "jfont.h"
 
 Bitu call_shellstop;
 bool insert;
@@ -433,7 +434,7 @@ void DOS_Shell::Run(void) {
 			InputCommand(input_line);
 			LineInputFlag = false;
 			ParseLine(input_line);
-			if(input_line[0] != 0) {
+			if(input_line[0] != 0 || CheckStayVz()) {
 				if (echo && !bf) WriteOut_NoParsing("\n");
 			}
 		}
