@@ -72,6 +72,7 @@ bool DOS_IOCTL(void) {
 			return false;
 		} else {
 			if (Files[handle]->GetInformation() & 0x8000) {	//Check for device
+				((DOS_Device *)(Files[handle]))->SetInformation(reg_dx);
 				reg_al=(Bit8u)(Files[handle]->GetInformation() & 0xff);
 			} else {
 				DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);

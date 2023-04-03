@@ -24,6 +24,7 @@
 #include "mem.h"
 #include "regs.h"
 #include "dos_inc.h"
+#include "cpu.h"
 #include <list>
 
 
@@ -200,8 +201,10 @@ static bool DOS_MultiplexFunctions(void) {
 		else if (reg_bx == 0x18) return true;	// idle callout
 		else return false;
 	case 0x1680:	/*  RELEASE CURRENT VIRTUAL MACHINE TIME-SLICE */
-		//TODO Maybe do some idling but could screw up other systems :)
-		return true; //So no warning in the debugger anymore
+		CPU_STI();
+		CPU_HLT(reg_eip);
+		reg_al = 0;
+		return true;
 	case 0x1689:	/*  Kernel IDLE CALL */
 	case 0x168f:	/*  Close awareness crap */
 	   /* Removing warning */

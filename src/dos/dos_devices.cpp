@@ -258,6 +258,12 @@ Bit16u DOS_Device::GetInformation(void) {
 	return Devices[devnum]->GetInformation();
 }
 
+void DOS_Device::SetInformation(uint16_t info) {
+	if(Devices[devnum]->IsName("CON") && !(Devices[devnum]->GetInformation() & EXT_DEVICE_BIT)) {
+		Devices[devnum]->SetInformation(info);
+	}
+}
+
 bool DOS_Device::ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode) { 
 	return Devices[devnum]->ReadFromControlChannel(bufptr,size,retcode);
 }
