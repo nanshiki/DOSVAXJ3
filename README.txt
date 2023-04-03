@@ -167,6 +167,10 @@ hosttime       DOS function (ah=2ah, 2ch) で日時をホスト OS から取得�
                false で以前通り tick 値から算出、true でホスト OS から取得と
                なります。
 
+idle           true とすると int 28h や int 2fh ax=1680h といったアイドル割り
+               込みでHLT を実行し、コマンドプロンプト等で CPU 使用率が下がる
+               ようになります。
+
 　DOSVAXJ3 関連の初期設定値は下記の通りです。
 [sdl]
 clipboardmodifier=alt
@@ -190,6 +194,7 @@ automount=true
 autoreload=cmd
 hosttime=false
 lfn_space=false
+idle=true
 
 ●Windows 版起動時オプション
 　Windows 版はデフォルトでステータスウインドウ非表示となっています。
@@ -546,7 +551,7 @@ mount したディレクトリ上の dir で表示されていなかったのを
 やシェル、CON デバイス等)と干渉して修正が難しい項目については適用していません。
 　DOSVAX の Build 4467AX13 の一部の修正を適用しました。PS/55 関連については対
 応の予定はありません。
-　DOSBox-X のデバイスドライバ read/write の修正を適用しました。(Dosdev #3347)
+　DOSBox-X のデバイスドライバ read/write の修正を適用しました。(DOSBox-X #3347)
 
 ・build JP220408 (2022/4/8)
 　ビデオカードが S3 の設定でも V-Text で XGA/SXGA の モードが使用可能になるよ
@@ -577,6 +582,21 @@ mount したディレクトリ上の dir で表示されていなかったのを
 　Vz 常駐中に more の出力の改行が二重になるのを修正しました。
 　ロングファイルネームにスペースが入っている場合でも開けるようにするオプショ
 ン lfn_space を追加しました。
+
+・build JP230403 (2023/4/3)
+　int 21h ax=7160h で末尾に \ があるパス名が渡された場合、返されるパス名の末
+尾に \ が付いていなかったのを修正しました。(DOSBox-X #4087)
+　int 21h ax=7160h cl=00h で返されるパス名が "" で囲われていたのを修正しまし
+た。(DOSBox-X #4087)
+　DOS の標準入力で Raw mode が設定できるように修正しました。(DOSBox-X #4098,
+#4101)
+　DOS の標準入力のキー入力待ち時に int 28h を呼び出すように修正し、int 28h,
+int 2fh ax=1680h といったアイドル割り込みで HLT を実行し CPU 使用率を下げる
+ように修正しました。(DOSBox-X #3985)
+　ロングファイルネーム有効時に +,;=[] が入った名前のファイルやディレクトリが
+使用できなかったのを修正しました。
+　Windows で x64 ビルドを追加し、64bit 版の実行ファイルを提供開始しました。
+　このバージョンから Windows 版は Visual Studio 2022 でビルドしています。
 
 ●ライセンス
 　GPL v2
