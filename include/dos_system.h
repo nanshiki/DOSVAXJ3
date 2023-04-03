@@ -113,6 +113,7 @@ public:
 	virtual bool	Seek(Bit32u * pos,Bit32u type);
 	virtual bool	Close();
 	virtual Bit16u	GetInformation(void);
+	virtual void	SetInformation(uint16_t info);
 	virtual bool	ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
 	virtual bool	WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
 	virtual Bit8u	GetStatus(bool input_flag);
