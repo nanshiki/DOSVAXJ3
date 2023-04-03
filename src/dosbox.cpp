@@ -900,6 +900,9 @@ void DOSBOX_Init(void) {
 	Pbool = secprop->Add_bool("hosttime",Property::Changeable::OnlyAtStart, false);
 	Pbool->Set_help("Use host OS time in DOS functions(0x2a/0x2c).");
 
+	Pbool = secprop->Add_bool("idle",Property::Changeable::OnlyAtStart, true);
+	Pbool->Set_help("If set, DOSVAXJ3 can lower the host system's CPU load when a supported guest program is idle.");
+
 	// Mscdex
 	secprop->AddInitFunction(&MSCDEX_Init);
 	secprop->AddInitFunction(&DRIVES_Init);
