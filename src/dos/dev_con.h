@@ -38,6 +38,9 @@ public:
 	bool Close();
 	void ClearAnsi(void);
 	Bit16u GetInformation(void);
+	void SetInformation(uint16_t info) {
+		binary = info & 0x20;
+	}
 	bool ReadFromControlChannel(PhysPt /*bufptr*/,Bit16u /*size*/,Bit16u * /*retcode*/){return false;}
 	bool WriteToControlChannel(PhysPt /*bufptr*/,Bit16u /*size*/,Bit16u * /*retcode*/){return false;}
 	void ClearKeyMap() {
@@ -65,6 +68,7 @@ private:
 		bool key;
 	} ansi;
 	Bit16u keepcursor;
+	Bit16u binary;
 
 	struct key_change {
 		Bit16u	src;
@@ -91,6 +95,17 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 		readcache=0;
 	}
 	while (*size>count) {
+		if(dos.idle_enabled) {
+			while(true) {
+				reg_ah = (IS_EGAVGA_ARCH) ? 0x11 : 0x01;
+				CALLBACK_RunRealInt(0x16);
+				if(GETFLAG(ZF) == 0) {
+					break;
+				}
+				CALLBACK_RunRealInt(0x28);
+			}
+		}
+
 		reg_ah=(IS_EGAVGA_ARCH)?0x10:0x0;
 		CALLBACK_RunRealInt(0x16);
 		switch(reg_al) {
@@ -177,7 +192,7 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 				}
 			}
 			data[count++]=reg_al;
-			if (*size > 1 && reg_al == 3) {
+			if (*size > 1 && reg_al == 3 && !binary) {
 				dos.errorcode=77;
 				*size=count;
 				reg_ax=oldax;
@@ -185,7 +200,7 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 			}
 			break;
 		}
-		if(dos.echo) { //what to do if *size==1 and character is BS ?????
+		if(dos.echo && !binary) { //what to do if *size==1 and character is BS ?????
 			if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
 				if(LineInputFlag && CheckHat(reg_al)) {
 					Bit8u ch = reg_al + 0x40;
@@ -583,8 +598,8 @@ Bit16u device_CON::GetInformation(void) {
 	Bit16u head=mem_readw(BIOS_KEYBOARD_BUFFER_HEAD);
 	Bit16u tail=mem_readw(BIOS_KEYBOARD_BUFFER_TAIL);
 
-	if ((head==tail) && !readcache) return 0x80D3;	/* No Key Available */
-	if (readcache || real_readw(0x40,head)) return 0x8093;		/* Key Available */
+	if ((head==tail) && !readcache) return 0x80D3 | binary;	/* No Key Available */
+	if (readcache || real_readw(0x40,head)) return 0x8093 | binary;		/* Key Available */
 
 	/* remove the zero from keyboard buffer */
 	Bit16u start=mem_readw(BIOS_KEYBOARD_BUFFER_START);
@@ -592,7 +607,7 @@ Bit16u device_CON::GetInformation(void) {
 	head+=2;
 	if (head>=end) head=start;
 	mem_writew(BIOS_KEYBOARD_BUFFER_HEAD,head);
-	return 0x80D3; /* No Key Available */
+	return 0x80D3 | binary; /* No Key Available */
 }
 
 device_CON::device_CON() {
@@ -606,6 +621,7 @@ device_CON::device_CON() {
 	ansi.warned=false;
 	ansi.key=false;
 	ClearAnsi();
+	binary = 0;
 }
 
 void device_CON::ClearAnsi(void){
