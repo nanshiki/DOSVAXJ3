@@ -41,6 +41,7 @@
 
 int fileInfoCounter = 0;
 
+extern bool filename_not_8x3(const char *n);
 bool isKanji1(Bit8u chr) { return (chr >= 0x81 && chr <= 0x9f) || (chr >= 0xe0 && chr <= 0xfc); }
 bool isKanji2(Bit8u chr) { return (chr >= 0x40 && chr <= 0x7e) || (chr >= 0x80 && chr <= 0xfc); }
 
@@ -545,6 +546,18 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 		}
 	}
 #endif
+	if (strcmp(tmpName, ".") && strcmp(tmpName, "..") && filename_not_8x3(tmpName)) {
+		createShort = true;
+		unsigned int i = 0;
+		bool lead = false;
+		while (tmpName[i] != 0) {
+			if (tmpName[i]<=32||tmpName[i]==127||tmpName[i]=='"'||tmpName[i]=='+'||tmpName[i]=='='||tmpName[i]==','||tmpName[i]==';'||tmpName[i]==':'||tmpName[i]=='<'||tmpName[i]=='>'||((tmpName[i]=='['||tmpName[i]==']'||tmpName[i]=='|'||tmpName[i]=='\\')&&(!lead))||tmpName[i]=='?'||tmpName[i]=='*') tmpName[i]='_';
+			if (lead) lead = false;
+			else if (isKanji1(tmpName[i])) lead = true;
+			i++;
+		}
+	}
+
 	// Should shortname version be created ?
 	createShort = createShort || (len>8);
 	if (!createShort) {

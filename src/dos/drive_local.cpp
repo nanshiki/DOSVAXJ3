@@ -1008,8 +1008,8 @@ bool localDrive::MakeDir(char * dir) {
 	ChangeUtf8FileName(newdir);
 #endif
     std::string newstr = newdir;
-    dirCache.GetExpandName(newdir);
-    const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
+    const char* temp_name = dirCache.GetExpandName(newdir);
+    const host_cnv_char_t* host_name = CodePageGuestToHost(temp_name);
     int temp=0;
 #if defined (WIN32)						/* MS Visual C++ */
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
@@ -1035,8 +1035,8 @@ bool localDrive::RemoveDir(char * dir) {
 	ChangeUtf8FileName(newdir);
 #endif
     std::string newstr = newdir;
-    dirCache.GetExpandName(newdir);
-    const host_cnv_char_t* host_name = CodePageGuestToHost(newdir);
+    const char* temp_name = dirCache.GetExpandName(newdir);
+    const host_cnv_char_t* host_name = CodePageGuestToHost(temp_name);
     int temp=0;
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
     if (host_name != NULL)
