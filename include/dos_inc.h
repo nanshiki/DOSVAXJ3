@@ -676,6 +676,7 @@ struct DOS_Block {
 	bool set_dosv_enabled;
 	bool im_enable_flag;
 	bool host_time_flag;
+	bool idle_enabled;
 };
 
 extern DOS_Block dos;
