@@ -382,6 +382,11 @@ Bitu CALLBACK_SetupExtra(Bitu callback, Bitu type, PhysPt physAddress, bool use_
 		for (Bitu i=0;i<=0x0b;i++) phys_writeb(physAddress+0x02+i,0x90);
 		phys_writew(physAddress+0x0e,(Bit16u)0xedeb);	//jmp callback
 		return (use_cb?0x10:0x0c);
+	case CB_INT28:	// DOS idle
+		phys_writeb(physAddress+0x00,(Bit8u)0xFB);		// STI
+		phys_writeb(physAddress+0x01,(Bit8u)0xF4);		// HLT
+		phys_writeb(physAddress+0x02,(Bit8u)0xcf);		// An IRET Instruction
+		return (0x04);
 	case CB_INT29:	// fast console output
 		if (use_cb) {
 			phys_writeb(physAddress+0x00,(Bit8u)0xFE);	//GRP 4
