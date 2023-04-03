@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#define	BUILD_VERSION	"JP230216"
+#define	BUILD_VERSION	"JP230403"
 #ifdef VERSION
 #undef VERSION
 #endif
@@ -88,6 +88,10 @@ extern bool SDLNetInited, uselfn, autolfn;
 	typedef unsigned int DWORD;
 	typedef   signed int HANDLE;
 #define INVALID_HANDLE_VALUE -1
+#else
+#ifdef _M_X64
+#pragma warning(disable : 4244)
+#endif
 #endif
 
 #endif /* DOSBOX_DOSBOX_H */
