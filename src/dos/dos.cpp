@@ -1889,25 +1889,30 @@ static Bitu DOS_21Handler(void) {
 				}
 				break;		
 			case 0x60:		/* LFN GetName */
+			{
 				MEM_StrCopy(SegPhys(ds)+reg_si,name1+1,DOSNAMEBUF);
+				bool tail = check_last_split_char(name1 + 1, strlen(name1 + 1), '\\');
 				*name1='\"';
 				p=name1+strlen(name1);
 				while (*p==' '||*p==0) p--;
 				*(p+1)='\"';
 				*(p+2)=0;
 				if (DOS_Canonicalize(name1,name2)) {
-					strcpy(name1,"\"");
-					strcat(name1,name2);
-					strcat(name1,"\"");
+					if(reg_cl != 0) {
+						strcpy(name1,"\"");
+						strcat(name1,name2);
+						strcat(name1,"\"");
+					}
 					switch(reg_cl)		{
 						case 0:		// Canonoical path name
-							strcpy(name2,name1);
+							if(tail) strcat(name2, "\\");
 							MEM_BlockWrite(SegPhys(es)+reg_di,name2,(Bitu)(strlen(name2)+1));
 							reg_ax=0;
 							CALLBACK_SCF(false);
 							break;
 						case 1:		// SFN path name
 							if (DOS_GetSFNPath(name1,name2,false)) {
+								if(tail) strcat(name2, "\\");
 								MEM_BlockWrite(SegPhys(es)+reg_di,name2,(Bitu)(strlen(name2)+1));
 								reg_ax=0;
 								CALLBACK_SCF(false);
@@ -1918,6 +1923,7 @@ static Bitu DOS_21Handler(void) {
 							break;
 						case 2:		// LFN path name
 							if (DOS_GetSFNPath(name1,name2,true)) {
+								if(tail) strcat(name2, "\\");
 								MEM_BlockWrite(SegPhys(es)+reg_di,name2,(Bitu)(strlen(name2)+1));
 								reg_ax=0;
 								CALLBACK_SCF(false);
@@ -1934,6 +1940,7 @@ static Bitu DOS_21Handler(void) {
 					CALLBACK_SCF(true);
 				}
 				break;
+			}
 			case 0x6c:		/* LFN Create */
 				MEM_StrCopy(SegPhys(ds)+reg_si,name1+1,DOSNAMEBUF);
 				*name1='\"';
@@ -2654,7 +2661,13 @@ public:
 		callback[4].Install(DOS_27Handler,CB_IRET,"DOS Int 27");
 		callback[4].Set_RealVec(0x27);
 
-		callback[5].Install(NULL,CB_IRET,"DOS Int 28");
+		Section_prop *section=static_cast<Section_prop *>(configuration);
+		dos.idle_enabled = section->Get_bool("idle");
+		if(dos.idle_enabled) {
+			callback[5].Install(NULL,CB_INT28,"DOS Int 28");
+		} else {
+			callback[5].Install(NULL,CB_IRET,"DOS Int 28");
+		}
 		callback[5].Set_RealVec(0x28);
 
 		if(IS_J3_ARCH || dos.set_ax_enabled || IS_DOSV) {
@@ -2699,7 +2712,6 @@ public:
 
 		dos.direct_output=false;
 
-		Section_prop *section=static_cast<Section_prop *>(configuration);
 		dos.host_time_flag = section->Get_bool("hosttime");
 	}
 	~DOS(){
