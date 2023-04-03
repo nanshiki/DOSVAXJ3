@@ -674,7 +674,7 @@ void CSerialModem::Timer2(void) {
 	// Check for eventual break command
 	if (!commandmode) {
 		cmdpause++;
-		if (cmdpause > (20 * reg[MREG_GUARD_TIME])) {
+		if (cmdpause > (20U * reg[MREG_GUARD_TIME])) {
 			if (plusinc == 0) {
 				plusinc = 1;
 			}

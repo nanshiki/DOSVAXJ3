@@ -1737,7 +1737,7 @@ Bit32u DEBUG_CheckKeys(void) {
 					safe_strncpy(codeViewData.suspInputStr, codeViewData.inputStr, sizeof(codeViewData.suspInputStr));
 				}
 				safe_strncpy(codeViewData.inputStr,(*--histBuffPos).c_str(),sizeof(codeViewData.inputStr));
-				codeViewData.inputPos = strlen(codeViewData.inputStr);
+				codeViewData.inputPos = (int)strlen(codeViewData.inputStr);
 				break;
 		case KEY_F(7):	// next command (f1-f4 generate rubbish at my place)
 		case KEY_F(4):	// next command
@@ -1748,7 +1748,7 @@ Bit32u DEBUG_CheckKeys(void) {
 					// copy suspInputStr back into inputStr
 					safe_strncpy(codeViewData.inputStr, codeViewData.suspInputStr, sizeof(codeViewData.inputStr));
 				}
-				codeViewData.inputPos = strlen(codeViewData.inputStr);
+				codeViewData.inputPos = (int)strlen(codeViewData.inputStr);
 				break;
 		case KEY_F(5):	// Run Program
 				debugging=false;
@@ -1794,7 +1794,7 @@ Bit32u DEBUG_CheckKeys(void) {
 					histBuffPos = histBuff.end();
 					ClearInputLine();
 				} else {
-					codeViewData.inputPos = strlen(codeViewData.inputStr);
+					codeViewData.inputPos = (int)strlen(codeViewData.inputStr);
 				}
 				break;
 		case KEY_BACKSPACE: //backspace (linux)
@@ -2444,7 +2444,7 @@ static void DrawVariables(void) {
 		}
 
 		if (varchanges) {
-			int y = i / 3;
+			int y = (int)(i / 3);
 			int x = (i % 3) * 26;
 			mvwprintw(dbg.win_var, y, x, dv->GetName());
 			mvwprintw(dbg.win_var, y,  (x + DEBUG_VAR_BUF_LEN + 1) , buffer);

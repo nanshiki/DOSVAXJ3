@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <curses.h>
 #include <string.h>
 
 #include "cross.h"

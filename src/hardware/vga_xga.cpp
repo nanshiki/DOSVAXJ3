@@ -674,7 +674,7 @@ void XGA_DrawWait(Bitu val, Bitu len) {
 							Bitu mixmode;
 							
 							// This formula can rule the world ;)
-							Bitu mask = 1 << ((((n&0xF8)+(8-(n&0x7)))-1)+chunksize*k);
+							Bitu mask = (Bitu)1ul << (Bitu)((((n & 0xF8u) + (8u - (n & 0x7u))) - 1u) + chunksize * k);
 							if(val&mask) mixmode = xga.foremix;
 							else mixmode = xga.backmix;
 							

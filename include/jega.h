@@ -25,7 +25,7 @@
 */
 
 /* JEGA internal registers */
-typedef struct {
+typedef struct JEGA_DATA_t {
 	Bitu RMOD1//b9: Mode register 1
 		, RMOD2//ba: Mode register 2
 		, RDAGS//bb: ANK Group sel (not implemented)

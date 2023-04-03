@@ -239,7 +239,7 @@ bool DOS_MakeName(char const * const name,char * const fullname,Bit8u * drive) {
 						if ((c>='A') && (c<='Z')) continue;
 						if ((c>='0') && (c<='9')) continue;
 						switch (c) {
-						case '+':	case '[':	case ']':	case ' ':
+						case '+':	case '[':	case ']':	case ' ': case '=': case ';': case ',':
 							if (!uselfn||force) {
 								DOS_SetError(DOSERR_PATH_NOT_FOUND);
 								return false;

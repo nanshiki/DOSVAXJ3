@@ -59,6 +59,7 @@
 
 #if C_CLIPBOARD
  #if !defined(C_NOPDCLIP)
+  #undef MOUSE_MOVED
   #include <curses.h>
  #endif
 #endif
@@ -2126,7 +2127,7 @@ void ClipboardCopy(int all) {
 #endif
 	exec(cmd.c_str(),false);
 #else
-	PDC_setclipboard(text,strlen(text));
+	PDC_setclipboard(text,(long)strlen(text));
 #endif
 }
 #endif

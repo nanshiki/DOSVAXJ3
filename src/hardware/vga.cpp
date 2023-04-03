@@ -118,16 +118,15 @@ void VGA_SetClock(Bitu which,Bitu target) {
 	best.m=1;
 	best.n=1;
 	Bitu n,r;
-	Bits m;
 
 	for (r = 0; r <= 3; r++) {
-		Bitu f_vco = target * (1 << r);
+        Bitu f_vco = target * ((Bitu)1u << (Bitu)r);
 		if (MIN_VCO <= f_vco && f_vco < MAX_VCO) break;
     }
 	for (n=1;n<=31;n++) {
-		m=(target * (n + 2) * (1 << r) + (S3_CLOCK_REF/2)) / S3_CLOCK_REF - 2;
+        Bits m=(Bits)((target * (n + 2u) * ((Bitu)1u << (Bitu)r) + (S3_CLOCK_REF / 2u)) / S3_CLOCK_REF) - 2;
 		if (0 <= m && m <= 127)	{
-			Bitu temp_target = S3_CLOCK(m,n,r);
+			Bitu temp_target = (Bitu)S3_CLOCK(m,n,r);
 			Bits err = target - temp_target;
 			if (err < 0) err = -err;
 			if (err < best.err) {

@@ -19,6 +19,7 @@
 /* Local Debug Function */
 
 
+#undef MOUSE_MOVED
 #include <curses.h>
 #include "mem.h"
 

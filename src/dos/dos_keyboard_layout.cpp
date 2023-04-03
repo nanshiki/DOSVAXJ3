@@ -839,7 +839,7 @@ Bitu keyboard_layout::read_codepage_file(const char* codepage_file_name, Bit32s 
 
 				// read in compressed CPX-file
 				fseek(tempfile, 0, SEEK_SET);
-				size_of_cpxdata=(Bitu)fread(cpi_buf, sizeof(Bit8u), 65536, tempfile);
+				size_of_cpxdata=(Bit32u)fread(cpi_buf, sizeof(Bit8u), 65536, tempfile);
 			}
 		} else {
 			// standard uncompressed cpi-file

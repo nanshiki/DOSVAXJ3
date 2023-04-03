@@ -715,7 +715,7 @@ bool Config::PrintConfig(char const * const configfilename) const {
 		if (sec) {
 			Property *p;
 			size_t i = 0, maxwidth = 0;
-			while ((p = sec->Get_prop(i++))) {
+			while ((p = sec->Get_prop((int)(i++)))) {
 				size_t w = strlen(p->propname.c_str());
 				if (w > maxwidth) maxwidth = w;
 			}
@@ -723,7 +723,7 @@ bool Config::PrintConfig(char const * const configfilename) const {
 			char prefix[80];
 			int intmaxwidth = (maxwidth>60)?60:static_cast<int>(maxwidth);
 			snprintf(prefix,80, "\n# %*s    ", intmaxwidth, "");
-			while ((p = sec->Get_prop(i++))) {
+			while ((p = sec->Get_prop((int)(i++)))) {
 				std::string help = p->Get_help();
 				std::string::size_type pos = std::string::npos;
 				while ((pos = help.find('\n', pos+1)) != std::string::npos) {
@@ -1175,7 +1175,7 @@ Bit16u CommandLine::Get_arglength() {
 	if (cmds.empty()) return 0;
 	Bit16u i=1;
 	for(cmd_it it = cmds.begin();it != cmds.end(); ++it)
-		i+=(*it).size() + 1;
+		i+=(Bit16u)((*it).size() + 1);
 	return --i;
 }
 

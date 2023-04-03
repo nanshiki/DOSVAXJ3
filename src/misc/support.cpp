@@ -62,7 +62,7 @@ char *strchr_dbcs(char *str, char ch) {
         for (size_t i=0; i<strlen(str); i++) {
             if (lead) lead = false;
             else if (isKanji1(str[i])) lead = true;
-            else if (str[i] == ch) {lastpos = i;break;}
+            else if (str[i] == ch) {lastpos = (int)i;break;}
         }
         return lastpos>-1 ? str + lastpos : NULL;
     } else
@@ -76,7 +76,7 @@ char *strrchr_dbcs(char *str, char ch) {
         for (size_t i=0; i<strlen(str); i++) {
             if (lead) lead = false;
             else if (isKanji1(str[i])) lead = true;
-            else if (str[i] == ch) lastpos = i;
+            else if (str[i] == ch) lastpos = (int)i;
         }
         return lastpos>-1 ? str + lastpos : NULL;
     } else

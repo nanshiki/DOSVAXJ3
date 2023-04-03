@@ -51,7 +51,7 @@ enum VGAModes {
 #define MAX_VCO 360000
 
 #define S3_CLOCK_REF	14318	/* KHz */
-#define S3_CLOCK(_M,_N,_R)	((S3_CLOCK_REF * ((_M) + 2)) / (((_N) + 2) * (1 << (_R))))
+#define S3_CLOCK(_M,_N,_R)	((S3_CLOCK_REF * (((Bitu)_M) + 2ul)) / ((((Bitu)_N) + 2ul) * ((Bitu)1ul << ((Bitu)_R))))
 #define S3_MAX_CLOCK	150000	/* KHz */
 
 #define S3_XGA_1024		0x00

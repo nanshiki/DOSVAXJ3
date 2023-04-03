@@ -1664,7 +1664,7 @@ public:
 		wmod=_wmod;
 	}
 	void Active(bool yesno) {
-		if (yesno) mapper.mods|=(1 << (wmod-1));
+		if (yesno) mapper.mods |= ((Bitu)1u << (wmod - 1u));
 		else mapper.mods&=~(1 << (wmod-1));
 	};
 protected:
@@ -2323,7 +2323,7 @@ static void CreateDefaultBinds(void) {
 		if(DefaultKeys[i].key == SDLK_MENU && !IS_AX_ARCH) {
 			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,SDLK_HENKAN);
 		} else {
-			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,DefaultKeys[i].key);
+			sprintf(buffer,"key_%s \"key %d\"",DefaultKeys[i].eventend,(int)DefaultKeys[i].key);
 		}
 		CreateStringBind(buffer);
 		i++;

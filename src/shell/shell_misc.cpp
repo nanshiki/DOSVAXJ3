@@ -62,7 +62,7 @@ void DOS_Shell::ShowPrompt(void) {
 			if (len+strlen(dir)+4 < sizeof(prompt))
 				{
 				sprintf(prompt+len, "%c:\\%s>", DOS_GetDefaultDrive()+'A', dir);
-				len += strlen(dir)+3;
+				len += (int)strlen(dir)+3;
 				envPrompt++;
 				}
 			else

@@ -254,9 +254,9 @@ Bitu DmaController::ReadControllerReg(Bitu reg,Bitu /*len*/) {
 		ret=0;
 		for (Bit8u ct=0;ct<4;ct++) {
 			chan=GetChannel(ct);
-			if (chan->tcount) ret|=1 << ct;
+			if (chan->tcount) ret|=(Bitu)1U << ct;
 			chan->tcount=false;
-			if (chan->request) ret|=1 << (4+ct);
+			if (chan->request) ret|=(Bitu)1U << (4U+ct);
 		}
 		return ret;
 	default:

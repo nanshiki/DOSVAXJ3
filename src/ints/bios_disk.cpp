@@ -168,7 +168,7 @@ Bit8u imageDisk::Read_AbsoluteSector(Bit32u sectnum, void * data) {
 
 	if (last_action==WRITE || bytenum!=current_fpos) fseek(diskimg,bytenum,SEEK_SET);
 	size_t ret=fread(data, 1, sector_size, diskimg);
-	current_fpos=bytenum+ret;
+	current_fpos=(Bit32u)(bytenum+ret);
 	last_action=READ;
 
 	return 0x00;
@@ -192,7 +192,7 @@ Bit8u imageDisk::Write_AbsoluteSector(Bit32u sectnum, void *data) {
 
 	if (last_action==READ || bytenum!=current_fpos) fseek(diskimg,bytenum,SEEK_SET);
 	size_t ret=fwrite(data, 1, sector_size, diskimg);
-	current_fpos=bytenum+ret;
+	current_fpos=(Bit32u)(bytenum+ret);
 	last_action=WRITE;
 
 	return ((ret>0)?0x00:0x05);
