@@ -12,7 +12,8 @@ DOSBox [README](https://github.com/nanshiki/DOSVAXJ3/blob/master/README_DOSBox.t
 
 ## ビルド
 ### Windows  
-Visual Studio の 2015 以降で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
+Visual Studio 2022 で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
+以前の Visual Studio でビルドする場合は、プラットフォームツールセットを対応するバージョンに変更してください。  
 SDL_net, zlib, libpng, pdcurses 等のライブラリをビルドし、リンクできるようにしておいてください。  
 
 ### Linux  
