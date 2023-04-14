@@ -45,6 +45,8 @@ static Bit8u fep_line = 0x01;
 
 bool CtrlCFlag = false;
 
+extern bool keyboard_jp_flag;
+
 /* Nice table from BOCHS i should feel bad for ripping this */
 #define none 0
 typedef struct {
@@ -71,7 +73,7 @@ static scancode_tbl scan_to_scanascii[MAX_SCAN_CODE + 1] = {
 	  { 0x0a39, 0x0a28,   none, 0x8000 ,0x0ad6, 0x0aae }, /* 0a 9( */
 	  { 0x0b30, 0x0b29,   none, 0x8100 ,0x0bdc, 0x0ba6 }, /* 0b 0) */
 	  { 0x0c2d, 0x0c5f, 0x0c1f, 0x8200 ,0x0cce, 0x0c00 }, /* 0c -_ */
-	  { 0x0d3d, 0x0d2b,   none, 0x8300 ,0x0dcd, 0x0d00 }, /* 0d =+ */
+	  { 0x0d3d, 0x0d2b, 0x0d00, 0x8300 ,0x0dcd, 0x0d00 }, /* 0d =+ */
 	  { 0x0e08, 0x0e08, 0x0e7f, 0x0ef0 ,0x0e08, 0x0e08 }, /* 0e backspace */
 	  { 0x0f09, 0x0f00, 0x9400,   none ,0x0f09, 0x0f09 }, /* 0f tab */
 	  { 0x1071, 0x1051, 0x1011, 0x1000 ,0x10c0, 0x1000 }, /* 10 Q */
@@ -176,7 +178,7 @@ static scancode_tbl scan_to_scanascii[MAX_SCAN_CODE + 1] = {
 	  { 0xb600, 0xb700, 0xb800, 0xb900 , none,   none }, //70 katakana hiragana
 	  { none,   none,   none,   none ,   none,   none }, //71
 	  { none,   none,   none,   none ,   none,   none }, //72
-	  { none,   none,   none,   none ,   none,   none }, //73
+	  { none,   none,   0x731c, 0x73ff,  none,   none }, //73 ro
 	  { none,   none,   none,   none ,   none,   none }, //74
 	  { none,   none,   none,   none ,   none,   none }, //75
 	  { none,   none,   none,   none ,   none,   none }, //76
@@ -185,6 +187,8 @@ static scancode_tbl scan_to_scanascii[MAX_SCAN_CODE + 1] = {
 	  { 0xa700, 0xa800, 0xa900, 0xaa00,  none,   none }, //79 henkan
 	  { none,   none,   none,   none ,   none,   none }, //7a
 	  { 0xab00, 0xac00, 0xad00, 0xae00 , none,   none }, //7b muhenkan
+	  { none,   none,   none,   none ,   none,   none }, //7c
+	  { none,   none,   0x7d1c, 0x7dff,  none,   none }, //7d yen
       };
 
 #include <queue>
@@ -533,7 +537,7 @@ static Bitu IRQ1_Handler(void) {
 
 	default: /* Normal Key */
 normal_key:
-		Bit16u asciiscan;
+		Bit16u asciiscan = 0;
 		/* Now Handle the releasing of keys and see if they match up for a code */
 		/* Handle the actual scancode */
 		if (scancode & 0x80) goto irq1_end;
@@ -545,7 +549,18 @@ normal_key:
 			asciiscan=(scancode << 8) | ascii;
 #endif
 		} else if (flags1 & 0x04) {					/* Ctrl is being pressed */
-			asciiscan=scan_to_scanascii[scancode].control;
+			if(keyboard_jp_flag) {
+				if(scancode == 0x1b) {
+					asciiscan = 0x1b1b;
+				} else if(scancode == 0x2b) {
+					asciiscan = 0x2b1d;
+				} else if(scancode == 0x1a || scancode == 0x27 || scancode == 0x28 || (scancode >= 0x33 && scancode <= 0x35)) {
+					asciiscan = (Bit16u)((scancode << 8) | 0xff);
+				}
+			}
+			if(asciiscan == 0) {
+				asciiscan=scan_to_scanascii[scancode].control;
+			}
 		}
 		else if ((flags1 & 0x03) && (kanafl & 0x02)) { //for AX: Kana is active + Shift is being pressed
 			asciiscan = scan_to_scanascii[scancode].kana_shift; //for AX
