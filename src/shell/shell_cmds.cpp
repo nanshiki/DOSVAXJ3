@@ -1632,10 +1632,21 @@ void DOS_Shell::CMD_CHEV(char *args)
 				new_mode = 0x03;
 			}
 			japanese_flag = true;
-		} else if(!strcasecmp(word, "vt") || !strcasecmp(word, "vt2")) {
+		} else if(!strncasecmp(word, "vt", 2)) {
+			int vtext_no = 0;
+			new_mode = 0x70;
 			status = "DOS/V(V-Text)";
 			japanese_flag = true;
-			new_mode = !strcasecmp(word, "vt") ? 0x70 : 0x78;
+			if(word[2] >= '2' && word[2] <= '4') {
+				vtext_no = word[2] - '1';
+				new_mode = 0x77 + vtext_no;
+			}
+			Bit8u row = 0;
+			word = StripWord(args);
+			if(word) {
+				row = (Bit8u)atoi(word);
+			}
+			DOSV_SetVTextRows(vtext_no, row);
 		} else if(!strcasecmp(word, "j3")) {
 			if(IS_J3_ARCH) {
 				status = "J-3100";
@@ -1659,7 +1670,7 @@ void DOS_Shell::CMD_CHEV(char *args)
 				reg_ax = new_mode;
 				CALLBACK_RunRealInt(0x10);
 			}
-			if(new_mode == 0x78) {
+			if(new_mode >= 0x78 && new_mode <= 0x78 + VTEXT_MODE_COUNT - 1) {
 				new_mode = 0x70;
 			}
 			WriteOut(MSG_Get("SHELL_CMD_CHEV_CHANGE"), status, new_mode);

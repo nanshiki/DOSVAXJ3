@@ -66,14 +66,15 @@ static Bitu INT10_Handler(void) {
 	case 0x00:								/* Set VideoMode */
 		Mouse_BeforeNewVideoMode(true);
 		SetTrueVideoMode(reg_al);
-		if(!IS_AX_ARCH && IS_DOS_JAPANESE && (reg_al == 0x03 || reg_al == 0x70 || reg_al == 0x72 || reg_al == 0x78)) {
+		if(!IS_AX_ARCH && IS_DOS_JAPANESE && (reg_al == 0x03 || reg_al == 0x70 || reg_al == 0x72 || (reg_al >= 0x78 && reg_al <= 0x78 + VTEXT_MODE_COUNT - 1))) {
 			Bit8u mode = reg_al;
 			if(reg_al == 0x03 || reg_al == 0x72) {
+				INT10_SetDOSVVtextRows(0, DOSV_VGA, 0);
 				INT10_SetVideoMode(0x12);
 				INT10_SetDOSVModeVtext(mode, DOSV_VGA);
-			} else if(reg_al == 0x70 || reg_al == 0x78) {
+			} else if(reg_al == 0x70 || (reg_al >= 0x78 && reg_al <= 0x78 + VTEXT_MODE_COUNT - 1)) {
 				mode = 0x70;
-				enum DOSV_VTEXT_MODE vtext_mode = DOSV_GetVtextMode((reg_al == 0x70) ? 0 : 1);
+				enum DOSV_VTEXT_MODE vtext_mode = DOSV_GetVtextMode((reg_al >= 0x78) ? (reg_al - 0x77) : 0);
 				if(vtext_mode == DOSV_VTEXT_XGA || vtext_mode == DOSV_VTEXT_XGA_24) {
 					if(svgaCard == SVGA_TsengET4K) {
 						INT10_SetVideoMode(0x37);
@@ -105,6 +106,7 @@ static Bitu INT10_Handler(void) {
 				INT10_SetJ3ModeCGA4(reg_al);
 				break;
 			}
+			DOSV_ResetVTextRows();
 			INT10_SetVideoMode(reg_al);
 		}
 		Mouse_AfterNewVideoMode(true);

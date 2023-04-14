@@ -28,6 +28,7 @@
 #include "jega.h"//for AX
 #include "j3.h"
 #include "jfont.h"
+#include "dosv.h"
 #include "render.h"
 #include "SDL_events.h"
 
@@ -43,8 +44,8 @@ extern bool image_boot_flag;
 
 VideoModeBlock ModeList_DOSV[]={
 /* mode  ,type     ,sw  ,sh  ,tw ,th ,cw,ch ,pt,pstart  ,plength,htot,vtot,hde,vde special flags */
-{ 0x003  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0	},
 { 0x070  ,M_EGA    ,640 ,480 ,80 ,30 ,8 ,16 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0	},
+{ 0x003  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0	},
 { 0x072  ,M_EGA    ,640 ,480 ,80 ,25 ,8 ,19 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,480 ,0	},
 };
 
@@ -1677,6 +1678,9 @@ dac_text16:
 		modeData.vtotal = CurMode->vtotal;
 		svga.set_video_mode(crtc_base, &modeData);
 	}
+	if(CurMode->vdispend > 1024) {
+		vga.config.line_compare = CurMode->vdispend - 1;
+	}
 
 	if(IS_J3_ARCH) {
 		if(mode == 0x74) {
@@ -1802,3 +1806,97 @@ void INT10_SetJ3ModeCGA4(Bit16u mode)
 		FinishSetMode(true);
 	}
 }
+
+#define	MIN_VTEXT_ROW	10
+const int default_vtext_rows[] = {
+	25, 30, 37, 48, 32, 64, 42
+};
+const int default_vtext_columns[] = {
+	80, 80, 100, 128, 85, 160, 106
+};
+const int max_vtext_rows[] = {
+	25, 51, 40, 80, 60, 75, 51
+};
+static int vtext_columns[VTEXT_MODE_COUNT];
+static int vtext_rows[VTEXT_MODE_COUNT];
+
+std::string INT10_GetDOSVVtextSettingText()
+{
+	char text[100], item[40];
+
+	strcpy(text, "\x084\x0a0          ");
+	for(int no = 0 ; no < VTEXT_MODE_COUNT ; no++) {
+		sprintf(item, "V-Text%d:%3d\x081\x07e%2d ", no + 1, vtext_columns[no], vtext_rows[no]);
+		strcat(text, item);
+	}
+	strcat(text, "\x084\x0a0\n");
+	return text;
+}
+
+void INT10_SetDOSVVtextRowsDefault(int vtext_no, enum DOSV_VTEXT_MODE vtext_mode, int rows)
+{
+	if(vtext_mode < DOSV_VTEXT_VGA) return;
+
+	if(rows < 1 || (IS_J3_ARCH && rows > default_vtext_rows[vtext_mode])) {
+		rows = default_vtext_rows[vtext_mode];
+	} else if(rows < MIN_VTEXT_ROW) {
+		rows = MIN_VTEXT_ROW;
+	} else if(rows > max_vtext_rows[vtext_mode]) {
+		rows = max_vtext_rows[vtext_mode];
+	}
+	vtext_columns[vtext_no] = default_vtext_columns[vtext_mode];
+	vtext_rows[vtext_no] = rows;
+}
+
+void INT10_SetDOSVVtextRows(int vtext_no, enum DOSV_VTEXT_MODE vtext_mode, int rows)
+{
+	VideoModeBlock *video_mode;
+	int mode, height;
+	if(vtext_mode == DOSV_VGA) {
+		mode = 0x12;
+	} else {
+		if(rows < 1 || (IS_J3_ARCH && rows > default_vtext_rows[vtext_mode])) {
+			rows = vtext_rows[vtext_no];
+		} else if(rows < MIN_VTEXT_ROW) {
+			rows = MIN_VTEXT_ROW;
+		} else if(rows > max_vtext_rows[vtext_mode]) {
+			rows = max_vtext_rows[vtext_mode];
+		}
+		video_mode = (svgaCard == SVGA_TsengET4K) ? ModeListVtext[vtext_mode] : ModeListVtextS3[vtext_mode];
+		video_mode->theight = rows;
+
+		mode = (vtext_mode == DOSV_VTEXT_VGA) ? 0x12 : 0x6a;
+		height = (vtext_mode == DOSV_VTEXT_XGA_24 || vtext_mode == DOSV_VTEXT_SXGA_24) ? 24 : 16;
+		if(svgaCard == SVGA_TsengET4K) {
+			if(vtext_mode == DOSV_VTEXT_XGA || vtext_mode == DOSV_VTEXT_XGA_24) {
+				mode = 0x37;
+			} else if(vtext_mode == DOSV_VTEXT_SXGA || vtext_mode == DOSV_VTEXT_SXGA_24) {
+				mode = 0x3d;
+			}
+		} else {
+			if(vtext_mode == DOSV_VTEXT_XGA || vtext_mode == DOSV_VTEXT_XGA_24) {
+				mode = 0x104;
+			} else if(vtext_mode == DOSV_VTEXT_SXGA || vtext_mode == DOSV_VTEXT_SXGA_24) {
+				mode = 0x106;
+			}
+		}
+	}
+	video_mode = (svgaCard == SVGA_TsengET4K) ? ModeList_VGA_Tseng : ModeList_VGA;
+	while(video_mode->mode != 0xffff) {
+		if(video_mode->mode == mode) {
+			if(vtext_mode == DOSV_VGA) {
+				video_mode->vdispend = 480;
+			} else if(vtext_mode == DOSV_VTEXT_SVGA && rows == 37) {
+				video_mode->vdispend = 600;
+			} else if(vtext_mode == DOSV_VTEXT_SXGA_24 && rows == 42) {
+				video_mode->vdispend = 1024;
+			} else {
+				video_mode->vdispend = rows * height;
+			}
+			break;
+		}
+		video_mode++;
+	}
+}
+
+

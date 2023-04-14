@@ -217,12 +217,12 @@ REN [drive:][path]ファイル1 ファイル2
 
 .
 :SHELL_CMD_CHEV_HELP_LONG
-CHEV [[JP][VT][J3][US]]
+CHEV [[JP][VT][VT1][VT3][VT3][VT4][J3][US]] [nn]
   JP: 日本語環境 DOS/V,AX
-  VT: 日本語環境 DOS/V(V-Text)
+  VT,VT1,VT2,VT3,VT4: 日本語環境 DOS/V(V-Text)
   J3: 日本語環境 J-3100
   US: 英語環境
-
+  nn: 行数 未指定の場合デフォルト値
 .
 :SHELL_CMD_CHEV_STATUS
 現在 %s 日本語環境です

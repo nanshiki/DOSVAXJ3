@@ -406,7 +406,9 @@ static void DOSBOX_RealInit(Section * sec) {
 			J3_SetConfig(section);
 		}
 		if(IS_J3_ARCH || IS_DOSV) {
-			SetGaijiConfig(section);
+			if(IS_J3_ARCH) {
+				SetGaijiConfig(section);
+			}
 			DOSV_SetConfig(section);
 		}
 		if(section->Get_bool("im")) {
@@ -483,7 +485,7 @@ void DOSBOX_Init(void) {
 #else
 	Pstring = secprop->Add_string("jfontname",Property::Changeable::OnlyAtStart,"\x082\x06c\x082\x072\x020\x083\x053\x083\x056\x083\x062\x083\x04e");
 	Pstring->Set_help("Font name used by Windows IME.");
-	Pbool = secprop->Add_bool("jfontuse20",Property::Changeable::OnlyAtStart,false);
+	Pbool = secprop->Add_bool("jfontuse20",Property::Changeable::OnlyAtStart,true);
 	Pbool->Set_help("Use a 20-dot font instead of Windows' built-in Japanese 24-dot font.");
 #endif
 	// gaiji
@@ -505,10 +507,17 @@ void DOSBOX_Init(void) {
 	Pbool = secprop->Add_bool("j3colordriver",Property::Changeable::WhenIdle,false);
 	Pbool->Set_help("If set to true, Toshiba Windows 3.1 CGA/EGA setup.exe can be used.");
 	// for DOS/V
-	Pstring = secprop->Add_path("vtext",Property::Changeable::OnlyAtStart,"svga");
-	Pstring->Set_help("V-text screen mode.");
-	Pstring = secprop->Add_path("vtext2",Property::Changeable::OnlyAtStart,"xga");
-	Pstring->Set_help("V-text screen mode 2.");
+	char name[16]; char help[80];
+	const char *vtext[] = { "svga", "xga", "sxga", "vga" };
+	for(int i = 0 ; i < VTEXT_MODE_COUNT ; i++) {
+		sprintf(name, "vtext%d", i + 1);
+		sprintf(help, "V-text screen mode %d.", i + 1);
+		Pmulti = secprop->Add_multi(name, Property::Changeable::OnlyAtStart, ",");
+		Pmulti->Set_help(help);
+		Pstring = Pmulti->GetSection()->Add_string("type", Property::Changeable::OnlyAtStart, vtext[i]);
+		Pmulti->SetValue(vtext[i]);
+		Pint = Pmulti->GetSection()->Add_int("rows", Property::Changeable::OnlyAtStart, 0);
+	}
 
 	Pbool = secprop->Add_bool("im",Property::Changeable::OnlyAtStart,true);
 #if defined(LINUX)

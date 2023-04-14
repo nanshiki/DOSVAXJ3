@@ -32,8 +32,6 @@
 #include "dosv.h"
 #include "dos_inc.h"
 
-#define	VTEXT_MODE_COUNT	2
-
 static Bitu dosv_font_handler[DOSV_FONT_MAX];
 static Bit16u dosv_font_handler_offset[DOSV_FONT_MAX];
 static Bitu dosv_timer;
@@ -56,7 +54,7 @@ void SetTrueVideoMode(Bit8u mode)
 
 bool DOSV_CheckJapaneseVideoMode()
 {
-	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x12 || TrueVideoMode == 0x70 || TrueVideoMode == 0x72 || TrueVideoMode == 0x78)) {
+	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x12 || TrueVideoMode == 0x70 || TrueVideoMode == 0x72 || (TrueVideoMode >= 0x78 && TrueVideoMode < 0x78 + VTEXT_MODE_COUNT - 1))) {
 		return true;
 	}
 	return false;
@@ -387,6 +385,26 @@ enum DOSV_VTEXT_MODE DOSV_StringVtextMode(std::string vtext)
 	return DOSV_VTEXT_SVGA;
 }
 
+static enum DOSV_VTEXT_MODE rows_vtext_mode = DOSV_VGA;
+static int rows_vtext_no;
+
+void DOSV_SetVTextRows(Bitu no, int rows)
+{
+	if(no < VTEXT_MODE_COUNT) {
+		rows_vtext_no = no;
+		rows_vtext_mode = dosv_vtext_mode[no];
+		INT10_SetDOSVVtextRows(no, rows_vtext_mode, rows);
+	}
+}
+
+void DOSV_ResetVTextRows()
+{
+	if(rows_vtext_mode != DOSV_VGA) {
+		INT10_SetDOSVVtextRows(rows_vtext_no, rows_vtext_mode, 0);
+		rows_vtext_mode = DOSV_VGA;
+	}
+}
+
 enum DOSV_FEP_CTRL DOSV_GetFepCtrl()
 {
 	return dosv_fep_ctrl;
@@ -402,8 +420,13 @@ void DOSV_SetConfig(Section_prop *section)
 	} else {
 		dosv_fep_ctrl = DOSV_FEP_CTRL_BOTH;
 	}
-	dosv_vtext_mode[0] = DOSV_StringVtextMode(section->Get_string("vtext"));
-	dosv_vtext_mode[1] = DOSV_StringVtextMode(section->Get_string("vtext2"));
+	char name[16];
+	for(int no = 0 ; no < VTEXT_MODE_COUNT ; no++) {
+		sprintf(name, "vtext%d", no + 1);
+		Prop_multival *p = section->Get_multival(name);
+		dosv_vtext_mode[no] = DOSV_StringVtextMode(p->GetSection()->Get_string("type"));
+		INT10_SetDOSVVtextRowsDefault(no, dosv_vtext_mode[no], p->GetSection()->Get_int("rows"));
+	}
 }
 
 void DOSV_Setup()

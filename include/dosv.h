@@ -4,6 +4,8 @@
 
 #include "setup.h"
 
+#define	VTEXT_MODE_COUNT	4
+
 enum DOSV_VTEXT_MODE {
 	DOSV_VGA,				// 80x25
 	DOSV_VTEXT_VGA,			// 80x30
@@ -42,6 +44,8 @@ void DOSV_OffCursor();
 void INT8_DOSV();
 Bit16u DOSV_GetFontHandlerOffset(enum DOSV_FONT font);
 enum DOSV_VTEXT_MODE DOSV_GetVtextMode(Bitu no = 0);
+void DOSV_SetVTextRows(Bitu no, int row);
+void DOSV_ResetVTextRows();
 enum DOSV_FEP_CTRL DOSV_GetFepCtrl();
 void SetTrueVideoMode(Bit8u mode);
 Bit8u GetTrueVideoMode();
