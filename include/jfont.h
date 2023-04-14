@@ -4,8 +4,6 @@
 
 #include "setup.h"
 
-#define	VIRTUAL_TEXT_SIZE		0x500
-
 void InitFontHandle();
 void QuitFont();
 bool GetWindowsFont(Bitu code, Bit8u *buff, int width, int height);
