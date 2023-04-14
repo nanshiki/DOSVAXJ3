@@ -32,7 +32,9 @@
 #include <X11/Xutil.h>
 #endif
 
-#define	GAIJI_MAX		100
+#define	GAIJI_MAX				100
+#define	VIRTUAL_TEXT_SIZE		0x5dc
+#define	VIRTUAL_TEXT_SIZE_J3	0x500
 
 extern Bit8u jfont_sbcs_19[];
 extern Bit8u jfont_dbcs_16[];
@@ -59,7 +61,6 @@ static Display *font_display;
 static Window font_window;
 static Pixmap font_pixmap;
 static GC font_gc;
-static XFontSet font_set16;
 static XFontSet font_set24;
 #endif
 
@@ -72,9 +73,6 @@ void QuitFont()
 		}
 		if(font_pixmap) {
 			XFreePixmap(font_display, font_pixmap);
-		}
-		if(font_set16) {
-			XFreeFontSet(font_display, font_set16);
 		}
 		if(font_set24) {
 			XFreeFontSet(font_display, font_set24);
@@ -106,10 +104,6 @@ void InitFontHandle()
 		font_display = XOpenDisplay("");
 	}
 	if(font_display) {
-		if(!font_set16) {
-			font_set16 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--16-*-*-*", &missing_list, &missing_count, &def_string);
-			XFreeStringList(missing_list);
-		}
 		if(!font_set24) {
 			font_set24 = XCreateFontSet(font_display, "-*-fixed-medium-r-normal--24-*-*-*", &missing_list, &missing_count, &def_string);
 			XFreeStringList(missing_list);
@@ -247,16 +241,15 @@ bool GetWindowsFont(Bitu code, Bit8u *buff, int width, int height)
 #if defined(LINUX)
 	XRectangle ir, lr;
 	wchar_t text[4];
+	int len;
 
-	if(font_set16 == NULL) {
-		if(height == 16) {
-			if(width == 16) {
-				return GetFontX16x16Data(code, buff);
-			} else if(width == 8) {
-				return GetFontX8x16Data(code, buff);
-			}
-			return false;
+	if(height == 16) {
+		if(width == 16) {
+			return GetFontX16x16Data(code, buff);
+		} else if(width == 8) {
+			return GetFontX8x16Data(code, buff);
 		}
+		return false;
 	}
 
 	if(code < 0x100) {
@@ -285,8 +278,16 @@ bool GetWindowsFont(Bitu code, Bit8u *buff, int width, int height)
 		sjis_to_utf16_copy((char *)text, src, 2);
 		text[0] &= 0xffff;
 	}
-	text[1] = ']';
-	text[2] = 0;
+	if(text[0] < 0x100) {
+		text[1] = ' ';
+		text[2] = ']';
+		text[3] = 0;
+		len = 3;
+	} else {
+		text[1] = ']';
+		text[2] = 0;
+		len = 2;
+	}
 
 	memset(buff, 0, (width / 8) * height);
 
@@ -294,18 +295,14 @@ bool GetWindowsFont(Bitu code, Bit8u *buff, int width, int height)
 		if(font_set24 == NULL) {
 			return false;
 		}
-		XwcTextExtents(font_set24, text, 2, &ir, &lr);
+		XwcTextExtents(font_set24, text, len, &ir, &lr);
 	} else {
-		XwcTextExtents(font_set16, text, 2, &ir, &lr);
+		return false;
 	}
 	XSetForeground(font_display, font_gc, BlackPixel(font_display, 0));
 	XFillRectangle(font_display, font_pixmap, font_gc, 0, 0, 32, 32);
 	XSetForeground(font_display, font_gc, WhitePixel(font_display, 0));
-	if(height == 24) {
-		XwcDrawString(font_display, font_pixmap, font_set24, font_gc, 0, lr.height - (ir.height + ir.y), text, 2);
-	} else {
-		XwcDrawString(font_display, font_pixmap, font_set16, font_gc, 0, lr.height - (ir.height + ir.y), text, 2);
-	}
+	XwcDrawString(font_display, font_pixmap, font_set24, font_gc, 0, lr.height - (ir.height + ir.y), text, 2);
 	XImage *image = XGetImage(font_display, font_pixmap, 0, 0, width, lr.height, ~0, XYPixmap);
 	if(image != NULL) {
 		int x, y;
@@ -420,7 +417,7 @@ Bit16u GetTextSeg()
 void SetTextSeg()
 {
 	if(jtext_seg == 0) {
-		jtext_seg = DOS_GetMemory(VIRTUAL_TEXT_SIZE);
+		jtext_seg = DOS_GetMemory(IS_J3_ARCH ? VIRTUAL_TEXT_SIZE_J3 : VIRTUAL_TEXT_SIZE);
 	}
 }
 
