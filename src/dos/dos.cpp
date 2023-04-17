@@ -1891,7 +1891,7 @@ static Bitu DOS_21Handler(void) {
 			case 0x60:		/* LFN GetName */
 			{
 				MEM_StrCopy(SegPhys(ds)+reg_si,name1+1,DOSNAMEBUF);
-				bool tail = check_last_split_char(name1 + 1, strlen(name1 + 1), '\\');
+				bool tail = check_last_split_char(name1 + 1, strlen(name1 + 1), '\\') && !(strlen(name1 + 1) == 3 && name1[2] == ':' && name1[3] == '\\');
 				*name1='\"';
 				p=name1+strlen(name1);
 				while (*p==' '||*p==0) p--;
