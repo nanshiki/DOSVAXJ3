@@ -61,6 +61,7 @@ public:
 	bool Seek(Bit32u * pos,Bit32u type);
 	bool Close();
 	Bit16u GetInformation(void);
+	bool SetDateTime(Bit16u ndate, Bit16u ntime);
 	bool UpdateDateTimeFromHost(void);   
 	void FlagReadOnlyMedium(void);
 	void Flush(void);
@@ -1362,6 +1363,45 @@ bool localFile::Seek(Bit32u * pos,Bit32u type) {
 #endif
 	*pos=(Bit32u)ftell(fhandle);
 	last_action=NONE;
+	return true;
+}
+
+bool localFile::SetDateTime(Bit16u ndate, Bit16u ntime)
+{
+#if defined(WIN32)
+	{
+		HANDLE h = (HANDLE)_get_osfhandle(fileno(fhandle));
+		if(h != INVALID_HANDLE_VALUE) {
+			FILETIME lft, ft;
+			if(DosDateTimeToFileTime(ndate, ntime, &lft)) {
+				LocalFileTimeToFileTime(&lft, &ft);
+				if(!SetFileTime(h, NULL, NULL, &ft)) {
+					dos.errorcode = GetLastError();
+					return false;
+				}
+			}
+		}
+	}
+#elif defined(LINUX) || defined(MACOSX)
+	struct tm t;
+	t.tm_isdst = -1;
+	t.tm_sec  = (((int)ntime) << 1) & 0x3e;
+	t.tm_min  = (((int)ntime) >> 5) & 0x3f;
+	t.tm_hour = (((int)ntime) >> 11) & 0x1f;
+	t.tm_mday = (int)(ndate) & 0x1f;
+	t.tm_mon  = ((int)(ndate >> 5) & 0x0f) - 1;
+	t.tm_year = ((int)(ndate >> 9) & 0x7f) + 80;
+	time_t ttime = mktime(&t);
+	struct timespec tv[2];
+	tv[0].tv_sec = ttime;
+	tv[0].tv_nsec = 0;
+	tv[1].tv_sec = ttime;
+	tv[1].tv_nsec = 0;
+	fflush(fhandle);
+	if(futimens(fileno(fhandle), tv) < 0) {
+		return false;
+	}
+#endif
 	return true;
 }
 

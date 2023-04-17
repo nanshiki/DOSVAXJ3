@@ -841,10 +841,15 @@ void DOS_Shell::CMD_COPY(char * args) {
 			dta.GetResult(name,lname,size,date,time,attr);
 
 			if ((attr & DOS_ATTR_DIRECTORY)==0) {
+				uint16_t ftime,fdate;
+
 				strcpy(nameSource,pathSource);
 				strcat(nameSource,name);
 				// Open Source
 				if (DOS_OpenFile(nameSource,0,&sourceHandle)) {
+					bool ftdvalid = DOS_GetFileDate(sourceHandle, &ftime, &fdate);
+					if (!ftdvalid) LOG_MSG("WARNING: COPY cannot obtain file date/time");
+
 					// Create Target or open it if in concat mode
 					strcpy(nameTarget,q);
 					strcat(nameTarget,pathTarget);
@@ -901,6 +906,8 @@ void DOS_Shell::CMD_COPY(char * args) {
 								}
 							} while (cont);
 							if (!DOS_CloseFile(sourceHandle)) failed=true;
+							if (DOS_FindDevice(name) == DOS_DEVICES && !DOS_SetFileDate(targetHandle, ftime, fdate))
+								LOG_MSG("WARNING: COPY unable to apply date/time to dest");
 							if (!DOS_CloseFile(targetHandle)) failed=true;
 							if (failed) {
 								WriteOut(MSG_Get("SHELL_CMD_COPY_ERROR"),uselfn?lname:name);
