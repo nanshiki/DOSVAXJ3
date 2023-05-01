@@ -1819,18 +1819,24 @@ const int max_vtext_rows[] = {
 };
 static int vtext_columns[VTEXT_MODE_COUNT];
 static int vtext_rows[VTEXT_MODE_COUNT];
+static int vtext_now_columns;
+static int vtext_now_rows;
 
 std::string INT10_GetDOSVVtextSettingText()
 {
-	char text[100], item[40];
-
-	strcpy(text, "\x084\x0a0          ");
+	char item[40];
+	std::string text = "\x084\x0a0          ";
 	for(int no = 0 ; no < VTEXT_MODE_COUNT ; no++) {
 		sprintf(item, "V-Text%d:%3d\x081\x07e%2d ", no + 1, vtext_columns[no], vtext_rows[no]);
-		strcat(text, item);
+		text += item;
 	}
-	strcat(text, "\x084\x0a0\n");
+	text += "\x084\x0a0\n";
 	return text;
+}
+
+std::string INT10_GetDOSVVtextRowsText()
+{
+	return std::to_string(vtext_now_columns) + "\x081\x07e" + std::to_string(vtext_now_rows);
 }
 
 void INT10_SetDOSVVtextRowsDefault(int vtext_no, enum DOSV_VTEXT_MODE vtext_mode, int rows)
@@ -1862,6 +1868,8 @@ void INT10_SetDOSVVtextRows(int vtext_no, enum DOSV_VTEXT_MODE vtext_mode, int r
 		} else if(rows > max_vtext_rows[vtext_mode]) {
 			rows = max_vtext_rows[vtext_mode];
 		}
+		vtext_now_columns = default_vtext_columns[vtext_mode];
+		vtext_now_rows = rows;
 		video_mode = (svgaCard == SVGA_TsengET4K) ? ModeListVtext[vtext_mode] : ModeListVtextS3[vtext_mode];
 		video_mode->theight = rows;
 
