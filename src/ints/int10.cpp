@@ -279,8 +279,9 @@ static Bitu INT10_Handler(void) {
 		}
 		break;
 	case 0x11:								/* Character generator functions */
-		if (!IS_EGAVGA_ARCH && !IS_J3_ARCH) 
-			break;
+		if(!IS_EGAVGA_ARCH && !IS_J3_ARCH) break;
+		if(reg_al < 0x20 && DOSV_CheckJapaneseVideoMode()) break;
+
 		if ((reg_al&0xf0)==0x10) Mouse_BeforeNewVideoMode(false);
 		switch (reg_al) {
 /* Textmode calls */
