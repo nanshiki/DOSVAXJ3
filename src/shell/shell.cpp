@@ -435,7 +435,7 @@ void DOS_Shell::Run(void) {
 			LineInputFlag = false;
 			ParseLine(input_line);
 			if(input_line[0] != 0 || CheckStayVz()) {
-				if (echo && !bf) WriteOut_NoParsing("\n");
+				if (!bf) WriteOut_NoParsing("\n");
 			}
 		}
 	} while (!exit);
