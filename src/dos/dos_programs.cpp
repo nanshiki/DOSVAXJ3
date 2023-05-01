@@ -42,6 +42,7 @@
 #include "dma.h"
 #include "j3.h"
 #include "jfont.h"
+#include "dosv.h"
 
 
 #if defined(OS2)
@@ -535,7 +536,7 @@ static void MEM_ProgramStart(Program * * make) {
 }
 
 extern Bit32u floppytype;
-
+extern void SetDbcsTable(bool japanese_flag);
 
 class BOOT : public Program {
 private:
@@ -883,7 +884,16 @@ public:
 			disable_umb_ems_xms();
 			void RemoveEMSPageFrame(void);
 			RemoveEMSPageFrame();
-			WriteOut(MSG_Get("PROGRAM_BOOT_BOOT"), drive);
+
+			if(DOSV_CheckJapaneseVideoMode()) {
+				uint16_t oldax=reg_ax;
+				SetDbcsTable(false);
+				reg_ax = 0x03;
+				CALLBACK_RunRealInt(0x10);
+				reg_ax = oldax;
+			} else {
+				WriteOut(MSG_Get("PROGRAM_BOOT_BOOT"), drive);
+			}
 			for(i=0;i<512;i++) real_writeb(0, 0x7c00 + i, bootarea.rawdata[i]);
 
 			/* create appearance of floppy drive DMA usage (Demon's Forge) */
