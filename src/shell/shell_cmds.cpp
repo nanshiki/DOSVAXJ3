@@ -736,7 +736,18 @@ void DOS_Shell::CMD_COPY(char * args) {
 				if (strlen(++source_p)==0) break;
 				plus = strchr(source_p,'+');
 			}
-			if (plus) *plus++ = 0;
+			if (plus) {
+				char *c=source_p+strlen(source_p)-1;
+				if (*source_p=='"'&&*c=='"') {
+					*c=0;
+					if (strchr(source_p+1,'"'))
+						*plus++ = 0;
+					else
+						plus=NULL;
+					*c='"';
+				} else
+					*plus++ = 0;
+			}
 			safe_strncpy(source_x,source_p,CROSS_LEN);
 			bool has_drive_spec = false;
 			size_t source_x_len = strlen(source_x);
@@ -1600,7 +1611,7 @@ void DOS_Shell::CMD_VER(char *args) {
 	} else WriteOut(MSG_Get("SHELL_CMD_VER_VER"),VERSION,dos.version.major,dos.version.minor);
 }
 
-static void SetDbcsTable(bool japanese_flag)
+void SetDbcsTable(bool japanese_flag)
 {
 	if(japanese_flag) {
 		mem_writew(Real2Phys(dos.tables.dbcs) + 0x00, 0x0006); //Set DBCS table
@@ -1620,12 +1631,14 @@ static void SetDbcsTable(bool japanese_flag)
 	}
 }
 
+std::string INT10_GetDOSVVtextRowsText();
+
 void DOS_Shell::CMD_CHEV(char *args)
 {
 	HELP("CHEV");
 
 	bool japanese_flag = false;
-	const char *status = "US";
+	std::string status = "US";
 	Bit8u new_mode = 0xff;
 	Bit8u mode = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE);
 	if(args && *args) {
@@ -1642,7 +1655,6 @@ void DOS_Shell::CMD_CHEV(char *args)
 		} else if(!strncasecmp(word, "vt", 2)) {
 			int vtext_no = 0;
 			new_mode = 0x70;
-			status = "DOS/V(V-Text)";
 			japanese_flag = true;
 			if(word[2] >= '2' && word[2] <= '4') {
 				vtext_no = word[2] - '1';
@@ -1654,6 +1666,7 @@ void DOS_Shell::CMD_CHEV(char *args)
 				row = (Bit8u)atoi(word);
 			}
 			DOSV_SetVTextRows(vtext_no, row);
+			status = "DOS/V(V-Text " + INT10_GetDOSVVtextRowsText() + ")";
 		} else if(!strcasecmp(word, "j3")) {
 			if(IS_J3_ARCH) {
 				status = "J-3100";
@@ -1680,7 +1693,7 @@ void DOS_Shell::CMD_CHEV(char *args)
 			if(new_mode >= 0x78 && new_mode <= 0x78 + VTEXT_MODE_COUNT - 1) {
 				new_mode = 0x70;
 			}
-			WriteOut(MSG_Get("SHELL_CMD_CHEV_CHANGE"), status, new_mode);
+			WriteOut(MSG_Get("SHELL_CMD_CHEV_CHANGE"), status.c_str(), new_mode);
 		}
 	} else {
 		if(IS_DOS_JAPANESE) {
@@ -1691,14 +1704,14 @@ void DOS_Shell::CMD_CHEV(char *args)
 					status = "DOS/V";
 				}
 			} else if(mode == 0x70) {
-				status = "DOS/V(V-Text)";
+				status = "DOS/V(V-Text " + INT10_GetDOSVVtextRowsText() + ")";
 			} else if(mode == 0x72) {
 				status = "DOS/V(Graphics)";
 			} else if(mode == 0x74) {
 				status = "J-3100";
 			}
 		}
-		WriteOut(MSG_Get("SHELL_CMD_CHEV_STATUS"), status, mode);
+		WriteOut(MSG_Get("SHELL_CMD_CHEV_STATUS"), status.c_str(), mode);
 	}
 }
 
