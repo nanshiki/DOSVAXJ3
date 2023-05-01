@@ -1410,7 +1410,7 @@ void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 			DrawCharDOSVDbcsHalf(off, font, prevattr, width, height, select, true);
 			if(col != width - 1) {
 				off++;
-				select = StartBankSelect(off);
+				select = CheckBankSelect(select, off);
 				DrawCharDOSVDbcsHalf(off, font + 1, attr, width, height, select, true);
 			}
 			return;
@@ -1423,7 +1423,7 @@ void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 		} else {
 			off++;
 		}
-		select = StartBankSelect(off);
+		select = CheckBankSelect(select, off);
 		DrawCharDOSVDbcsHalf(off, font + 1, attr, width, height, select, false);
 	} else {
 		if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
@@ -1445,14 +1445,11 @@ void WriteCharTopView(Bit16u off, int count)
 		code = real_readb(seg, off);
 		attr = real_readb(seg, off + 1);
 		if(isKanji1(code)) {
-			real_writeb(seg, row * width * 2 + col * 2, code);
-			real_writeb(seg, row * width * 2 + col * 2 + 1, attr);
 			off += 2;
 			if(IS_J3_ARCH && J3_IsJapanese()) {
 				WriteCharJ31Dbcs(col, row, ((Bit16u)code << 8) | real_readb(seg, off), attr);
 			} else {
 				prevattr = attr;
-				attr = real_readb(seg, off + 1);
 				WriteCharDOSVDbcs(col, row, ((Bit16u)code << 8) | real_readb(seg, off), attr);
 			}
 			count--;
@@ -1461,11 +1458,7 @@ void WriteCharTopView(Bit16u off, int count)
 				col = 0;
 				row++;
 			}
-			real_writeb(seg, row * width * 2 + col * 2, real_readb(seg, off));
-			real_writeb(seg, row * width * 2 + col * 2 + 1, attr);
 		} else {
-			real_writeb(seg, row * width * 2 + col * 2, code);
-			real_writeb(seg, row * width * 2 + col * 2 + 1, attr);
 			if(IS_J3_ARCH && J3_IsJapanese()) {
 				WriteCharJ31Sbcs(col, row, code, attr);
 			} else {
