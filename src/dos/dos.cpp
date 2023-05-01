@@ -1293,13 +1293,18 @@ static Bitu DOS_21Handler(void) {
 	case 0x57:					/* Get/Set File's Date and Time */
 		if (reg_al==0x00) {
 			if (DOS_GetFileDate(reg_bx,&reg_cx,&reg_dx)) {
+				reg_ax = dos.errorcode;
 				CALLBACK_SCF(false);
 			} else {
 				CALLBACK_SCF(true);
 			}
 		} else if (reg_al==0x01) {
-			LOG(LOG_DOSMISC,LOG_ERROR)("DOS:57:Set File Date Time Faked");
-			CALLBACK_SCF(false);		
+			if (DOS_SetFileDate(reg_bx, reg_cx, reg_dx)) {
+				reg_ax = dos.errorcode;
+				CALLBACK_SCF(false);
+			} else {
+				CALLBACK_SCF(true);
+			}
 		} else {
 			LOG(LOG_DOSMISC,LOG_ERROR)("DOS:57:Unsupported subtion %X",reg_al);
 		}

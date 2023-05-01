@@ -219,6 +219,7 @@ public:
 	bool Close();
 	Bit16u GetInformation(void);
 	bool UpdateDateTimeFromHost(void);   
+	bool SetDateTime(Bit16u ndate, Bit16u ntime);
 public:
 	Bit32u firstCluster;
 	Bit32u seekpos;
@@ -235,6 +236,8 @@ public:
 private:
 	enum { NONE,READ,WRITE } last_action;
 	Bit16u info;
+	bool modified = false;
+	bool newtime = false;
 };
 
 
@@ -398,6 +401,7 @@ bool fatFile::Write(Bit8u * data, Bit16u *size) {
 			loadedSector = true;
 		}
 		--sizedec;
+		modified = true;
 	}
 	if(curSectOff>0 && loadedSector) myDrive->loadedDisk->Write_AbsoluteSector(currentSector, sectorBuffer);
 
@@ -447,6 +451,22 @@ bool fatFile::Close() {
 	/* Flush buffer */
 	if (loadedSector) myDrive->loadedDisk->Write_AbsoluteSector(currentSector, sectorBuffer);
 
+	if (modified || newtime) {
+		direntry tmpentry = {};
+
+		myDrive->directoryBrowse(dirCluster, &tmpentry, (int32_t)dirIndex);
+		if (newtime) {
+			tmpentry.modTime = time;
+			tmpentry.modDate = date;
+		} else {
+			time_t tt = ::time(NULL);
+			struct tm *tm = localtime(&tt);
+			tmpentry.modTime = ((unsigned int)tm->tm_hour << 11u) + ((unsigned int)tm->tm_min << 5u) + ((unsigned int)tm->tm_sec >> 1u);
+			tmpentry.modDate = (((unsigned int)tm->tm_year - 80u) << 9u) + (((unsigned int)tm->tm_mon + 1u) << 5u) + (unsigned int)tm->tm_mday;
+		}
+
+		myDrive->directoryChange(dirCluster, &tmpentry, (int32_t)dirIndex);
+	}
 	return false;
 }
 
@@ -455,6 +475,18 @@ Bit16u fatFile::GetInformation(void) {
 }
 
 bool fatFile::UpdateDateTimeFromHost(void) {
+	direntry tmpentry = {};
+	myDrive->directoryBrowse(dirCluster, &tmpentry, (int32_t)dirIndex);
+	time = tmpentry.modTime;
+	date = tmpentry.modDate;
+	return true;
+}
+
+bool fatFile::SetDateTime(Bit16u ndate, Bit16u ntime)
+{
+	time = ntime;
+	date = ndate;
+	newtime = true;
 	return true;
 }
 
@@ -863,7 +895,7 @@ fatDrive::fatDrive(const char *sysFilename, Bit32u bytesector, Bit32u cylsector,
 	struct partTable mbrData;
 	
 	if(imgDTASeg == 0) {
-		imgDTASeg = DOS_GetMemory(2);
+		imgDTASeg = DOS_GetMemory(4);
 		imgDTAPtr = RealMake(imgDTASeg, 0);
 		imgDTA    = new DOS_DTA(imgDTAPtr);
 	}
