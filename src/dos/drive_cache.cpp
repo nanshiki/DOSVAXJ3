@@ -346,7 +346,7 @@ int DOS_Drive_Cache::CompareShortname(const char* compareName, const char* short
 		 * if (compareCount2>compareCount1) compareCount1 = compareCount2;
 		 * but to prevent negative numbers: 
 		 */
-		if(compareCount2 > compareCount1 + numberSize)
+		if(compareCount2 > compareCount1 + numberSize && compareCount1 + numberSize == 8)
 			compareCount1 = compareCount2 - numberSize;
 		return strncmp(compareName,shortName,compareCount1);
 	}
@@ -375,7 +375,7 @@ Bitu DOS_Drive_Cache::CreateShortNameID(CFileInfo* curDir, const char* name) {
 				mid++;
 			} while((Bitu)mid<curDir->longNameList.size() && (CompareShortname(name,curDir->longNameList[mid]->shortname)==0));
 			break;
-		};
+		}
 	}
 	return foundNr+1;
 }
@@ -524,7 +524,7 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 	char* pos = strchr(tmpName,'.');
 	if (pos) {
 		// ignore preceding '.' if extension is longer than "3"
-		if (strlen(pos)>4) {
+		if (strlen(pos)>4 || (strlen(pos) == strlen(tmpName) && strcmp(tmpName, ".") && strcmp(tmpName, ".."))) {
 			while (*tmpName=='.') tmpName++;
 			createShort = true;
 		}
@@ -536,7 +536,7 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 	}
 #if defined(LINUX) || defined(MACOSX)
 	char sjis[CROSS_LEN];
-	utf8_to_sjis_copy(sjis, tmpNameBuffer, CROSS_LEN);
+	utf8_to_sjis_copy(sjis, tmpName, CROSS_LEN);
 	if(!createShort) {
 		char *spos;
 		if ((spos = strchr(sjis, '.')) != NULL) {
@@ -632,7 +632,6 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 			strncat(info->shortname,pos,4);
 			info->shortname[DOS_NAMELENGTH] = 0;
 		}
-
 		// keep list sorted for CreateShortNameID to work correctly
 		if (curDir->longNameList.size()>0) {
 			if (!(strcmp(info->shortname,curDir->longNameList.back()->shortname)<0)) {
