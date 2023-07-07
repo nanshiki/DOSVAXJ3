@@ -82,6 +82,9 @@ public:
 	virtual Bits	RemoveRef()					{ return --refCtr; };
 	virtual bool	UpdateDateTimeFromHost()	{ return true; }
 	virtual bool	SetDateTime(Bit16u ndate, Bit16u ntime)	{ return true; }
+#if defined(WIN32)
+	virtual void SetFullPath(char *full_path) { (void)full_path; }
+#endif
 	void SetDrive(Bit8u drv) { hdrive=drv;}
 	Bit8u GetDrive(void) { return hdrive;}
 	Bit32u flags;
@@ -263,6 +266,7 @@ public:
 	virtual bool TestDir(char * _dir)=0;
 	virtual bool FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst=false)=0;
 	virtual bool FindNext(DOS_DTA & dta)=0;
+	virtual bool SetFileAttr(const char * name,Bit16u attr)=0;
 	virtual bool GetFileAttr(char * name,Bit16u * attr)=0;
 	virtual bool GetFileAttrEx(char* name, struct stat *status)=0;
 	virtual DWORD GetCompressedSize(char* name)=0;
