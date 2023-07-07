@@ -2326,31 +2326,6 @@ bool GFX_IsFullscreen(void) {
 	return sdl.desktop.fullscreen;
 }
 
-static bool CheckEnableImmOnKey(SDL_KeyboardEvent key)
-{
-	if(key.keysym.sym == 0 || key.keysym.sym == 0x08 || key.keysym.sym == 0x09 || key.keysym.sym == 0x7f || (key.keysym.sym >= 0x111 && key.keysym.sym <= 0x119)) {
-		// BS, Tab, Arrow, PgUp etc.
-		return true;
-	}
-	if(key.keysym.scancode == 0x01 || key.keysym.scancode == 0x1d || key.keysym.scancode == 0x2a || key.keysym.scancode == 0x36 || key.keysym.scancode == 0x38) {
-		// ESC, shift,  control, alt
-		return true;
-	}
-	if(key.keysym.scancode >= 0x3b && key.keysym.scancode <= 0x44) {
-		// function
-		return true;
-	}
-	if(key.keysym.mod & (KMOD_ALT | KMOD_CTRL)) {
-		// Ctrl+, Alt+
-		return true;
-	}
-	if((key.keysym.mod & 0x03) != 0 && key.keysym.scancode == 0x39) {
-		// shift + space
-		return true;
-	}
-	return false;
-}
-
 #if defined(LINUX)
 extern bool debug_flag;
 #endif
@@ -2583,9 +2558,6 @@ void GFX_Events() {
 								break;
 							}
 						}
-					} else if(!CheckEnableImmOnKey(event.key)) {
-						sdl.ime_ticks = 0;
-						break;
 					}
 				}
 			}
@@ -2616,6 +2588,7 @@ void GFX_Events() {
 			}
 #endif
 #if defined (MACOSX)
+			bool ime_key;
 			int onoff;
 			if(SDL_GetIMValues(SDL_IM_ONOFF, &onoff, NULL) == NULL) {
 				if(onoff != 0 && event.type == SDL_KEYDOWN) {
@@ -2626,12 +2599,10 @@ void GFX_Events() {
 								break;
 							}
 						}
-					} else if(!CheckEnableImmOnKey(event.key)) {
-						sdl.ime_ticks = 0;
-						break;
 					}
 				}
 			}
+			ime_key = false;
 			sdl.ime_ticks = 0;
 			if(event.key.keysym.scancode == 0 && event.key.keysym.sym == 0) {
 				int len;
@@ -2646,7 +2617,29 @@ void GFX_Events() {
 								flag = 1;
 								BIOS_AddKeyToBuffer(0xf000 | buff[no]);
 							} else {
-								BIOS_AddKeyToBuffer(buff[no]);
+								if(buff[no] == 0x1c) {
+									event.key.keysym.scancode = 0x7b;
+									event.key.keysym.sym = SDLK_LEFT;
+									ime_key = true;
+								} else if(buff[no] == 0x1d) {
+									event.key.keysym.scancode = 0x7c;
+									event.key.keysym.sym = SDLK_RIGHT;
+									ime_key = true;
+								} else if(buff[no] == 0x1e) {
+									event.key.keysym.scancode = 0x7e;
+									event.key.keysym.sym = SDLK_UP;
+									ime_key = true;
+								} else if(buff[no] == 0x1f) {
+									event.key.keysym.scancode = 0x7d;
+									event.key.keysym.sym = SDLK_DOWN;
+									ime_key = true;
+								} else if(buff[no] == 0x08) {
+									event.key.keysym.scancode = 0x33;
+									event.key.keysym.sym = SDLK_BACKSPACE;
+									ime_key = true;
+								} else {
+									BIOS_AddKeyToBuffer(buff[no]);
+								}
 							}
 						} else {
 							BIOS_AddKeyToBuffer(0xf100 | buff[no]);
@@ -2690,6 +2683,12 @@ void GFX_Events() {
 			MAPPER_CheckEvent(&event);
 #if defined(WIN32)
 			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x3a || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x29) {
+				event.type = SDL_KEYUP;
+				MAPPER_CheckEvent(&event);
+			}
+#endif
+#if defined (MACOSX)
+			if(ime_key) {
 				event.type = SDL_KEYUP;
 				MAPPER_CheckEvent(&event);
 			}
