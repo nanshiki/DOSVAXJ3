@@ -1454,6 +1454,25 @@ bool fatDrive::FindNext(DOS_DTA &dta) {
 	return FindNextInternal(lfn_filefind_handle>=LFN_FILEFIND_MAX?dta.GetDirIDCluster():(dnum[lfn_filefind_handle]?dnum[lfn_filefind_handle]:0), dta, &dummyClust);
 }
 
+bool fatDrive::SetFileAttr(const char *name, Bit16u attr) {
+    direntry fileEntry = {};
+	Bit32u dirClust, subEntry;
+
+	/* you cannot set file attr root directory (right?) */
+	if (*name == 0) {
+		DOS_SetError(DOSERR_ACCESS_DENIED);
+		return false;
+	}
+
+	if(!getFileDirEntry(name, &fileEntry, &dirClust, &subEntry, /*dirOk*/true)) {
+		return false;
+	} else {
+		fileEntry.attrib=(uint8_t)attr;
+		directoryChange(dirClust, &fileEntry, (int32_t)subEntry);
+	}
+	return true;
+}
+
 bool fatDrive::GetFileAttr(char *name, Bit16u *attr) {
     direntry fileEntry = {};
 	Bit32u dirClust, subEntry;

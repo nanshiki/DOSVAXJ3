@@ -928,19 +928,39 @@ HANDLE DOS_CreateOpenFile(char const* const name)
 	return Drives[drive]->CreateOpenFile(fullname);
 	}
 
-bool DOS_SetFileAttr(char const * const name,Bit16u /*attr*/) 
-// this function does not change the file attributs
-// it just does some tests if file is available 
+bool DOS_SetFileAttr(char const * const name,Bit16u attr) 
 // returns false when using on cdrom (stonekeep)
 {
-	Bit16u attrTemp;
 	char fullname[DOS_PATHLENGTH];Bit8u drive;
 	if (!DOS_MakeName(name,fullname,&drive)) return false;	
 	if (strncmp(Drives[drive]->GetInfo(),"CDRom ",6)==0 || strncmp(Drives[drive]->GetInfo(),"isoDrive ",9)==0) {
 		DOS_SetError(DOSERR_ACCESS_DENIED);
 		return false;
 	}
-	return Drives[drive]->GetFileAttr(fullname,&attrTemp);
+
+	/* This function must prevent changing a file into a directory, volume label into a file, etc.
+	 * Also Windows 95 setup likes to create WINBOOT.INI as a file and then chattr it into a directory for some stupid reason. */
+	uint16_t old_attr;
+	if (!Drives[drive]->GetFileAttr(fullname,&old_attr))
+	{
+		DOS_SetError(DOSERR_FILE_NOT_FOUND);
+		return false;
+	}
+
+	if ((old_attr ^ attr) & DOS_ATTR_VOLUME) { /* change in volume label attribute */
+		LOG(LOG_DOSMISC,LOG_WARN)("Attempted to change volume label attribute of '%s' with SetFileAttr",name);
+		return false;
+	}
+
+	if ((old_attr ^ attr) & DOS_ATTR_DIRECTORY) /* change in directory attribute (ex: Windows 95 SETUP.EXE vs WINBOOT.INI) */
+		LOG(LOG_DOSMISC,LOG_WARN)("Attempted to change directory attribute of '%s' with SetFileAttr",name);
+
+	/* define what cannot be changed */
+	const uint16_t attr_mask = (DOS_ATTR_VOLUME|DOS_ATTR_DIRECTORY);
+
+	attr = (attr & ~attr_mask) | (old_attr & attr_mask);
+
+	return Drives[drive]->SetFileAttr(fullname,attr);
 }
 
 bool DOS_Canonicalize(char const * const name,char * const big) {

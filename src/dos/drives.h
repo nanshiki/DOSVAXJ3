@@ -64,6 +64,7 @@ public:
 	virtual bool TestDir(char * dir);
 	virtual bool FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst=false);
 	virtual bool FindNext(DOS_DTA & dta);
+	virtual bool SetFileAttr(const char * name,Bit16u attr);
 	virtual bool GetFileAttr(char * name,Bit16u * attr);
 	virtual bool GetFileAttrEx(char* name, struct stat *status);
 	virtual DWORD GetCompressedSize(char* name);
@@ -176,6 +177,7 @@ public:
 	virtual bool TestDir(char * dir);
 	virtual bool FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst=false);
 	virtual bool FindNext(DOS_DTA & dta);
+	virtual bool SetFileAttr(const char * name,Bit16u attr);
 	virtual bool GetFileAttr(char * name,Bit16u * attr);
 	virtual bool GetFileAttrEx(char* name, struct stat *status);
 	virtual DWORD GetCompressedSize(char* name);
@@ -369,6 +371,7 @@ public:
 	virtual bool TestDir(char *dir);
 	virtual bool FindFirst(char *_dir, DOS_DTA &dta, bool fcb_findfirst);
 	virtual bool FindNext(DOS_DTA &dta);
+	virtual bool SetFileAttr(const char * name,Bit16u attr);
 	virtual bool GetFileAttr(char *name, Bit16u *attr);
 	virtual bool GetFileAttrEx(char* name, struct stat *status);
 	virtual DWORD GetCompressedSize(char* name);
@@ -437,6 +440,7 @@ public:
 	bool TestDir(char * dir);
 	bool FindFirst(char * _dir,DOS_DTA & dta,bool fcb_findfirst);
 	bool FindNext(DOS_DTA & dta);
+	bool SetFileAttr(const char * name,Bit16u attr);
 	bool GetFileAttr(char * name,Bit16u * attr);
 	bool GetFileAttrEx(char* name, struct stat *status);
 	DWORD GetCompressedSize(char* name);

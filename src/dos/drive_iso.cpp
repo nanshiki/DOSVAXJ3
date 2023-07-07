@@ -331,6 +331,14 @@ bool isoDrive::Rename(char* /*oldname*/, char* /*newname*/) {
 	return false;
 }
 
+bool isoDrive::SetFileAttr(const char * name,Bit16u attr) {
+	(void)attr;
+
+	isoDirEntry de;
+	DOS_SetError(lookup(&de, name) ? DOSERR_ACCESS_DENIED : DOSERR_FILE_NOT_FOUND);
+	return false;
+}
+
 bool isoDrive::GetFileAttr(char *name, Bit16u *attr) {
 	*attr = 0;
 	isoDirEntry de;
