@@ -65,10 +65,18 @@ public:
 	bool UpdateDateTimeFromHost(void);   
 	void FlagReadOnlyMedium(void);
 	void Flush(void);
+#if defined(WIN32)
+	void SetFullPath(char *full_path) { path = strdup(full_path); }
+#endif
 private:
 	FILE * fhandle;
 	bool read_only_medium;
 	enum { NONE,READ,WRITE } last_action;
+#if defined(WIN32)
+	bool newtime = false;
+	FILETIME filetime;
+	char* path = NULL;
+#endif
 };
 
 enum {
@@ -610,7 +618,9 @@ bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 
 	*file=new localFile(name,hand);
 	(*file)->flags=flags;  //for the inheritance flag and maybe check for others.
-//	(*file)->SetFileName(newname);
+#if defined(WIN32)
+	(*file)->SetFullPath(newname);
+#endif
 	return true;
 }
 
@@ -851,10 +861,16 @@ again:
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)
 	if(stat_block64.st_mode & S_IFDIR) find_attr=DOS_ATTR_DIRECTORY;
+	else find_attr=0;
 #else
 	if(stat_block.st_mode & S_IFDIR) find_attr=DOS_ATTR_DIRECTORY;
-#endif
 	else find_attr=DOS_ATTR_ARCHIVE;
+#endif
+#if defined (WIN32)
+	Bitu attribs = GetFileAttributesW(host_name);
+	if (attribs != INVALID_FILE_ATTRIBUTES)
+		find_attr|=attribs&0x3f;
+#endif
  	if (~srch_attr & find_attr & (DOS_ATTR_DIRECTORY | DOS_ATTR_HIDDEN | DOS_ATTR_SYSTEM)) goto again;
 	
 	/*file is okay, setup everything to be copied in DTA Block */
@@ -890,6 +906,49 @@ again:
 	return true;
 }
 
+bool localDrive::SetFileAttr(const char * name,uint16_t attr) {
+	char newname[CROSS_LEN];
+	strcpy(newname,basedir);
+	strcat(newname,name);
+	CROSS_FILENAME(newname);
+#if defined(LINUX) || defined(MACOSX)
+	ChangeUtf8FileName(newname);
+#endif
+	dirCache.ExpandName(newname);
+
+#if defined (WIN32)
+	const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
+	if (host_name == NULL) {
+		LOG_MSG("%s: Filename '%s' from guest is non-representable on the host filesystem through code page conversion",__FUNCTION__,newname);
+		DOS_SetError(DOSERR_FILE_NOT_FOUND);
+		return false;
+	}
+
+	if (!SetFileAttributesW(host_name, attr)) {
+		DOS_SetError((uint16_t)GetLastError());
+		return false;
+	}
+	dirCache.EmptyCache();
+	return true;
+#else
+	struct stat status;
+	if (stat(newname,&status)==0) {
+		if (attr & DOS_ATTR_READ_ONLY)
+			status.st_mode &= ~(S_IWUSR|S_IWGRP|S_IWOTH);
+		else
+			status.st_mode |=  S_IWUSR;
+		if (chmod(newname,status.st_mode) < 0) {
+			DOS_SetError(DOSERR_ACCESS_DENIED);
+			return false;
+		}
+		return true;
+	}
+
+	DOS_SetError(DOSERR_FILE_NOT_FOUND);
+	return false;
+#endif
+}
+
 bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	char newname[CROSS_LEN];
 	strcpy(newname,basedir);
@@ -899,25 +958,31 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	ChangeUtf8FileName(newname);
 #endif
 	dirCache.ExpandName(newname);
-	struct stat status;
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-	struct _stat64 status64;
-	const wchar_t* host_name = CodePageGuestToHost(newname);
-	if (host_name == NULL && stat(newname,&status)==0 || host_name != NULL && _wstat64(host_name,&status64)==0) {
+
+#if defined (WIN32)
+    const host_cnv_char_t* host_name = CodePageGuestToHost(newname);
+    if (host_name == NULL) {
+        LOG_MSG("%s: Filename '%s' from guest is non-representable on the host filesystem through code page conversion",__FUNCTION__,newname);
+		DOS_SetError(DOSERR_FILE_NOT_FOUND);
+        return false;
+    }
+	Bitu attribs = GetFileAttributesW(host_name);
+	if (attribs == INVALID_FILE_ATTRIBUTES) {
+		DOS_SetError((uint16_t)GetLastError());
+		return false;
+	}
+	*attr = attribs&0x3f;
+	return true;
 #else
+	struct stat status;
 	if (stat(newname,&status)==0) {
-#endif
-		*attr=DOS_ATTR_ARCHIVE;
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-        if(host_name != NULL) {
-            if(status64.st_mode & S_IFDIR) *attr|=DOS_ATTR_DIRECTORY;
-        } else
-#endif
-		if(status.st_mode & S_IFDIR) *attr|=DOS_ATTR_DIRECTORY;
+		if(status.st_mode & S_IFDIR) *attr=DOS_ATTR_DIRECTORY;
+		else *attr=DOS_ATTR_ARCHIVE;
 		return true;
 	}
 	*attr=0;
 	return false; 
+#endif
 }
 
 bool localDrive::GetFileAttrEx(char* name, struct stat *status) {
@@ -1372,12 +1437,17 @@ bool localFile::SetDateTime(Bit16u ndate, Bit16u ntime)
 	{
 		HANDLE h = (HANDLE)_get_osfhandle(fileno(fhandle));
 		if(h != INVALID_HANDLE_VALUE) {
-			FILETIME lft, ft;
-			if(DosDateTimeToFileTime(ndate, ntime, &lft)) {
-				LocalFileTimeToFileTime(&lft, &ft);
-				if(!SetFileTime(h, NULL, NULL, &ft)) {
-					dos.errorcode = GetLastError();
-					return false;
+			FILETIME ft;
+			if(DosDateTimeToFileTime(ndate, ntime, &ft)) {
+				LocalFileTimeToFileTime(&ft, &filetime);
+				if(!SetFileTime(h, NULL, NULL, &filetime)) {
+					if(GetLastError() != ERROR_ACCESS_DENIED) {
+						dos.errorcode = (Bit16u)GetLastError();
+						return false;
+					} else {
+						newtime = true;
+						return true;
+					}
 				}
 			}
 		}
@@ -1411,7 +1481,23 @@ bool localFile::Close() {
 		if(fhandle) fclose(fhandle);
 		fhandle = 0;
 		open = false;
-	};
+	}
+#if defined(WIN32)
+	if(newtime && path) {
+		const host_cnv_char_t *host_name = CodePageGuestToHost(path);
+		if(host_name) {
+			HANDLE h = CreateFileW(host_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if(h) {
+				SetFileTime(h, NULL, NULL, &filetime);
+				CloseHandle(h);
+			}
+		}
+	}
+	if(path) {
+		free(path);
+		path = NULL;
+	}
+#endif
 	return true;
 }
 
