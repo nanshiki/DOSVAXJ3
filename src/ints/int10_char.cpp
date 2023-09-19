@@ -1776,10 +1776,101 @@ void INT10_TeletypeOutput(Bit8u chr,Bit8u attr) {
 	INT10_TeletypeOutputAttr(chr,attr,CurMode->type!=M_TEXT);
 }
 
+#define	EXTEND_ATTRIBUTE_HORIZON_LINE	0x04
+#define	EXTEND_ATTRIBUTE_VERTICAL_LINE	0x08
+#define	EXTEND_ATTRIBUTE_UNDER_LINE		0x80
+#define	EXTEND_ATTRIBUTE_ALL			(EXTEND_ATTRIBUTE_HORIZON_LINE|EXTEND_ATTRIBUTE_VERTICAL_LINE|EXTEND_ATTRIBUTE_UNDER_LINE)
+
+static Bit8u ExtendAttribute[160*75];
+
+static void DrawExtendAttribute(Bit16u col, Bit16u row, Bit8u attr, Bit8u ex_attr)
+{
+	Bitu off, off_start;
+	volatile Bit8u dummy;
+	Bitu width = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+	Bit8u height = real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT);
+	Bit8u no, select;
+	const Bit8u mask_data[2][2] = {{ 0xff, 0xf0 }, { 0x0f, 0xff }};
+
+	if(height == 24) {
+		width = (width == 85) ? 128 : 160;
+		off = row * width * 24 + (col * 12) / 8;
+	} else {
+		off = row * width * height + col;
+	}
+	off_start = off;
+	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x0a);
+	IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x00);
+	if(ex_attr & EXTEND_ATTRIBUTE_HORIZON_LINE) {
+		select = StartBankSelect(off);
+		if(height == 24) {
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, mask_data[col & 1][0]);
+			dummy = real_readb(0xa000, off);
+			real_writeb(0xa000, off, 0x07);
+			off++;
+			select = CheckBankSelect(select, off);
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, mask_data[col & 1][1]);
+			dummy = real_readb(0xa000, off);
+			real_writeb(0xa000, off, 0x07);
+		} else {
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
+			real_writeb(0xa000, off, 0x07);
+		}
+	}
+	if(ex_attr & EXTEND_ATTRIBUTE_VERTICAL_LINE) {
+		off = off_start;
+		select = StartBankSelect(off);
+		IO_Write(0x3ce, 0x08); 
+		if(height != 24 || (col & 1) == 0) {
+			IO_Write(0x3cf, 0x80);
+		} else {
+			IO_Write(0x3cf, 0x08);
+		}
+		for(no = 0 ; no < height ; no++) {
+			dummy = real_readb(0xa000, off);
+			real_writeb(0xa000, off, 0x07);
+			off += width;
+			select = CheckBankSelect(select, off);
+		}
+	}
+	if(ex_attr & EXTEND_ATTRIBUTE_UNDER_LINE) {
+		off = off_start + (width * (height - 1));
+		select = StartBankSelect(off);
+		if(height == 24) {
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, mask_data[col & 1][0]);
+			dummy = real_readb(0xa000, off);
+			real_writeb(0xa000, off, attr & 0x0f);
+			off++;
+			select = CheckBankSelect(select, off);
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, mask_data[col & 1][1]);
+			dummy = real_readb(0xa000, off);
+			real_writeb(0xa000, off, attr & 0x0f);
+		} else {
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
+			real_writeb(0xa000, off, attr & 0x0f);
+		}
+	}
+	IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
+}
+
+void ClearExtendAttribute()
+{
+	memset(ExtendAttribute, 0, sizeof(ExtendAttribute));
+}
+
+static bool IsExtendAttributeMode()
+{
+	uint8_t vmode = GetTrueVideoMode();
+	return (vmode == 0x71 || vmode == 0x73);
+}
+
 void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,Bit16u count,Bit8u page) {
 	Bit8u cur_row=CURSOR_POS_ROW(page);
 	Bit8u cur_col=CURSOR_POS_COL(page);
-	
+	Bit8u ex_attr;
+	Bit8u dbcs_ex_attr = 0;
+	Bit8u dbcs_attr = 0;
+
 	// if row=0xff special case : use current cursor position
 	if (row==0xff) {
 		row=cur_row;
@@ -1789,13 +1880,32 @@ void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,B
 	while (count>0) {
 		Bit8u chr=mem_readb(string);
 		string++;
-		if((flag & 2) != 0 || flag == 0x20) {
+		if((flag & 2) != 0 || flag == 0x20 || flag == 0x21) {
 			attr=mem_readb(string);
 			string++;
+			if(flag == 0x21) {
+				ex_attr = mem_readb(string);
+				string += 2;
+				ExtendAttribute[row * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) + col] = ex_attr;
+			}
 		}
-		if(flag == 0x20) {
+		if(flag == 0x20 || flag == 0x21) {
 			if(DOSV_CheckJapaneseVideoMode()) {
 				WriteCharV(col, row, chr, attr, true);
+				if(flag == 0x21 && IsExtendAttributeMode()) {
+					if(ex_attr & EXTEND_ATTRIBUTE_ALL) {
+						DrawExtendAttribute(col, row, attr, ex_attr);
+					}
+					if(dbcs_ex_attr & EXTEND_ATTRIBUTE_ALL) {
+						DrawExtendAttribute(col - 1, row, dbcs_attr, dbcs_ex_attr);
+					}
+					dbcs_attr = 0;
+					dbcs_ex_attr = 0;
+					if(isKanji1(chr) && (ex_attr & EXTEND_ATTRIBUTE_ALL)) {
+						dbcs_attr = attr;
+						dbcs_ex_attr = ex_attr;
+					}
+				}
 			} else {
 				WriteChar(col, row, page, chr, attr, true);
 			}
@@ -1812,7 +1922,7 @@ void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,B
 		}
 		count--;
 	}
-	if((flag & 1) == 0) {
+	if((flag & 1) == 0 || flag == 0x21) {
 		INT10_SetCursorPos(cur_row, cur_col, page);
 	}
 }
@@ -1825,6 +1935,12 @@ void INT10_ReadString(Bit8u row, Bit8u col, Bit8u flag, Bit8u attr, PhysPt strin
 		ReadCharAttr(col, row, page, &result);
 		mem_writew(string, result);
 		string += 2;
+		if(flag == 0x11 && IsExtendAttributeMode()) {
+			mem_writeb(string, ExtendAttribute[row * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) + col]);
+			string++;
+			mem_writeb(string, 0);
+			string++;
+		}
 		col++;
 		if(col == real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)) {
 			col = 0;
