@@ -125,6 +125,7 @@ VideoModeBlock ModeList_VGA[]={
 
 /* J-3100 */
 { 0x074  ,M_DCGA   ,640 ,400 ,80 ,25 ,8 ,16 ,1 ,0xB8000 ,0x8000 ,100 ,449 ,80 ,400 ,0   },
+{ 0x075  ,M_EGA    ,640 ,400 ,80 ,25 ,8 ,16 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,400 ,0   },
 
 /* Follow vesa 1.2 for first 0x20 */
 { 0x100  ,M_LIN8   ,640 ,400 ,80 ,25 ,8 ,16 ,1 ,0xA0000 ,0x10000,100 ,449 ,80 ,400 ,0   },
@@ -258,6 +259,7 @@ VideoModeBlock ModeList_VGA_Tseng[]={
 
 /* J-3100 */
 { 0x074  ,M_DCGA   ,640 ,400 ,80 ,25 ,8 ,16 ,1 ,0xB8000 ,0x8000 ,100 ,449 ,80 ,400 , 0 },
+{ 0x075  ,M_EGA    ,640 ,400 ,80 ,25 ,8 ,16 ,1 ,0xA0000 ,0xA000 ,100 ,525 ,80 ,400 , 0 },
 
 {0xFFFF  ,M_ERROR  ,0   ,0   ,0  ,0  ,0 ,0  ,0 ,0x00000 ,0x0000 ,0   ,0   ,0  ,0   ,0 	},
 };
@@ -834,6 +836,7 @@ bool INT10_SetVideoMode_OTHER(Bit16u mode,bool clearmem) {
 	return true;
 }
 
+void direct_write_p3c9(Bitu val);
 
 bool INT10_SetVideoMode(Bit16u mode) {
 	bool clearmem=true;Bitu i;
@@ -1351,6 +1354,8 @@ bool INT10_SetVideoMode(Bit16u mode) {
 		case 0x10:
 		case 0x12: 
 			goto att_text16;
+		case 0x75: 
+			if(IS_J3_ARCH) goto att_text16;
 		default:
 			if ( CurMode->type == M_LIN4 )
 				goto att_text16;
@@ -1524,9 +1529,18 @@ att_text16:
 		case M_LIN4: //Added for CAD Software
 dac_text16:
 			for (i=0;i<64;i++) {
-				IO_Write(0x3c9,text_palette[i][0]);
-				IO_Write(0x3c9,text_palette[i][1]);
-				IO_Write(0x3c9,text_palette[i][2]);
+				// Temporary solution to a problem with I/O output in protected mode.
+				// DOSBox-X has no problem, so we should incorporate the change, 
+				// but there are a lot of fixes, so we are considering what to do.
+				if(GetTrueVideoMode() == 0x75) {
+					direct_write_p3c9(text_palette[i][0]);
+					direct_write_p3c9(text_palette[i][1]);
+					direct_write_p3c9(text_palette[i][2]);
+				} else {
+					IO_Write(0x3c9,text_palette[i][0]);
+					IO_Write(0x3c9,text_palette[i][1]);
+					IO_Write(0x3c9,text_palette[i][2]);
+				}
 			}
 			break;
 		case M_VGA:

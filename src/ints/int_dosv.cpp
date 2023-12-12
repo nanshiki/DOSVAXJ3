@@ -57,6 +57,9 @@ bool DOSV_CheckJapaneseVideoMode()
 	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x12 || (TrueVideoMode >= 0x70 && TrueVideoMode <= 0x73) || (TrueVideoMode >= 0x78 && TrueVideoMode < 0x78 + VTEXT_MODE_COUNT - 1))) {
 		return true;
 	}
+	if(IS_J3_ARCH && TrueVideoMode == 0x75) {
+		return true;
+	}
 	return false;
 }
 

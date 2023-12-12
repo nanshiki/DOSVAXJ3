@@ -148,6 +148,11 @@ static void write_p3c9(Bitu /*port*/,Bitu val,Bitu /*iolen*/) {
 	};
 }
 
+void direct_write_p3c9(Bitu val)
+{
+	write_p3c9(0x3c9, val, 1);
+}
+
 static Bitu read_p3c9(Bitu /*port*/,Bitu /*iolen*/) {
 	Bit8u ret;
 	switch (vga.dac.pel_index) {
