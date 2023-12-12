@@ -21,6 +21,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include "dosbox.h"
 #include "mem.h"
 #include "drives.h"
@@ -411,19 +412,33 @@ void DOS_DTA::GetResult(char * _name, char * _lname,Bit32u & _size,Bit16u & _dat
 	}
 }
 
+#define	FIND_DATA_SIZE	(4+8+8+8+8+8+260+14)
+void set_dword(char *buff, uint32_t data);
+
 int DOS_DTA::GetFindData(int fmt, char * fdstr) {
-	if (fmt==1)
-		sprintf(fdstr,"%-1s%-19s%-2s%-2s%-4s%-4s%-4s%-8s%-260s%-14s",(char *)&fd.attr,(char *)&fd.fres1,(char *)&fd.mtime,(char *)&fd.mdate,(char *)&fd.mtime,(char *)&fd.hsize,(char *)&fd.size,(char *)&fd.fres2,(char *)&fd.lname,(char *)&fd.sname);
-	else
-		sprintf(fdstr,"%-1s%-19s%-4s%-4s%-4s%-4s%-8s%-260s%-14s",(char *)&fd.attr,(char *)&fd.fres1,(char *)&fd.mtime,(char *)&fd.mdate,(char *)&fd.hsize,(char *)&fd.size,(char *)&fd.fres2,(char *)&fd.lname,(char *)&fd.sname);
-	for (int i=0;i<4;i++) fdstr[28+i]=0;
-	fdstr[32]=(char)fd.size%256;
-	fdstr[33]=(char)((fd.size%65536)/256);
-	fdstr[34]=(char)((fd.size%16777216)/65536);
-	fdstr[35]=(char)(fd.size/16777216);
-	fdstr[44+strlen(fd.lname)]=0;
-	fdstr[304+strlen(fd.sname)]=0;
-	return (sizeof(fd));
+	memset(fdstr, 0, FIND_DATA_SIZE);
+	set_dword(fdstr, fd.attr);
+	if(fmt == 1) {
+		set_dword(&fdstr[20], ((Bit32u)fd.mdate << 16) | fd.mtime);
+	} else {
+		struct tm ftm = {0};
+		ftm.tm_year = ((fd.mdate >> 9) & 0x7f) + 80;
+		ftm.tm_mon = ((fd.mdate >> 5) & 0x0f) - 1;
+		ftm.tm_mday = (fd.mdate & 0x1f);
+		ftm.tm_hour = (fd.mtime >> 11) & 0x1f;
+		ftm.tm_min = (fd.mtime >> 5) & 0x3f;
+		ftm.tm_sec = (fd.mtime & 0x1f) * 2;
+		ftm.tm_isdst = -1;
+		// 116444736000000000LL = FILETIME 1970/01/01 00:00:00
+		long long ff = 116444736000000000LL + (long long)mktime(&ftm) * 10000000LL;
+		set_dword(&fdstr[20], (Bit32u)ff);
+		set_dword(&fdstr[24], (Bit32u)(ff >> 32));
+	}
+	set_dword(&fdstr[28], fd.hsize);
+	set_dword(&fdstr[32], fd.size);
+	strcpy(&fdstr[44], fd.lname);
+	strcpy(&fdstr[304], fd.sname);
+	return FIND_DATA_SIZE;
 }
 
 Bit8u DOS_DTA::GetSearchDrive(void) {
