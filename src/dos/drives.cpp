@@ -22,6 +22,7 @@
 #include "dosbox.h"
 #include "dos_system.h"
 #include "drives.h"
+#include "bios_disk.h"
 #include "mapper.h"
 #include "support.h"
 
@@ -210,6 +211,7 @@ void DriveManager::InitializeDrive(int drive) {
 		DOS_Drive* disk = driveInfo.disks[driveInfo.currentDisk];
 		Drives[currentDrive] = disk;
 		if (driveInfo.disks.size() > 1) disk->Activate();
+		disk->UpdateDPB(currentDrive);
 	}
 }
 
@@ -255,10 +257,18 @@ void DriveManager::CycleDisks(int drive, bool notify) {
 		currentDisk = (currentDisk + 1) % numDisks;		
 		DOS_Drive* newDisk = driveInfos[drive].disks[currentDisk];
 		driveInfos[drive].currentDisk = currentDisk;
-		
+		if (drive < MAX_DISK_IMAGES && imageDiskList[drive] != NULL) {
+			if (strncmp(newDisk->GetInfo(),"fatDrive",8) == 0)
+				imageDiskList[drive] = ((fatDrive *)newDisk)->loadedDisk;
+			else
+				imageDiskList[drive] = (imageDisk *)newDisk;
+			if ((drive == 2 || drive == 3) && imageDiskList[drive]->hardDrive) updateDPT();
+		}
+
 		// copy working directory, acquire system resources and finally switch to next drive		
 		strcpy(newDisk->curdir, oldDisk->curdir);
 		newDisk->Activate();
+		newDisk->UpdateDPB(currentDrive);
 		Drives[drive] = newDisk;
 		if (notify) LOG_MSG("Drive %c: disk %d of %d now active", 'A'+drive, currentDisk+1, numDisks);
 	}
