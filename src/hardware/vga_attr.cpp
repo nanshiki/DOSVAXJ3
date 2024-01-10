@@ -296,7 +296,7 @@ void VGA_SetupAttr(void) {
 		IO_RegisterWriteHandler(0x3c0,write_p3c0,IO_MB);
 		if (machine==MCH_EGA)
 			IO_RegisterWriteHandler(0x3c1,write_p3c0,IO_MB); // alias on EGA
-		if (IS_VGA_ARCH || IS_J3_ARCH) {
+		if (IS_VGA_ARCH || IS_J3_ARCH || IS_AX_ARCH) {
 			IO_RegisterReadHandler(0x3c0,read_p3c0,IO_MB);
 			IO_RegisterReadHandler(0x3c1,read_p3c1,IO_MB);
 		}

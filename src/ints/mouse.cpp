@@ -804,9 +804,12 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 		break;
 	case 0x11:
 	case 0x12:
+	case 0x52:
+	case 0x53:
 		mouse.max_y = 479;
 		break;
 	case 0x74:
+	case 0x75:
 		mouse.max_y = 399;
 		break;
 	default:

@@ -540,9 +540,9 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 	if (vga.draw.panning) blocks++; // if the text is panned part of an 
 									// additional character becomes visible
 	Bitu background, foreground;
-	//temporary for DBCS
+	//temporary set for DBCS
 	Bitu chr_left;
-	Bitu bsattr;
+	Bitu bsattr;//basic attribute (used in JEGA Attribution)
 	bool chr_wide = false;
 
 	while (blocks > 0) { // for each characters in a line
@@ -550,28 +550,33 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 		Bitu attr = *vidmem++;
 		// SBCS or DBCS second block
 		if(chr_wide == false) {
-			// choose foreground color if blinking not set for this cell or blink on
-			if (!(jega.RMOD2 & 0x80))//bit7 First Attribute EGA/JEGA
-			{
+			if (!(jega.RMOD2 & 0x80))//RMOD2 bit7: First Attribute EGA/JEGA
+			{//--Parse attribute byte as EGA mode--
 				background = attr >> 4; //in EGA
-				// if blinking is enabled bit7 is not mapped to attributes
-				foreground = (vga.draw.blink || (!(attr & 0x80))) ?
-					(attr & 0xf) : background;
-				// choose foreground color if blinking not set for this cell or blink on
-				if (vga.draw.blinking) background &= ~0x8;
+				if (!(jega.RMOD2 & 0x20)) {//RMOD2 bit6: Select Blink or Intensity
+					// choose foreground color if blinking not set for this cell or blink on
+					if (vga.draw.blinking) background &= ~0x8;
+					// if blinking is enabled bit7 is not mapped to attributes
+					foreground = (vga.draw.blink || (!(attr & 0x80))) ?
+						(attr & 0xf) : background;
+				}
+				else
+					foreground = attr & 0x0f;
+				//Clear basic attribute
 				bsattr = 0;
 			}
-			else {
-				foreground = (vga.draw.blink || (!(attr & 0x80))) ?
-					(attr & 0xf) : background;
-				//Background is always black(or transparent) in JEGA attribute mode
+			else {//--Parse attribute byte as JEGA mode--
+				//Background is always black(or transparent) in JEGA mode
 				background = 0;
-				bsattr = attr;
-				if (bsattr & 0x40) {//Reversed in JEGA mode
+				foreground = (vga.draw.blink || (!(attr & 0x80))) ?
+					(attr & 0xf) : background;//Blinking (bit7)
+				if (attr & 0x40) {//Reverse (bit6)
 					Bitu tmp = background;
 					background = foreground;
 					foreground = tmp;
 				}
+				//Set basic attribute
+				bsattr = attr;
 			}
 			// Stay drawing If the char code is DBCS and not at last column.
 			if(isKanji1(chr) && blocks > 1) {
@@ -661,7 +666,7 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 						}
 					}
 				}
-				// Ignore wide char code, put blank
+				// Ignore a wide char code, and put blank
 				else
 					for (Bitu n = 0; n < 16; n++)
 						*draw++ = vga.dac.xlat16[background];
@@ -671,7 +676,7 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 						*draw++ = vga.dac.xlat16[foreground];//underline
 			}
 			else for (Bitu n = 0; n < 16; n++) *draw++ = vga.dac.xlat16[background];//draw blank
-			if (bsattr & 0x20) {//vertical line draw at last
+			if (bsattr & 0x20) {// draw vertical line at last
 				draw -= 16;
 				*draw = vga.dac.xlat16[foreground];
 				draw += 16;
@@ -683,7 +688,7 @@ static Bit8u* VGA_TEXT_JEGA_Draw_Line(Bitu vidstart, Bitu line) {
 	}
 	// draw the text mode cursor if needed
 
-	if ((vga.draw.cursor.count & 0x8) && (line >= vga.draw.cursor.sline) &&
+	if ((vga.draw.cursor.count & 0x10) && (line >= vga.draw.cursor.sline) &&
 		(line <= vga.draw.cursor.eline) && vga.draw.cursor.enabled) {
 		// the adress of the attribute that makes up the cell the cursor is in
 		Bits attr_addr = (vga.draw.cursor.address - vidstart) >> 1;

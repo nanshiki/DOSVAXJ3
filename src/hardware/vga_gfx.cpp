@@ -225,7 +225,7 @@ void VGA_SetupGFX(void) {
 	if (IS_EGAVGA_ARCH || IS_J3_ARCH) {
 		IO_RegisterWriteHandler(0x3ce,write_p3ce,IO_MB);
 		IO_RegisterWriteHandler(0x3cf,write_p3cf,IO_MB);
-		if (IS_VGA_ARCH || IS_J3_ARCH) {
+		if (IS_VGA_ARCH || IS_J3_ARCH || IS_AX_ARCH) {
 			IO_RegisterReadHandler(0x3ce,read_p3ce,IO_MB);
 			IO_RegisterReadHandler(0x3cf,read_p3cf,IO_MB);
 		}

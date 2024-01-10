@@ -151,7 +151,7 @@ void VGA_SetupSEQ(void) {
 	if (IS_EGAVGA_ARCH || IS_J3_ARCH) {
 		IO_RegisterWriteHandler(0x3c4,write_p3c4,IO_MB);
 		IO_RegisterWriteHandler(0x3c5,write_p3c5,IO_MB);
-		if (IS_VGA_ARCH || IS_J3_ARCH) {
+		if (IS_VGA_ARCH || IS_J3_ARCH || IS_AX_ARCH) {
 			IO_RegisterReadHandler(0x3c4,read_p3c4,IO_MB);
 			IO_RegisterReadHandler(0x3c5,read_p3c5,IO_MB);
 		}
