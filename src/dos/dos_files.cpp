@@ -417,11 +417,6 @@ bool DOS_MakeDir(char const * const dir) {
 		Drives[drive]->EmptyCache();
 	}
 
-	if (Drives[drive]->isWriteProtected()) {
-		LOG(LOG_FILES, LOG_NORMAL)("Attempt to write on a write-protected drive: %s", Drives[drive]->GetInfo());
-		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
-		return false;
-	}
 	if(Drives[drive]->MakeDir(fulldir)) return true;
 
 	/* Determine reason for failing */
@@ -725,11 +720,6 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 		DOS_SetError(DOSERR_ACCESS_DENIED);
 		return false;
 	}
-	if (Drives[drive]->isWriteProtected()) {
-		LOG(LOG_FILES, LOG_NORMAL)("Attempt to write on a write-protected drive: %s", Drives[drive]->GetInfo());
-		DOS_SetError(DOSERR_WRITE_PROTECTED_DISK);
-		return false;
-	}
 	bool foundit=Drives[drive]->FileCreate(&Files[handle],fullname,attributes);
 	if (foundit) { 
 		Files[handle]->SetDrive(drive);
@@ -801,8 +791,12 @@ bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	if (device) {
 		Files[handle]=new DOS_Device(*Devices[devnum]);
 	} else {
+		Bit16u olderror=dos.errorcode;
+		dos.errorcode=0;
 		exists=Drives[drive]->FileOpen(&Files[handle],fullname,flags)||Drives[drive]->FileOpen(&Files[handle],upcase(fullname),flags);
 		if (exists) Files[handle]->SetDrive(drive);
+		if (dos.errorcode) return false;
+		dos.errorcode=olderror;
 	}
 	if (exists || device ) { 
 		Files[handle]->AddRef();
@@ -1050,6 +1044,7 @@ bool DOS_CreateTempFile(char * const name,Bit16u * entry) {
 			tempname++;
 		}
 	}
+	Bit16u olderror=dos.errorcode;
 	dos.errorcode=0;
 	/* add random crap to the end of the name and try to open */
 	srand((unsigned int)time(0));
@@ -1062,6 +1057,7 @@ bool DOS_CreateTempFile(char * const name,Bit16u * entry) {
 	} while (DOS_FileExists(name));
 	DOS_CreateFile(name,0,entry);
 	if (dos.errorcode) return false;
+	dos.errorcode=olderror;
 	return true;
 }
 
@@ -1564,7 +1560,7 @@ bool DOS_GetAllocationInfo(Bit8u drive,Bit16u * _bytes_sector,Bit8u * _sectors_c
 	Bit16u _free_clusters;
 	Drives[drive]->AllocationInfo(_bytes_sector,_sectors_cluster,_total_clusters,&_free_clusters);
 	SegSet16(ds,RealSeg(dos.tables.mediaid));
-	reg_bx=RealOff(dos.tables.mediaid+drive*9);
+	reg_bx=RealOff(dos.tables.mediaid+drive*dos.tables.dpb_size);
 	return true;
 }
 
