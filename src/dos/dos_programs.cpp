@@ -95,7 +95,7 @@ static const char* UnmountHelper(char umount) {
 			case 2: return MSG_Get("MSCDEX_ERROR_MULTIPLE_CDROMS");
 		}
 		Drives[i_drive] = 0;
-		mem_writeb(Real2Phys(dos.tables.mediaid)+i_drive*9,0);
+		mem_writeb(Real2Phys(dos.tables.mediaid)+i_drive*dos.tables.dpb_size,0);
 		if (i_drive == DOS_GetDefaultDrive()) {
 			DOS_SetDrive(ZDRIVE_NUM);
 		}
@@ -438,7 +438,7 @@ public:
 		if (!newdrive) E_Exit("DOS:Can't create drive");
 		Drives[drive-'A']=newdrive;
 		/* Set the correct media byte in the table */
-		mem_writeb(Real2Phys(dos.tables.mediaid)+(drive-'A')*9,newdrive->GetMediaByte());
+		mem_writeb(Real2Phys(dos.tables.mediaid)+(drive-'A')*dos.tables.dpb_size,newdrive->GetMediaByte());
 		WriteOut(MSG_Get("PROGRAM_MOUNT_STATUS_2"),drive,newdrive->GetInfo());
 		/* check if volume label is given and don't allow it to updated in the future */
 		if (cmd->FindString("-label",label,true)) newdrive->dirCache.SetLabel(label.c_str(),iscdrom,false);
@@ -692,7 +692,12 @@ public:
 					i++;
 					continue;
 				}
-				
+
+				if (imageDiskList[0] != NULL || imageDiskList[1] != NULL) {
+					WriteOut(MSG_Get("PROGRAM_BOOT_IMAGE_MOUNTED"));
+					return;
+				}
+
 				if ( i >= MAX_SWAPPABLE_DISKS ) {
 					return; //TODO give a warning.
 				}
@@ -1429,7 +1434,7 @@ public:
 			DriveManager::InitializeDrive(drive - 'A');
 
 			// Set the correct media byte in the table 
-			mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * 9, mediaid);
+			mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * dos.tables.dpb_size, mediaid);
 			
 			/* Command uses dta so set it to our internal dta */
 			RealPt save_dta = dos.dta();
@@ -1449,9 +1454,8 @@ public:
 			}
 			WriteOut(MSG_Get("PROGRAM_MOUNT_STATUS_2"), drive, tmp.c_str());
 
-			if (paths.size() == 1) {
-				DOS_Drive * newdrive = imgDisks[0];
-				switch (drive - 'A') {
+			DOS_Drive * newdrive = imgDisks[0];
+			switch (drive - 'A') {
 				case 0:
 				case 1:
 					if(!((fatDrive *)newdrive)->loadedDisk->hardDrive) {
@@ -1467,7 +1471,6 @@ public:
 						updateDPT();
 					}
 					break;
-				}
 			}
 		} else if (fstype=="iso") {
 
@@ -1510,7 +1513,7 @@ public:
 			DriveManager::InitializeDrive(drive - 'A');
 			
 			// Set the correct media byte in the table 
-			mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * 9, mediaid);
+			mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * dos.tables.dpb_size, mediaid);
 			
 			// Print status message (success)
 			WriteOut(MSG_Get("MSCDEX_SUCCESS"));
@@ -1541,7 +1544,7 @@ public:
 			if (hdd) newImage->Set_Geometry(sizes[2],sizes[3],sizes[1],sizes[0]);
 			if(imageDiskList[drive - '0'] != NULL) delete imageDiskList[drive - '0'];
 			imageDiskList[drive - '0'] = newImage;
-			updateDPT();
+			if ((drive == '2' || drive == '3') && hdd) updateDPT();
 			WriteOut(MSG_Get("PROGRAM_IMGMOUNT_MOUNT_NUMBER"),drive - '0',temp_line.c_str());
 		}
 
@@ -1782,6 +1785,7 @@ void DOS_SetupPrograms(void) {
 		"\033[34;1mBOOT [diskimg1.img diskimg2.img] [-l driveletter]\033[0m\n"
 		);
 	MSG_Add("PROGRAM_BOOT_UNABLE","Unable to boot off of drive %c");
+	MSG_Add("PROGRAM_BOOT_IMAGE_MOUNTED","Floppy image(s) already mounted.\n");
 	MSG_Add("PROGRAM_BOOT_IMAGE_OPEN","Opening image file: %s\n");
 	MSG_Add("PROGRAM_BOOT_IMAGE_NOT_OPEN","Cannot open %s");
 	MSG_Add("PROGRAM_BOOT_BOOT","Booting from drive %c...\n");
