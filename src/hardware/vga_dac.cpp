@@ -104,53 +104,46 @@ static Bitu read_p3c8(Bitu /*port*/, Bitu /*iolen*/){
 	return vga.dac.write_index;
 }
 
+static unsigned char tmp_dac[3] = {0,0,0};
+
 static void write_p3c9(Bitu /*port*/,Bitu val,Bitu /*iolen*/) {
 	val&=0x3f;
-	switch (vga.dac.pel_index) {
-	case 0:
-		vga.dac.rgb[vga.dac.write_index].red=val;
-		vga.dac.pel_index=1;
-		break;
-	case 1:
-		vga.dac.rgb[vga.dac.write_index].green=val;
-		vga.dac.pel_index=2;
-		break;
-	case 2:
-		vga.dac.rgb[vga.dac.write_index].blue=val;
-		switch (vga.mode) {
-		case M_VGA:
-		case M_LIN8:
-			VGA_DAC_UpdateColor( vga.dac.write_index );
-			if ( GCC_UNLIKELY( vga.dac.pel_mask != 0xff)) {
-				Bitu index = vga.dac.write_index;
-				if ( (index & vga.dac.pel_mask) == index ) {
-					for ( Bitu i = index+1;i<256;i++) 
-						if ( (i & vga.dac.pel_mask) == index )
-							VGA_DAC_UpdateColor( i );
-				}
-			} 
-			break;
-		default:
-			/* Check for attributes and DAC entry link */
-			for (Bitu i=0;i<16;i++) {
-				if (vga.dac.combine[i]==vga.dac.write_index) {
-					VGA_DAC_SendColor( i, vga.dac.write_index );
+    if(vga.dac.pel_index < 3) {
+		tmp_dac[vga.dac.pel_index]=(unsigned char)val;
+		if(vga.dac.pel_index == 2) {
+			/* update palette ONLY when all three are given */
+			vga.dac.rgb[vga.dac.write_index].red=tmp_dac[0];
+			vga.dac.rgb[vga.dac.write_index].green=tmp_dac[1];
+			vga.dac.rgb[vga.dac.write_index].blue=tmp_dac[2];
+			switch (vga.mode) {
+			case M_VGA:
+			case M_LIN8:
+				VGA_DAC_UpdateColor( vga.dac.write_index );
+				if ( GCC_UNLIKELY( vga.dac.pel_mask != 0xff)) {
+					Bitu index = vga.dac.write_index;
+					if ( (index & vga.dac.pel_mask) == index ) {
+						for ( Bitu i = index+1;i<256;i++) 
+							if ( (i & vga.dac.pel_mask) == index )
+								VGA_DAC_UpdateColor( i );
+					}
+				} 
+				break;
+			default:
+				/* Check for attributes and DAC entry link */
+				for (Bitu i=0;i<16;i++) {
+					if (vga.dac.combine[i]==vga.dac.write_index) {
+						VGA_DAC_SendColor( i, vga.dac.write_index );
+					}
 				}
 			}
+			vga.dac.write_index++;
+			vga.dac.pel_index=0;
+		} else {
+			vga.dac.pel_index++;
 		}
-		vga.dac.write_index++;
-//		vga.dac.read_index = vga.dac.write_index - 1;//disabled as it breaks Wari
-		vga.dac.pel_index=0;
-		break;
-	default:
+	} else {
 		LOG(LOG_VGAGFX,LOG_NORMAL)("VGA:DAC:Illegal Pel Index");			//If this can actually happen that will be the day
-		break;
-	};
-}
-
-void direct_write_p3c9(Bitu val)
-{
-	write_p3c9(0x3c9, val, 1);
+	}
 }
 
 static Bitu read_p3c9(Bitu /*port*/,Bitu /*iolen*/) {

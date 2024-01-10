@@ -836,8 +836,6 @@ bool INT10_SetVideoMode_OTHER(Bit16u mode,bool clearmem) {
 	return true;
 }
 
-void direct_write_p3c9(Bitu val);
-
 bool INT10_SetVideoMode(Bit16u mode) {
 	bool clearmem=true;Bitu i;
 	if (mode>=0x100) {
@@ -1529,18 +1527,9 @@ att_text16:
 		case M_LIN4: //Added for CAD Software
 dac_text16:
 			for (i=0;i<64;i++) {
-				// Temporary solution to a problem with I/O output in protected mode.
-				// DOSBox-X has no problem, so we should incorporate the change, 
-				// but there are a lot of fixes, so we are considering what to do.
-				if(GetTrueVideoMode() == 0x75) {
-					direct_write_p3c9(text_palette[i][0]);
-					direct_write_p3c9(text_palette[i][1]);
-					direct_write_p3c9(text_palette[i][2]);
-				} else {
-					IO_Write(0x3c9,text_palette[i][0]);
-					IO_Write(0x3c9,text_palette[i][1]);
-					IO_Write(0x3c9,text_palette[i][2]);
-				}
+				IO_Write(0x3c9,text_palette[i][0]);
+				IO_Write(0x3c9,text_palette[i][1]);
+				IO_Write(0x3c9,text_palette[i][2]);
 			}
 			break;
 		case M_VGA:
