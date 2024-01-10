@@ -76,7 +76,6 @@ public:
 	virtual Bit8u GetMediaByte(void);
 	virtual bool isRemote(void);
 	virtual bool isRemovable(void);
-	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 	virtual void *opendir(const char *name);
 	virtual bool read_directory_first(void *handle, char* entry_name, char* entry_sname, bool& is_directory);
@@ -189,23 +188,31 @@ public:
 	virtual Bit8u GetMediaByte(void);
 	virtual bool isRemote(void);
 	virtual bool isRemovable(void);
-	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 public:
 	char* Generate_SFN(const char *path, const char *name);
 	Bit8u readSector(Bit32u sectnum, void * data);
 	Bit8u writeSector(Bit32u sectnum, void * data);
 	Bit32u getAbsoluteSectFromBytePos(Bit32u startClustNum, Bit32u bytePos);
+	Bit32u getSectorCount(void);
 	Bit32u getSectorSize(void);
+	Bit32u getClusterSize(void);
 	Bit32u getAbsoluteSectFromChain(Bit32u startClustNum, Bit32u logicalSector);
 	bool allocateCluster(Bit32u useCluster, Bit32u prevCluster);
 	Bit32u appendCluster(Bit32u startCluster);
-	void deleteClustChain(Bit32u startCluster);
+	void deleteClustChain(Bit32u startCluster, Bit32u bytePos);
 	Bit32u getFirstFreeClust(void);
 	bool directoryBrowse(Bit32u dirClustNumber, direntry *useEntry, Bit32s entNum, Bit32s start=0);
 	bool directoryChange(Bit32u dirClustNumber, direntry *useEntry, Bit32s entNum);
 	imageDisk *loadedDisk;
 	bool created_successfully;
+	Bit32u partSectOff;
+	// INT 25h/INT 26h
+	virtual Bit32u GetSectorCount(void);
+	virtual Bit32u GetSectorSize(void);
+	virtual Bit8u Read_AbsoluteSector_INT25(Bit32u sectnum, void * data);
+	virtual Bit8u Write_AbsoluteSector_INT25(Bit32u sectnum, void * data);
+	virtual void UpdateDPB(unsigned char dos_drive);
 private:
 	Bit32u getClusterValue(Bit32u clustNum);
 	void setClusterValue(Bit32u clustNum, Bit32u clustValue);
@@ -233,7 +240,6 @@ private:
 	bool absolute = false;
 	Bit8u fattype;
 	Bit32u CountOfClusters;
-	Bit32u partSectOff;
 	Bit32u firstDataSector;
 	Bit32u firstRootDirSect;
 
@@ -275,7 +281,6 @@ public:
 	virtual void SetDir(const char* path);
 	virtual bool isRemote(void);
 	virtual bool isRemovable(void);
-	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 private:
 	Bit8u subUnit;
@@ -384,7 +389,6 @@ public:
 	virtual void EmptyCache(void){}
 	virtual bool isRemote(void);
 	virtual bool isRemovable(void);
-	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 	bool readSector(Bit8u *buffer, Bit32u sector);
 	virtual char const* GetLabel(void) {return discLabel;};
@@ -453,7 +457,6 @@ public:
 	void EmptyCache(void){}
 	bool isRemote(void);
 	virtual bool isRemovable(void);
-	virtual bool isWriteProtected(void);
 	virtual Bits UnMount(void);
 	virtual char const* GetLabel(void);
 private:

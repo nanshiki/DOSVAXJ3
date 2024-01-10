@@ -1251,9 +1251,6 @@ bool localDrive::isRemovable(void) {
 	return false;
 }
 
-bool localDrive::isWriteProtected(void) {
-	return false;
-}
 Bits localDrive::UnMount(void) { 
 	delete this;
 	return 0; 
@@ -1653,10 +1650,6 @@ bool cdromDrive::isRemote(void) {
 
 bool cdromDrive::isRemovable(void) {
 	return true;
-}
-
-bool cdromDrive::isWriteProtected(void) {
-	return false;
 }
 
 Bits cdromDrive::UnMount(void) {

@@ -404,10 +404,6 @@ bool isoDrive::isRemovable(void) {
 	return true;
 }
 
-bool isoDrive::isWriteProtected(void) {
-	return false;
-}
-
 Bits isoDrive::UnMount(void) {
 	if(MSCDEX_RemoveDrive(driveLetter)) {
 		delete this;

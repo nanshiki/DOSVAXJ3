@@ -305,10 +305,6 @@ bool Virtual_Drive::isRemovable(void) {
 	return false;
 }
 
-bool Virtual_Drive::isWriteProtected(void) {
-	return false;
-}
-
 Bits Virtual_Drive::UnMount(void) {
 	return 1;
 }
