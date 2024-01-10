@@ -61,6 +61,7 @@ CPU_Decoder * cpudecoder;
 bool CPU_CycleAutoAdjust = false;
 bool CPU_SkipCycleAutoAdjust = false;
 Bitu CPU_AutoDetermineMode = 0;
+bool ignore_opcode_63 = true;
 
 Bitu CPU_ArchitectureType = CPU_ARCHTYPE_MIXED;
 
@@ -2232,6 +2233,8 @@ public:
 		//CPU_CycleLeft=0;//needed ?
 		CPU_Cycles=0;
 		CPU_SkipCycleAutoAdjust=false;
+
+		ignore_opcode_63 = section->Get_bool("ignore opcode 63");
 
 		Prop_multival* p = section->Get_multival("cycles");
 		std::string type = p->GetSection()->Get_string("type");

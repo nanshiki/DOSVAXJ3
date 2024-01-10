@@ -637,6 +637,10 @@ void DOSBOX_Init(void) {
 	Pint->SetMinMax(1,1000000);
 	Pint->Set_help("Setting it lower than 100 will be a percentage.");
 
+	Pbool = secprop->Add_bool("ignore opcode 63",Property::Changeable::Always,true);
+	Pbool->Set_help("When debugging, do not report illegal opcode 0x63.\n"
+		"Enable this option to ignore spurious errors while debugging from within Windows 3.1/9x/ME.");
+
 #if C_FPU
 	secprop->AddInitFunction(&FPU_Init);
 #endif
