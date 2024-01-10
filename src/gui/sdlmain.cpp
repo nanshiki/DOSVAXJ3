@@ -340,6 +340,8 @@ struct SDL_Block {
 	Bit8u rshiftstate;
 };
 
+int posx = -1;
+int posy = -1;
 static SDL_Block sdl;
 const char *titlebar;
 
@@ -1926,6 +1928,38 @@ static void GUI_StartUp(Section * sec) {
 	} /* OPENGL is requested end */
 
 #endif	//OPENGL
+    // Getting window position (if configured)
+    posx = -1;
+    posy = -1;
+    const char* windowposition = section->Get_string("windowposition");
+    LOG_MSG("Configured windowposition: %s", windowposition);
+    if (windowposition && !strcmp(windowposition, "-"))
+        posx = posy = -2;
+    else if (windowposition && *windowposition && strcmp(windowposition, ",")) {
+        char result[100];
+        safe_strncpy(result, windowposition, sizeof(result));
+        char* y = strchr(result, ',');
+        if (y && *y) {
+            *y = 0;
+            posx = atoi(result);
+            posy = atoi(y + 1);
+#if defined(WIN32)
+            posy += GetSystemMetrics(SM_CYCAPTION) + GetSystemMetrics(SM_CYFRAME) * 2;
+#endif
+        }
+    }
+    char pos[100];
+    if (posx >= 0 && posy >= 0 && SDL_getenv("SDL_VIDEO_WINDOW_POS") == NULL) {
+#if defined(WIN32)
+        safe_strncpy(pos, "SDL_VIDEO_WINDOW_POS=", sizeof(pos));
+        strcat_s(pos, 100, (std::to_string(posx)+","+std::to_string(posy)).c_str());
+        SDL_putenv(pos);
+#else
+        setenv("SDL_VIDEO_WINDOW_POS",(std::to_string(posx)+","+std::to_string(posy)).c_str(),0);
+#endif
+    } else if (posx != -2 || posy != -2)
+        putenv((char*)"SDL_VIDEO_CENTERED=center");
+
 	/* Initialize screen for first time */
 	sdl.surface=SDL_SetVideoMode_Wrap(640,400,0,0);
 	if (sdl.surface == NULL) E_Exit("Could not initialize video: %s",SDL_GetError());
@@ -2754,6 +2788,10 @@ void Config_Add_SDL() {
 	Pstring = sdl_sec->Add_string("windowresolution",Property::Changeable::Always,"original");
 	Pstring->Set_help("Scale the window to this size IF the output device supports hardware scaling.\n"
 	                  "(output=surface does not!)");
+
+    Pstring = sdl_sec->Add_string("windowposition", Property::Changeable::Always, "-");
+    Pstring->Set_help("Set the window position at startup in the positionX,positionY format (e.g.: 1300,200).\n"
+                      "The window will be centered with \",\" (or empty), and will be in the original position with \"-\".");
 
 	const char* outputs[] = {
 		"surface", "overlay",
