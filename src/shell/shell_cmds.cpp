@@ -1621,14 +1621,15 @@ void SetDbcsTable(bool japanese_flag)
 		mem_writeb(Real2Phys(dos.tables.dbcs) + 0x05, 0xfc);
 		mem_writeb(Real2Phys(dos.tables.dbcs) + 0x06, 0x00);
 		mem_writeb(Real2Phys(dos.tables.dbcs) + 0x07, 0x00);
-		real_writew(dos.tables.country_seg, 5, 932);
+		dos.loaded_codepage = 932;
 	} else {
 		mem_writew(Real2Phys(dos.tables.dbcs) + 0x00, 0x0000);
 		mem_writew(Real2Phys(dos.tables.dbcs) + 0x02, 0x0000); 
 		mem_writew(Real2Phys(dos.tables.dbcs) + 0x04, 0x0000);
 		mem_writew(Real2Phys(dos.tables.dbcs) + 0x06, 0x0000);
-		real_writew(dos.tables.country_seg, 5, 437);
+		dos.loaded_codepage = 437;
 	}
+	real_writew(dos.tables.country_seg, 5, dos.loaded_codepage);
 }
 
 std::string INT10_GetDOSVVtextRowsText();
