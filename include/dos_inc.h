@@ -53,6 +53,7 @@ struct DOS_Version {
 	Bit8u major,minor,revision;
 };
 
+#define SECTOR_SIZE_MAX     2048
 
 #ifdef _MSC_VER
 #pragma pack (1)
@@ -66,7 +67,7 @@ union bootSector {
 		Bit16u reserve_sect;
 		Bit8u misc[496];
 	} bootdata;
-	Bit8u rawdata[512];
+	Bit8u rawdata[SECTOR_SIZE_MAX];
 } GCC_ATTRIBUTE(packed);
 #ifdef _MSC_VER
 #pragma pack ()
@@ -92,7 +93,7 @@ enum { RETURN_EXIT=0,RETURN_CTRLC=1,RETURN_ABORT=2,RETURN_TSR=3};
 #define DOS_FIRST_SHELL 0x118
 #define DOS_MEM_START 0x170		//First Segment that DOS can use
 
-#define DOS_PRIVATE_SEGMENT 0xc800
+#define DOS_PRIVATE_SEGMENT 0xc600
 #define DOS_PRIVATE_SEGMENT_END 0xd000
 
 /* internal Dos Tables */
@@ -392,6 +393,7 @@ class DOS_InfoBlock:public MemStruct {
 public:
 	DOS_InfoBlock			() {};
 	void SetLocation(Bit16u  seg);
+    void SetFirstDPB(uint32_t _first_dpb);
 	void SetFirstMCB(Bit16u _first_mcb);
 	void SetBuffers(Bit16u x,Bit16u y);
 	void SetCurDirStruct(Bit32u _curdirstruct);
@@ -663,7 +665,9 @@ struct DOS_Block {
 		RealPt collatingseq;
 		RealPt upcase;
 		//Bit8u* country;//Will be copied to dos memory. resides in real mem
-		Bit16u dpb; //Fake Disk parameter system using only the first entry so the drive letter matches
+		Bit16u dpb = 0; //Fake Disk parameter system using only the first entry so the drive letter matches
+		uint16_t dpb_size = 0x21; // bytes per DPB entry (MS-DOS 4.x-6.x size)
+		uint16_t mediaid_offset = 0x17; // media ID offset in DPB (MS-DOS 4.x-6.x case)
 		Bit16u country_seg;
 		Bit16u dcp;	// Device command packet
 	} tables;
