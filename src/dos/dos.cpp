@@ -274,6 +274,16 @@ static Bitu DOS_21Handler(void) {
 	if (((reg_ah != 0x50) && (reg_ah != 0x51) && (reg_ah != 0x62) && (reg_ah != 0x64)) && (reg_ah<0x6c)) {
 		DOS_PSP psp(dos.psp());
 		psp.SetStack(RealMake(SegValue(ss),reg_sp-18));
+		/* Save registers */
+		real_writew(SegValue(ss),reg_sp-18,reg_ax);
+		real_writew(SegValue(ss),reg_sp-16,reg_bx);
+		real_writew(SegValue(ss),reg_sp-14,reg_cx);
+		real_writew(SegValue(ss),reg_sp-12,reg_dx);
+		real_writew(SegValue(ss),reg_sp-10,reg_si);
+		real_writew(SegValue(ss),reg_sp- 8,reg_di);
+		real_writew(SegValue(ss),reg_sp- 6,reg_bp);
+		real_writew(SegValue(ss),reg_sp- 4,SegValue(ds));
+		real_writew(SegValue(ss),reg_sp- 2,SegValue(es));
 	}
 
     if(dos.breakcheck && (reg_ah != 0x00 && reg_ah != 0x4c && reg_ah != 0x31)) {
@@ -290,7 +300,7 @@ static Bitu DOS_21Handler(void) {
 	static Bitu time_start = 0; //For emulating temporary time changes.
 	switch (reg_ah) {
 	case 0x00:		/* Terminate Program */
-		DOS_Terminate(mem_readw(SegPhys(ss)+reg_sp+2),false,0);
+		DOS_Terminate(real_readw(SegValue(ss),reg_sp+2),false,0);
 		if (DOS_BreakINT23InProgress) throw int(0); /* HACK: Ick */
 		break;
 	case 0x01:		/* Read character from STDIN, with echo */
@@ -812,7 +822,7 @@ static Bitu DOS_21Handler(void) {
 			if (drive < DOS_DRIVES && Drives[drive] && !Drives[drive]->isRemovable()) {
 				reg_al = 0x00;
 				SegSet16(ds,dos.tables.dpb);
-				reg_bx = drive*9;
+				reg_bx = drive*dos.tables.dpb_size;
 				LOG(LOG_DOSMISC,LOG_ERROR)("Get drive parameter block.");
 			} else {
 				reg_al=0xff;
@@ -1259,6 +1269,7 @@ static Bitu DOS_21Handler(void) {
 	case 0x4d:					/* Get Return code */
 		reg_al=dos.return_code;/* Officially read from SDA and clear when read */
 		reg_ah=dos.return_mode;
+		CALLBACK_SCF(false);
 		break;
 	case 0x4e:					/* FINDFIRST Find first matching file */
 		MEM_StrCopy(SegPhys(ds)+reg_dx,name1,DOSNAMEBUF);
@@ -1341,6 +1352,7 @@ static Bitu DOS_21Handler(void) {
 		switch (reg_al) {
 		case 0:					/* Get Strategy */
 			reg_ax=DOS_GetMemAllocStrategy();
+			CALLBACK_SCF(false);
 			break;
 		case 1:					/* Set Strategy */
 			if (DOS_SetMemAllocStrategy(reg_bx)) CALLBACK_SCF(false);
@@ -1374,7 +1386,8 @@ static Bitu DOS_21Handler(void) {
 			reg_bh=0;	//Unspecified error class
 		}
 		reg_bl=1;	//Retry retry retry
-		reg_ch=0;	//Unkown error locus
+		reg_ch=0;	//Unknown error locus
+		CALLBACK_SCF(false); //undocumented
 		break;
 	case 0x5a:					/* Create temporary file */
 		{
@@ -1421,7 +1434,10 @@ static Bitu DOS_21Handler(void) {
 			reg_si = DOS_SDA_OFS;
 			reg_cx = 0x80;  // swap if in dos
 			reg_dx = 0x1a;  // swap always
+			CALLBACK_SCF(false);
 			LOG(LOG_DOSMISC,LOG_ERROR)("Get SDA, Let's hope for the best!");
+		} else {
+			LOG(LOG_DOSMISC,LOG_ERROR)("DOS:5D:Unsupported subfunction %X",reg_al);
 		}
 		break;
 	case 0x5e:																		/* More Network Functions */
@@ -1460,13 +1476,13 @@ static Bitu DOS_21Handler(void) {
 	case 0x60:					/* Canonicalize filename or path */
 		MEM_StrCopy(SegPhys(ds)+reg_si,name1,DOSNAMEBUF);
 		if (DOS_Canonicalize(name1,name2)) {
-				MEM_BlockWrite(SegPhys(es)+reg_di,name2,(Bitu)(strlen(name2)+1));	
-				CALLBACK_SCF(false);
-			} else {
-				reg_ax=dos.errorcode;
-				CALLBACK_SCF(true);
-			}
-			break;
+			MEM_BlockWrite(SegPhys(es)+reg_di,name2,(Bitu)(strlen(name2)+1));	
+			CALLBACK_SCF(false);
+		} else {
+			reg_ax=dos.errorcode;
+			CALLBACK_SCF(true);
+		}
+		break;
 	case 0x62:					/* Get Current PSP Address */
 		reg_bx=dos.psp();
 		break;
@@ -1595,8 +1611,10 @@ static Bitu DOS_21Handler(void) {
 			CALLBACK_SCF(false);
 			break;
 		};
-	case 0x68:                  /* FFLUSH Commit file */
+	case 0x6a:					/* Same as commit file */
+	case 0x68:					/* FFLUSH Commit file */
 		if(DOS_FlushFile(reg_bl)) {
+			reg_ah = 0x68;
 			CALLBACK_SCF(false);
 		} else {
 			reg_ax = dos.errorcode;
@@ -2239,22 +2257,53 @@ static Bitu DOS_27Handler(void) {
 	return CBRET_NONE;
 }
 
+static Bit16u DOS_SectorAccess(bool read) {
+	fatDrive * drive = (fatDrive *)Drives[reg_al];
+	Bit16u bufferSeg = SegValue(ds);
+	Bit16u bufferOff = reg_bx;
+	Bit16u sectorCnt = reg_cx;
+	Bit32u sectorNum = (Bit32u)reg_dx + drive->partSectOff;
+	Bit32u sectorEnd = drive->getSectorCount() + drive->partSectOff;
+	Bit8u sectorBuf[512];
+	Bitu i;
+
+	if (sectorCnt == 0xffff) { // large partition form
+		bufferSeg = real_readw(SegValue(ds),reg_bx + 8);
+		bufferOff = real_readw(SegValue(ds),reg_bx + 6);
+		sectorCnt = real_readw(SegValue(ds),reg_bx + 4);
+		sectorNum = real_readd(SegValue(ds),reg_bx + 0) + drive->partSectOff;
+	} else if (sectorEnd > 0xffff) return 0x0207; // must use large partition form
+	while (sectorCnt--) {
+		if (sectorNum >= sectorEnd) return 0x0408; // sector not found
+		if (read) {
+			if (drive->readSector(sectorNum++,&sectorBuf)) return 0x0408;
+			for (i=0;i<512;i++) real_writeb(bufferSeg,bufferOff++,sectorBuf[i]);
+		} else {
+			for (i=0;i<512;i++) sectorBuf[i] = real_readb(bufferSeg,bufferOff++);
+			if (drive->writeSector(sectorNum++,&sectorBuf)) return 0x0408;
+		}
+	}
+	return 0;
+}
+
 static Bitu DOS_25Handler(void) {
 	if (reg_al >= DOS_DRIVES || !Drives[reg_al] || Drives[reg_al]->isRemovable()) {
 		reg_ax = 0x8002;
 		SETFLAGBIT(CF,true);
+	} else if (strncmp(Drives[reg_al]->GetInfo(),"fatDrive",8) == 0) {
+		reg_ax = DOS_SectorAccess(true);
+		SETFLAGBIT(CF,reg_ax != 0);
 	} else {
-		if (reg_cx == 1 && reg_dx == 0) {
-			if (reg_al >= 2) {
-				PhysPt ptr = PhysMake(SegValue(ds),reg_bx);
-				// write some BPB data into buffer for MicroProse installers
-				mem_writew(ptr+0x1c,0x3f); // hidden sectors
-			}
+		if (reg_cx == 1 && reg_dx == 0 && reg_al >= 2) {
+			// write some BPB data into buffer for MicroProse installers
+			real_writew(SegValue(ds),reg_bx+0x1c,0x3f); // hidden sectors
+			SETFLAGBIT(CF,false);
+			reg_ax = 0;
 		} else {
 			LOG(LOG_DOSMISC,LOG_NORMAL)("int 25 called but not as disk detection drive %u",reg_al);
+			reg_ax = 0x8002;
+			SETFLAGBIT(CF,true);
 		}
-		SETFLAGBIT(CF,false);
-		reg_ax = 0;
 	}
     return CBRET_NONE;
 }
@@ -2263,6 +2312,9 @@ static Bitu DOS_26Handler(void) {
 	if (reg_al >= DOS_DRIVES || !Drives[reg_al] || Drives[reg_al]->isRemovable()) {	
 		reg_ax = 0x8002;
 		SETFLAGBIT(CF,true);
+	} else if (strncmp(Drives[reg_al]->GetInfo(),"fatDrive",8) == 0) {
+		reg_ax = DOS_SectorAccess(false);
+		SETFLAGBIT(CF,reg_ax != 0);
 	} else {
 		SETFLAGBIT(CF,false);
 		reg_ax = 0;
@@ -2363,6 +2415,26 @@ static Bitu DOS_29Handler(void)
 					col--;
 				}
 			} else {
+				if(DOSV_CheckJapaneseVideoMode() && isKanji1(reg_al) &&  col == ncols - 1) {
+					col = 0;
+					if(row < nrows) {
+						row++;
+					} else {
+						uint8_t tmp_al = reg_al;
+						reg_bh = 0x07;
+						reg_ax = 0x0601;
+						reg_cx = 0x0000;
+						reg_dl = (uint8_t)(ncols - 1);
+						reg_dh = (uint8_t)nrows;
+						CALLBACK_RunRealInt(0x10);
+						reg_al = tmp_al;
+					}
+					reg_ah = 0x02;
+					reg_bh = page;
+					reg_dl = col;
+					reg_dh = row;
+					CALLBACK_RunRealInt(0x10);
+				}
 				reg_ah = 0x09;
 				reg_bh = page;
 				reg_bl = int29h_data.ansi.attr;

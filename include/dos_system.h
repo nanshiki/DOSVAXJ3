@@ -280,7 +280,6 @@ public:
 	virtual void EmptyCache(void) { dirCache.EmptyCache(); };
 	virtual bool isRemote(void)=0;
 	virtual bool isRemovable(void)=0;
-	virtual bool isWriteProtected(void) = 0;
 	virtual Bits UnMount(void)=0;
 
 	virtual void *opendir(const char *dir) { (void)dir; return NULL; };
@@ -297,6 +296,13 @@ public:
 
 	// disk cycling functionality (request resources)
 	virtual void Activate(void) {};
+	virtual void UpdateDPB(unsigned char dos_drive) { (void)dos_drive; };
+
+    // INT 25h/INT 26h
+    virtual uint32_t GetSectorCount(void) { return 0; }
+    virtual uint32_t GetSectorSize(void) { return 0; } // LOGICAL sector size (from the FAT driver) not PHYSICAL disk sector size
+	virtual uint8_t Read_AbsoluteSector_INT25(uint32_t sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
+	virtual uint8_t Write_AbsoluteSector_INT25(uint32_t sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
 };
 
 enum { OPEN_READ=0, OPEN_WRITE=1, OPEN_READWRITE=2, OPEN_READ_NO_MOD=4, DOS_NOT_INHERIT=128};
