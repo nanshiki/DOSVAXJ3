@@ -578,8 +578,8 @@ public:
 			memory.phandlers[i] = &ram_page_handler;
 			memory.mhandles[i] = 0;				//Set to 0 for memory allocation
 		}
-		/* Setup rom at 0xc0000-0xc8000 */
-		for (i=0xc0;i<0xc8;i++) {
+		/* Setup rom at 0xc0000-0xc6000 */
+		for (i=0xc0;i<0xc6;i++) {
 			memory.phandlers[i] = &rom_page_handler;
 		}
 		/* Setup rom at 0xf0000-0x100000 */
