@@ -721,6 +721,10 @@ int 2fh ax=1680h といったアイドル割り込みで HLT を実行し CPU �
 　DOSVAX Build 4483PS13 までの修正を適用しました。ただし PS/55 関連は適用して
 いません。
 
+・build JP240130 (2024/1/30)
+　[sdl] windowposition の位置指定が画面モード変更でも有効になっていたのを修正
+しました。
+
 ●ライセンス
 　GPL v2
 　ソースコードや ABOUT_LIB、README_AX.txt も参照してください。
