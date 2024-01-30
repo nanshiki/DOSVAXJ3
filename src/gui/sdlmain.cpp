@@ -1552,6 +1552,8 @@ void GFX_Start() {
 		ResetIMPosition();
 	}
 #endif
+	putenv((char*)"SDL_VIDEO_CENTERED=");
+	SDL_putenv("SDL_VIDEO_WINDOW_POS=");
 	sdl.active=true;
 
 }
