@@ -123,6 +123,8 @@ static void write_p60(Bitu /*port*/,Bitu val,Bitu /*iolen*/) {
 		case 0xf2:	/* Identify keyboard */
 			/* AT's just send acknowledge */
 			KEYBOARD_AddBuffer(0xfa);	/* Acknowledge */
+			KEYBOARD_AddBuffer(0xab);   /* ID */
+			KEYBOARD_AddBuffer(0x83);
 			break;
 		case 0xf3: /* Typematic rate programming */
 			keyb.command=CMD_SETTYPERATE;
@@ -402,6 +404,8 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_kanji:
 		if(INT16_AX_GetKBDBIOSMode() == 0x51) {
 			extend = true;
+			ret = 0x3a;
+		} else if(IS_J3_ARCH) {
 			ret = 0x3a;
 		} else {
 			ret = 86;
