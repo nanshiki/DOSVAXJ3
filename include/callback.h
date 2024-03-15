@@ -37,7 +37,7 @@ enum { CB_RETN,CB_RETF,CB_RETF8,CB_RETF_STI,CB_RETF_CLI,
 #define CB_MAX		128
 #define CB_SIZE		32
 #define CB_SEG		0xF000
-#define CB_SOFFSET	0x1000
+#define CB_SOFFSET	0xC000
 
 enum {	
 	CBRET_NONE=0,CBRET_STOP=1
