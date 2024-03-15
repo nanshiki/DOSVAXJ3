@@ -50,7 +50,7 @@ typedef char host_cnv_char_t;
 
 static uint16_t ldid[256];
 static std::string ldir[256];
-extern int lfn_filefind_handle;
+extern int lfn_filefind_handle, file_access_tries;
 static host_cnv_char_t cpcnv_temp[4096], cpcnv_ltemp[4096];
 
 class localFile : public DOS_File {
@@ -60,6 +60,7 @@ public:
 	bool Write(Bit8u * data,Bit16u * size);
 	bool Seek(Bit32u * pos,Bit32u type);
 	bool Close();
+	bool LockFile(Bit8u mode, Bit32u pos, Bit16u size);
 	Bit16u GetInformation(void);
 	bool SetDateTime(Bit16u ndate, Bit16u ntime);
 	bool UpdateDateTimeFromHost(void);   
@@ -1399,6 +1400,98 @@ bool localFile::Write(Bit8u * data,Bit16u * size) {
 		*size=(Bit16u)fwrite(data,1,*size,fhandle);
 		return true;
     }
+}
+
+// ert, 20100711: Locking extensions
+// Wengier, 20201230: All platforms
+bool localFile::LockFile(Bit8u mode, Bit32u pos, Bit16u size) {
+#if defined(WIN32)
+    static bool lockWarn = true;
+	HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(fhandle));
+    if (file_access_tries>0) {
+        if (mode > 1) {
+            DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+            return false;
+        }
+        if (!mode)																		// Lock, try 3 tries
+            for (int tries = file_access_tries; tries; tries--) {
+                if (::LockFile(hFile, pos, 0, size, 0)) {
+                    if (lockWarn && ::LockFile(hFile, pos, 0, size, 0)) {
+                        lockWarn = false;
+                        char caption[512];
+                        strcat(strcpy(caption, "Windows reference: "), dynamic_cast<localDrive*>(Drives[GetDrive()])->getBasedir());
+                        MessageBox(NULL, "Record locking seems incorrectly implemented!\nConsult ...", caption, MB_OK|MB_ICONSTOP);
+                    }
+                    return true;
+                }
+                Sleep(25);																// If failed, wait 25 millisecs
+            }
+        else if (::UnlockFile(hFile, pos, 0, size, 0))									// This is a somewhat permanent condition!
+            return true;
+        DOS_SetError((uint16_t)GetLastError());
+        return false;
+    }
+	BOOL bRet;
+#else
+	bool bRet;
+#endif
+
+	switch (mode)
+	{
+#if defined(WIN32)
+	case 0: bRet = ::LockFile (hFile, pos, 0, size, 0); break;
+	case 1: bRet = ::UnlockFile(hFile, pos, 0, size, 0); break;
+#else
+	case 0: bRet = toLock(fileno(fhandle), true, pos, size); break;
+	case 1: bRet = toLock(fileno(fhandle), false, pos, size); break;
+#endif
+	default: 
+		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+		return false;
+	}
+	//LOG_MSG("::LockFile %s", name);
+
+	if (!bRet)
+	{
+#if defined(WIN32)
+		switch (GetLastError())
+		{
+		case ERROR_ACCESS_DENIED:
+		case ERROR_LOCK_VIOLATION:
+		case ERROR_NETWORK_ACCESS_DENIED:
+		case ERROR_DRIVE_LOCKED:
+		case ERROR_SEEK_ON_DEVICE:
+		case ERROR_NOT_LOCKED:
+		case ERROR_LOCK_FAILED:
+			DOS_SetError(0x21);
+			break;
+		case ERROR_INVALID_HANDLE:
+			DOS_SetError(DOSERR_INVALID_HANDLE);
+			break;
+		case ERROR_INVALID_FUNCTION:
+		default:
+			DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+			break;
+		}
+#else
+		switch (errno)
+		{
+		case EINTR:
+		case ENOLCK:
+		case EAGAIN:
+			DOS_SetError(0x21);
+			break;
+		case EBADF:
+			DOS_SetError(DOSERR_INVALID_HANDLE);
+			break;
+		case EINVAL:
+		default:
+			DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+			break;
+		}
+#endif
+	}
+	return bRet;
 }
 
 bool localFile::Seek(Bit32u * pos,Bit32u type) {

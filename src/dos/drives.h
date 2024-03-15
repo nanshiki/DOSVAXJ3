@@ -80,6 +80,7 @@ public:
 	virtual void *opendir(const char *name);
 	virtual bool read_directory_first(void *handle, char* entry_name, char* entry_sname, bool& is_directory);
     virtual bool read_directory_next(void *handle, char* entry_name, char* entry_sname, bool& is_directory);
+	const char* getBasedir() const {return basedir;};
 private:
 	char basedir[CROSS_LEN];
 	friend void DOS_Shell::CMD_SUBST(char* args); 	

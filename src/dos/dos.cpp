@@ -45,6 +45,9 @@
 
 DOS_Block dos;
 DOS_InfoBlock dos_infoblock;
+bool enable_share_exe = true;
+int file_access_tries = 0;
+
 extern int lfn_filefind_handle;
 extern bool force;
 extern bool LineInputFlag;
@@ -1424,9 +1427,22 @@ static Bitu DOS_21Handler(void) {
 			break;
 		}
 	case 0x5c:			/* FLOCK File region locking */
-		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-		reg_ax = dos.errorcode;
-		CALLBACK_SCF(true);
+		/* ert, 20100711: Locking extensions */
+		{
+			uint32_t pos = ((unsigned int)reg_cx << 16u) + reg_dx;
+			uint32_t size = ((unsigned int)reg_si << 16u) + reg_di;
+			if(!enable_share_exe) {
+				DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+				reg_ax = dos.errorcode;
+				CALLBACK_SCF(true);
+			} else if(DOS_LockFile(reg_bx,reg_al,pos, size)) {
+				reg_ax = 0;
+				CALLBACK_SCF(false);
+			} else {
+				reg_ax = dos.errorcode;
+				CALLBACK_SCF(true);
+			}
+		}
 		break;
 	case 0x5d:					/* Network Functions */
 		if(reg_al == 0x06) {
@@ -2828,6 +2844,8 @@ public:
 		dos.direct_output=false;
 
 		dos.host_time_flag = section->Get_bool("hosttime");
+		enable_share_exe = section->Get_bool("share");
+		file_access_tries = section->Get_int("file access tries");
 	}
 	~DOS(){
 		for (Bit16u i=0;i<DOS_DRIVES;i++) delete Drives[i];

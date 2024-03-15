@@ -43,6 +43,8 @@
 #define DOS_DIRDEPTH 8
 #define DOS_PATHLENGTH 255
 #define DOS_TEMPSIZE 1024
+#define DOSERR_FUNCTION_NUMBER_INVALID 1
+void DOS_SetError(uint16_t code);
 
 enum {
 	DOS_ATTR_READ_ONLY=	0x01,
@@ -73,6 +75,8 @@ public:
 	virtual bool	Write(Bit8u * data,Bit16u * size)=0;
 	virtual bool	Seek(Bit32u * pos,Bit32u type)=0;
 	virtual bool	Close()=0;
+	/* ert, 20100711: Locking extensions */
+	virtual bool    LockFile(uint8_t mode, uint32_t pos, uint16_t size) { (void)mode; (void)pos; (void)size; DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);return false; };
 	virtual Bit16u	GetInformation(void)=0;
 	virtual void	SetName(const char* _name)	{ if (name) delete[] name; name = new char[strlen(_name)+1]; strcpy(name,_name); }
 	virtual char*	GetName(void)				{ return name; };
