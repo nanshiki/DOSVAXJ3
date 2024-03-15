@@ -66,10 +66,6 @@
 Bitu DEBUG_EnableDebugger(void);
 #endif
 
-bool image_boot_flag = false;
-extern Bit16u int10_offset;
-extern Bit16u int60_offset;
-
 void MSCDEX_SetCDInterface(int intNr, int forceCD);
 static Bitu ZDRIVE_NUM = 25;
 
@@ -537,6 +533,7 @@ static void MEM_ProgramStart(Program * * make) {
 
 extern Bit32u floppytype;
 extern void SetDbcsTable(bool japanese_flag);
+extern void SetImageBootCheckData();
 
 class BOOT : public Program {
 private:
@@ -915,10 +912,8 @@ public:
 				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_MODE, 0);
 				real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_LINE_COUNT, 0);
 			}
+			SetImageBootCheckData();
 			// motor ON
-			image_boot_flag = true;
-			int10_offset = mem_readw(0x0040);
-			int60_offset = mem_readw(0x0180);
 			mem_writeb(BIOS_DISK_MOTOR_TIMEOUT, 10);
 			mem_writeb(BIOS_DRIVE_RUNNING, 0x01);
 

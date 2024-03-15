@@ -43,10 +43,13 @@
 #include <sys/timeb.h>
 #endif
 
-Bit16u int10_offset;
-Bit16u int60_offset;
+static Bit16u int10_offset;
+static Bit16u int60_offset;
+static Bit32u irq1_vector;
+bool SetKanjiKey();
 
-extern bool image_boot_flag;
+bool image_boot_flag = false;
+
 extern bool debug_flag;
 
 /* if mem_systems 0 then size_extended is reported as the real size else 
@@ -539,6 +542,26 @@ static void BIOS_HostTimeSync() {
 		loctime->tm_sec*1000+
 		milli))*(((double)PIT_TICK_RATE/65536.0)/1000.0));
 	mem_writed(BIOS_TIMER,ticks);
+}
+
+void SetImageBootCheckData()
+{
+	if(SetKanjiKey()) {
+		irq1_vector = mem_readd(0x0024);
+	}
+	int10_offset = mem_readw(0x0040);
+	int60_offset = mem_readw(0x0180);
+	image_boot_flag = true;
+}
+
+void CheckIRQ1Vector()
+{
+	if(image_boot_flag && irq1_vector) {
+		if(irq1_vector != mem_readd(0x0024)) {
+			mem_writed(0x24, irq1_vector);
+			irq1_vector = 0;
+		}
+	}
 }
 
 static Bitu INT8_Handler(void) {
@@ -1243,6 +1266,7 @@ public:
 
 		/* INT 16 Keyboard handled in another file */
 		BIOS_SetupKeyboard();
+		SetKanjiKey();
 
 		/* INT 17 Printer Routines */
 		callback[5].Install(&INT17_Handler,CB_IRET_STI,"Int 17 Printer");

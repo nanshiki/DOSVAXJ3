@@ -2385,6 +2385,8 @@ extern bool keyboard_jp_flag;
 #define SDL_XORG_FIX 0
 #endif
 
+void CheckIRQ1Vector();
+
 void GFX_Events() {
 	//Don't poll too often. This can be heavy on the OS, especially Macs.
 	//In idle mode 3000-4000 polls are done per second without this check.
@@ -2716,6 +2718,7 @@ void GFX_Events() {
 				}
 			}
 #endif
+			CheckIRQ1Vector();
 			MAPPER_CheckEvent(&event);
 #if defined(WIN32)
 			if(event.key.keysym.scancode == 0x70 || event.key.keysym.scancode == 0x3a || event.key.keysym.scancode == 0x94 || event.key.keysym.scancode == 0x29) {

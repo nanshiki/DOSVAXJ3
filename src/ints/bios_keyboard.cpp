@@ -42,6 +42,7 @@
 
 static Bitu call_int16,call_irq1,call_irq6;
 static Bit8u fep_line = 0x01;
+static bool right_alt_kanji_key = false;
 
 bool CtrlCFlag = false;
 
@@ -438,6 +439,14 @@ static Bitu IRQ1_Handler(void) {
 		}
 		else
 		{
+			if(right_alt_kanji_key && (flags3 & 0x02)) {
+				if(IS_J3_ARCH) {
+					add_key(0x3a00);
+				} else {
+					add_key(0xb200);
+				}
+				break;
+			}
 			flags1 |=0x08;
 			if (flags3 &0x02) flags3 |=0x08;
 			else flags2 |=0x02;
@@ -914,6 +923,38 @@ static void InitBiosSegment(void) {
 	mem_writeb(BIOS_KEYBOARD_FLAGS3,16); /* Enhanced keyboard installed */	
 	mem_writeb(BIOS_KEYBOARD_TOKEN,0);
 	mem_writeb(BIOS_KEYBOARD_LEDS,leds);
+}
+
+bool SetKanjiKey()
+{
+	bool enable = false;
+
+	Section_prop *section = static_cast<Section_prop *>(control->GetSection("dosbox"));
+	if(section) {
+		const char *param = section->Get_string("kanjikey");
+		if(!strcmp(param, "hanzen")) {
+			if(IS_J3_ARCH) {
+				scan_to_scanascii[0x29].normal = 0x3a00;
+			} else {
+				scan_to_scanascii[0x29].normal = 0xb200;
+			}
+			enable = true;
+		} else if(!strcmp(param, "althanzen")) {
+			scan_to_scanascii[0x29].normal = 0xaf00;
+			scan_to_scanascii[0x29].shift = 0xb000;
+			scan_to_scanascii[0x29].control = 0xb100;
+			if(IS_J3_ARCH) {
+				scan_to_scanascii[0x29].alt = 0x3a00;
+			} else {
+				scan_to_scanascii[0x29].alt = 0xb200;
+			}
+			enable = true;
+		} else if(!strcmp(param, "rightalt")) {
+			right_alt_kanji_key = true;
+			enable = true;
+		}
+	}
+	return enable;
 }
 
 void BIOS_SetupKeyboard(void) {
