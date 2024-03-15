@@ -109,7 +109,7 @@ static Bitu INT10_Handler(void) {
 				}
 			}
 		} else {
-			if(!IS_J3_ARCH && reg_al == 0x74) {
+			if(!IS_J3_ARCH && (reg_al == 0x74 || reg_al == 0x64)) {
 				break;
 			}
 			if(IS_J3_ARCH && (reg_al == 0x04 || reg_al == 0x05)) {

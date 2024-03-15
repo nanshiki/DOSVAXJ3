@@ -1051,7 +1051,7 @@ void WriteCharJ31Sbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 		fontdata = RealMake(RealSeg(fontdata), RealOff(fontdata) + chr * 16);
 	}
 	x = col;
-	y = row * 16;
+	y = row * ((real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) == 24) ? 16 : 20);
 	off = (y >> 2) * 80 + 8 * 1024 * (y & 3) + x;
 	for(Bit8u h = 0 ; h < 16 ; h++) {
 		if(J3_IsJapanese() && chr >= 0x20) {
@@ -1091,7 +1091,7 @@ void WriteCharJ31Dbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 	pos = 0;
 	font = (Bit16u *)GetDbcsFont(chr);
 	x = col;
-	y = row * 16;
+	y = row * ((real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) == 24) ? 16 : 20);
 	off = (y >> 2) * 80 + 8 * 1024 * (y & 3) + x;
 	for(Bit8u h = 0 ; h < 16 ; h++) {
 		data = *font++;

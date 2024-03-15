@@ -55,9 +55,9 @@ extern Bit8u jfont_dbcs_24[];
 bool INT10_J3_SetCRTBIOSMode(Bitu mode)
 {
 	if (!IS_J3_ARCH) return false;
-	if (mode == 0x74) {
+	if (mode == 0x74 || mode == 0x64) {
 		LOG(LOG_INT10, LOG_NORMAL)("J-3100 CRT BIOS has been set to JP mode.");
-		INT10_SetVideoMode(0x74);
+		INT10_SetVideoMode(mode);
 		return true;
 	}
 	return false;
@@ -473,7 +473,7 @@ void INT8_J3()
 	if((j3_timer & 0x03) == 0) {
 		if((real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_BLINK) & 0x01) == 0 || j3_cursor_stat == 0) {
 			Bitu x = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS);
-			Bitu y = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS + 1) * 16;
+			Bitu y = real_readb(BIOSMEM_SEG, BIOSMEM_CURSOR_POS + 1) * ((real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) == 24) ? 16 : 20);
 			if(j3_cursor_stat == 0) {
 				Bit8u attr = GetKanjiAttr();
 				if(attr == 0) {
@@ -584,7 +584,7 @@ void J3_GetPalette(Bit8u no, Bit8u &r, Bit8u &g, Bit8u &b)
 
 bool J3_IsJapanese()
 {
-	if(real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x74) {
+	if(real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x74 || real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x64) {
 		return true;
 	}
 	return false;
