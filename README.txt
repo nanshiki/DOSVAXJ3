@@ -99,6 +99,15 @@ im             IM の有効/無効を指定します。true で有効、false �
 fepcontrol     DOS の FEP 制御用 API を選択します。
                ias で $IAS.SYS、mskanji で MS-KANJI API、both で両方有効となり
                ます。
+kanjikey       漢字キーに割り当てるキーを指定します。
+               althanzen  ALT＋半角全角
+               hanzen     半角全角
+               rightalt   右 ALT
+               none       指定なし
+               設定する場合 im=false としてください。ただし rightalt の場合は
+               im=true でも大丈夫です。
+               none 以外を指定するとイメージファイルから DOS をブートした後で
+               も DOSVAXJ3 のキーボードの設定が有効になります。
 
 languagejp     日本語メッセージ定義ファイルを指定します。
                内容は Shift JIS で記述する必要があります。
@@ -724,6 +733,17 @@ int 2fh ax=1680h といったアイドル割り込みで HLT を実行し CPU �
 ・build JP240130 (2024/1/30)
 　[sdl] windowposition の位置指定が画面モード変更でも有効になっていたのを修正
 しました。
+
+・build JP240322 (2024/3/22)
+　J-3100 ビデオモード 64h (640×400 2色 文字80×20)に対応しました。
+　MS-DOS/V 6.2 をイメージファイルからブートした場合に jkeyb.sys の /106 設定
+が有効にならず英語キーボード配列になっていたのを修正しました。(DOSBox-X から
+移植)
+　[dosbox] kanjikey を追加しました。漢字キーを ALT+半角全角、半角全角、右 ALT
+に割り当てる事ができます。
+　int 21h ah=5ch に対応しました。Windows 3.1 用の MS-Office が起動可能になり
+ます。(DOSBox-X から移植)
+　内蔵 BIOS 割り込みのエントリアドレスを F000:C000 以降に変更しました。
 
 ●ライセンス
 　GPL v2
