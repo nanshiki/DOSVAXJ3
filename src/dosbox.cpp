@@ -530,6 +530,11 @@ void DOSBOX_Init(void) {
 	Pstring->Set_values(fepcontrol_settings);
 	Pstring->Set_help("FEP control API");
 
+	const char* kanjikey_setting[] = { "none", "hanzen", "althanzen", "rightalt", 0};
+	Pstring = secprop->Add_path("kanjikey",Property::Changeable::OnlyAtStart,"none");
+	Pstring->Set_values(kanjikey_setting);
+	Pstring->Set_help("Key to assign Kanji key at image boot");
+
 	Pbool = secprop->Add_bool("debug",Property::Changeable::OnlyAtStart,false);
 	Pbool->Set_help("debug flag");
 
@@ -915,6 +920,13 @@ void DOSBOX_Init(void) {
 
 	Pbool = secprop->Add_bool("idle",Property::Changeable::OnlyAtStart, true);
 	Pbool->Set_help("If set, DOSVAXJ3 can lower the host system's CPU load when a supported guest program is idle.");
+
+	Pbool = secprop->Add_bool("share",Property::Changeable::WhenIdle,true);
+	Pbool->Set_help("Reports SHARE.EXE as resident and provides functions such as file-locking and record-locking, although not all SHARE functions are emulated.");
+
+	Pint = secprop->Add_int("file access tries",Property::Changeable::WhenIdle,0);
+	Pint->Set_help("If a positive integer is set, DOSVAXJ3 will try to read/write/lock files directly on mounted local drives for the specified number of times without caching before failing on Windows systems.\n"
+		"For networked database applications (e.g. dBase, FoxPro, etc), it is strongly recommended to set this to e.g. 3 for correct operations.");
 
 	// Mscdex
 	secprop->AddInitFunction(&MSCDEX_Init);
