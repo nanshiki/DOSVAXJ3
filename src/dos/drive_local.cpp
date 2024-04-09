@@ -25,6 +25,15 @@
 #include <time.h>
 #include <errno.h>
 #include <limits.h>
+#ifndef WIN32
+#include <utime.h>
+#include <sys/file.h>
+#else
+#include <fcntl.h>
+#include <sys/utime.h>
+#include <sys/locking.h>
+#endif
+#include <sys/stat.h>
 
 #include "dosbox.h"
 #include "dos_inc.h"
@@ -559,6 +568,101 @@ bool localDrive::FileCreate(DOS_File * * file,char * name,Bit16u /*attributes*/)
 
 	return true;
 }
+
+#ifndef WIN32
+int lock_file_region(int fd, int cmd, struct flock *fl, long long start, unsigned long len)
+{
+  fl->l_whence = SEEK_SET;
+  fl->l_pid = 0;
+  //if (start == 0x100000000LL) start = len = 0; //first handle magic file lock value
+#ifdef F_SETLK64
+  if (cmd == F_SETLK64 || cmd == F_GETLK64) {
+    struct flock64 fl64;
+    int result;
+    LOG_MSG("Large file locking start=%llx, len=%lx\n", start, len);
+    fl64.l_type = fl->l_type;
+    fl64.l_whence = fl->l_whence;
+    fl64.l_pid = fl->l_pid;
+    fl64.l_start = start;
+    fl64.l_len = len;
+    result = fcntl( fd, cmd, &fl64 );
+    fl->l_type = fl64.l_type;
+    fl->l_start = (long) fl64.l_start;
+    fl->l_len = (long) fl64.l_len;
+    return result;
+  }
+#endif
+  if (start == 0x100000000LL)
+    start = 0x7fffffff;
+  fl->l_start = start;
+  fl->l_len = len;
+  return fcntl( fd, cmd, fl );
+}
+
+#define COMPAT_MODE	0x00
+#define DENY_ALL	0x01
+#define DENY_WRITE	0x02
+#define DENY_READ	0x03
+#define DENY_NONE	0x04
+#define FCB_MODE	0x07
+bool share(int fd, int mode, uint32_t flags) {
+  struct flock fl;
+  int ret;
+  int share_mode = ( flags >> 4 ) & 0x7;
+  fl.l_type = F_WRLCK;
+  /* see whatever locks are possible */
+
+#ifdef F_GETLK64
+  ret = lock_file_region( fd, F_GETLK64, &fl, 0x100000000LL, 1 );
+  if ( ret == -1 && errno == EINVAL )
+#endif
+  ret = lock_file_region( fd, F_GETLK, &fl, 0x100000000LL, 1 );
+  if ( ret == -1 ) return true;
+
+  /* file is already locked? then do not even open */
+  /* a Unix read lock prevents writing;
+     a Unix write lock prevents reading and writing,
+     but for DOS compatibility we allow reading for write locks */
+  if ((fl.l_type == F_RDLCK && mode != O_RDONLY) || (fl.l_type == F_WRLCK && mode != O_WRONLY))
+    return false;
+
+  switch ( share_mode ) {
+  case COMPAT_MODE:
+    if (fl.l_type == F_WRLCK) return false;
+  case DENY_NONE:
+    return true;                   /* do not set locks at all */
+  case DENY_WRITE:
+    if (fl.l_type == F_WRLCK) return false;
+    if (mode == O_WRONLY) return true; /* only apply read locks */
+    fl.l_type = F_RDLCK;
+    break;
+  case DENY_READ:
+    if (fl.l_type == F_RDLCK) return false;
+    if (mode == O_RDONLY) return true; /* only apply write locks */
+    fl.l_type = F_WRLCK;
+    break;
+  case DENY_ALL:
+    if (fl.l_type == F_WRLCK || fl.l_type == F_RDLCK) return false;
+    fl.l_type = mode == O_RDONLY ? F_RDLCK : F_WRLCK;
+    break;
+  case FCB_MODE:
+    if ((flags & 0x8000) && (fl.l_type != F_WRLCK)) return true;
+    /* else fall through */
+  default:
+    LOG_MSG("internal SHARE: unknown sharing mode %x\n", share_mode);
+    return false;
+    break;
+  }
+#ifdef F_SETLK64
+  ret = lock_file_region(fd, F_SETLK64, &fl, 0x100000000LL, 1);
+  if(ret == -1 && errno == EINVAL)
+#endif
+      lock_file_region(fd, F_SETLK, &fl, 0x100000000LL, 1);
+  LOG_MSG("internal SHARE: locking: fd %d, type %d whence %d pid %d\n", fd, fl.l_type, fl.l_whence, fl.l_pid);
+
+  return true;
+}
+#endif
 
 bool localDrive::FileOpen(DOS_File * * file,char * name,Bit32u flags) {
 	const char* type;
@@ -1401,6 +1505,27 @@ bool localFile::Write(Bit8u * data,Bit16u * size) {
 		return true;
     }
 }
+
+#ifndef WIN32
+bool toLock(int fd, bool is_lock, uint32_t pos, uint16_t size) {
+    struct flock larg;
+    unsigned long mask = 0xC0000000;
+    int flag = fcntl(fd, F_GETFL);
+    larg.l_type = is_lock ? (flag & O_RDWR || flag & O_WRONLY ? F_WRLCK : F_RDLCK) : F_UNLCK;
+    larg.l_start = pos;
+    larg.l_len = size;
+    larg.l_len &= ~mask;
+    if ((larg.l_start & mask) != 0)
+        larg.l_start = (larg.l_start & ~mask) | ((larg.l_start & mask) >> 2);
+    int ret;
+#ifdef F_SETLK64
+    ret = lock_file_region (fd,F_SETLK64,&larg,pos,size);
+    if (ret == -1 && errno == EINVAL)
+#endif
+    ret = lock_file_region (fd,F_SETLK,&larg,larg.l_start,larg.l_len);
+    return ret != -1;
+}
+#endif
 
 // ert, 20100711: Locking extensions
 // Wengier, 20201230: All platforms
