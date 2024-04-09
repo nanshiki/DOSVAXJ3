@@ -33,7 +33,7 @@ $ ./configure LIBS="-liconv"
 $ make  
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
-Homebrew で libiconv をインストールしておいてください。  
+Homebrew で libiconv, automake, sdl_net, sdl_sound をインストールしておいてください。sdl12-compat も必要かもしれません。  
 東雲フォントを内蔵したため日本語の 8x16, 8x19, 16x16 ドットのフォントファイルは不要です。  
 日本語の 12x24, 24x24 ドットフォントについては別途 FONTX2 のフォントファイルが必要です。  
 実行ファイル名は dosboxj、設定ファイルは ~/Library/Preferences/dosboxj.conf です。  
