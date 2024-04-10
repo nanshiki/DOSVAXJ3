@@ -37,7 +37,8 @@ enum { CB_RETN,CB_RETF,CB_RETF8,CB_RETF_STI,CB_RETF_CLI,
 #define CB_MAX		128
 #define CB_SIZE		32
 #define CB_SEG		0xF000
-#define CB_SOFFSET	0xC000
+#define CB_SOFFSET		0xC000
+#define CB_SOFFSET_J3	0xB000
 
 enum {	
 	CBRET_NONE=0,CBRET_STOP=1
@@ -46,14 +47,14 @@ enum {
 extern Bit8u lastint;
 
 static INLINE RealPt CALLBACK_RealPointer(Bitu callback) {
-	return RealMake(CB_SEG,(Bit16u)(CB_SOFFSET+callback*CB_SIZE));
+	return RealMake(CB_SEG,(Bit16u)((IS_J3_ARCH ? CB_SOFFSET_J3 : CB_SOFFSET)+callback*CB_SIZE));
 }
 static INLINE PhysPt CALLBACK_PhysPointer(Bitu callback) {
-	return PhysMake(CB_SEG,(Bit16u)(CB_SOFFSET+callback*CB_SIZE));
+	return PhysMake(CB_SEG,(Bit16u)((IS_J3_ARCH ? CB_SOFFSET_J3 : CB_SOFFSET)+callback*CB_SIZE));
 }
 
 static INLINE PhysPt CALLBACK_GetBase(void) {
-	return (CB_SEG << 4) + CB_SOFFSET;
+	return (CB_SEG << 4) + (IS_J3_ARCH ? CB_SOFFSET_J3 : CB_SOFFSET);
 }
 
 Bitu CALLBACK_Allocate();

@@ -64,7 +64,7 @@ void CALLBACK_Idle(void) {
 	Bit16u oldcs=SegValue(cs);
 	Bit32u oldeip=reg_eip;
 	SegSet16(cs,CB_SEG);
-	reg_eip=CB_SOFFSET+call_idle*CB_SIZE;
+	reg_eip=(IS_J3_ARCH ? CB_SOFFSET_J3 : CB_SOFFSET)+call_idle*CB_SIZE;
 	DOSBOX_RunMachine();
 	reg_eip=oldeip;
 	SegSet16(cs,oldcs);
@@ -100,7 +100,7 @@ void CALLBACK_RunRealFar(Bit16u seg,Bit16u off) {
 void CALLBACK_RunRealInt(Bit8u intnum) {
 	Bit32u oldeip=reg_eip;
 	Bit16u oldcs=SegValue(cs);
-	reg_eip=CB_SOFFSET+(CB_MAX*CB_SIZE)+(intnum*6);
+	reg_eip=(IS_J3_ARCH ? CB_SOFFSET_J3 : CB_SOFFSET)+(CB_MAX*CB_SIZE)+(intnum*6);
 	SegSet16(cs,CB_SEG);
 	DOSBOX_RunMachine();
 	reg_eip=oldeip;
