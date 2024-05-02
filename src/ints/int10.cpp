@@ -950,6 +950,8 @@ graphics_chars:
 				reg_al = real_readb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL);
 				if(reg_bl == 0x00 || reg_bl == 0x01) {
 					real_writeb(BIOSMEM_J3_SEG, BIOSMEM_J3_SCROLL, 0x01);
+					INT10_ScrollWindow(0, 0, real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS), real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) - 1, 0, 0x07, 0);
+					INT10_SetCursorPos(0, 0, 0);
 				}
 			} else if(reg_al == 0x04) {
 				// cursor blink
