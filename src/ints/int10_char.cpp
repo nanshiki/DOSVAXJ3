@@ -830,6 +830,7 @@ void INT10_SetCursorPos(Bit8u row,Bit8u col,Bit8u page) {
 
 	if(IS_J3_ARCH && J3_IsJapanese()) {
 		J3_OffCursor();
+		page = 0;
 	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		DOSV_OffCursor();
 	}
