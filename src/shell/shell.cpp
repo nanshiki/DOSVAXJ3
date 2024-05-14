@@ -831,6 +831,7 @@ void SHELL_Init() {
 	MSG_Add("SHELL_CMD_CHEV_CHANGE","Change to the %s environment.\nCurrent video mode is %02xh");
 	MSG_Add("SHELL_CMD_BREAK_HELP","Sets or clears extended CTRL+C checking.\n");
 	MSG_Add("SHELL_CMD_BREAK_HELP_LONG","BREAK [ON | OFF]\n\nType BREAK without a parameter to display the current BREAK setting.\n");
+	MSG_Add("SHELL_CMD_TITLE_HELP","Sets the window title for the DOSBox window.\n");
 
 	/* Regular startup */
 	call_shellstop=CALLBACK_Allocate();

@@ -80,6 +80,7 @@ static SHELL_Cmd cmd_list[]={
 {	"VER",		0,			&DOS_Shell::CMD_VER,		"SHELL_CMD_VER_HELP"},
 {	"CHEV",		0,			&DOS_Shell::CMD_CHEV,		"SHELL_CMD_CHEV_HELP"},
 {	"BREAK",	0,			&DOS_Shell::CMD_BREAK,		"SHELL_CMD_BREAK_HELP"},
+{	"TITLE",	0,			&DOS_Shell::CMD_TITLE,		"SHELL_CMD_TITLE_HELP"},
 {0,0,0,0}
 }; 
 
@@ -1728,4 +1729,14 @@ void DOS_Shell::CMD_BREAK(char *args)
 		dos.breakcheck = true;
 	else
 		WriteOut("Must specify ON or OFF\n");
+}
+
+extern std::string titlebar;
+void GFX_SetTitle(Bit32s cycles, int frameskip, bool paused);
+
+void DOS_Shell::CMD_TITLE(char *args)
+{
+	HELP("TITLE");
+	titlebar = trim(args);
+	GFX_SetTitle(-1, -1, false);
 }

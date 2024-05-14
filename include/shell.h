@@ -118,6 +118,7 @@ public:
 	void CMD_VER(char * args);
 	void CMD_CHEV(char * args);
 	void CMD_BREAK(char * args);
+	void CMD_TITLE(char * args);
 	/* The shell's variables */
 	Bit16u input_handle;
 	BatchFile * bf;
