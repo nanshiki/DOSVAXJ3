@@ -29,11 +29,13 @@ Debian 系の場合、automake libsdl-sound1.2 libsdl-net1.2 あたりをイン�
 
 ### macOS  
 $ ./autogen.sh  
-$ ./configure LIBS="-liconv"  
+$ ./configure  
 $ make  
 $ sudo make install  
+ARM の場合は ./configure を下記のように実行してください。  
+$ CPPFLAGS=-I/opt/homebrew/include LDFLAGS=-L/opt/homebrew/lib ./configure  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
-Homebrew で libiconv, automake, libpng をインストールしておいてください。  
+Homebrew で automake, libpng をインストールしておいてください。  
 東雲フォントを内蔵したため日本語の 8x16, 8x19, 16x16 ドットのフォントファイルは不要です。  
 日本語の 12x24, 24x24 ドットフォントについては別途 FONTX2 のフォントファイルが必要です。  
 実行ファイル名は dosboxj、設定ファイルは ~/Library/Preferences/dosboxj.conf です。  
