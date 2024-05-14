@@ -343,7 +343,7 @@ struct SDL_Block {
 int posx = -1;
 int posy = -1;
 static SDL_Block sdl;
-const char *titlebar;
+std::string titlebar;
 
 #if C_OPENGL
 static char const shader_src_default[] =
@@ -492,19 +492,31 @@ int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, f
 const char *modifier;
 
 void GFX_SetTitle(Bit32s cycles,int frameskip,bool paused){
-	char title[200]={0}, titlestr[200];
+	char title[400]={0}, titlestr[200]={0};
 	static Bit32s internal_cycles=0;
 	static Bit32s internal_frameskip=0;
 	if(cycles != -1) internal_cycles = cycles;
 	if(frameskip != -1) internal_frameskip = frameskip;
-	strcpy(titlestr,"(");
-	strcat(titlestr,titlebar);
-	strcat(titlestr,")");
-	if (strlen(titlebar)<1) strcpy(titlestr,"");
+	if(!titlebar.empty()) {
+#if defined(WIN32)
+		int size;
+		WCHAR titlew[200];
+		if((size = ::MultiByteToWideChar(CP_ACP, 0, (LPCSTR)titlebar.c_str(), -1, NULL, 0)) < 200) {
+			::MultiByteToWideChar(CP_ACP, 0, (LPCSTR)titlebar.c_str(), -1, (LPWSTR)titlew, size);
+			if((size = ::WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)titlew, -1, NULL, 0, NULL, NULL)) < 200) {
+				::WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)titlew, -1, (LPSTR)titlestr, size, NULL, NULL );
+     		}
+		}
+#elif defined(LINUX) || defined(MACOSX)
+		sjis_to_utf8_copy(titlestr, titlebar.c_str(), 200);
+#else
+		strcpy(titlestr, titlebar.c_str());
+#endif
+	}
 	if(CPU_CycleAutoAdjust) {
-		sprintf(title,"DOSBox %s, CPU speed: max %3d%% cycles, Frameskip %2d, Program: %8s",VERSION,internal_cycles,internal_frameskip,RunningProgram);
+		sprintf(title,"%s%sDOSBox %s, CPU speed: max %3d%% cycles, Frameskip %2d, Program: %8s",titlestr, titlestr[0] == 0 ? "" : " - ", VERSION,internal_cycles,internal_frameskip,RunningProgram);
 	} else {
-		sprintf(title,"DOSBox %s, CPU speed: %8d cycles, Frameskip %2d, Program: %8s",VERSION,internal_cycles,internal_frameskip,RunningProgram);
+		sprintf(title,"%s%sDOSBox %s, CPU speed: %8d cycles, Frameskip %2d, Program: %8s",titlestr, titlestr[0] == 0 ? "" : " - ", VERSION,internal_cycles,internal_frameskip,RunningProgram);
 	}
 
 	if (paused) strcat(title," PAUSED");
@@ -1678,6 +1690,9 @@ static void GUI_StartUp(Section * sec) {
 	sdl.desktop.fullscreen=section->Get_bool("fullscreen");
 	sdl.wait_on_error=section->Get_bool("waitonerror");
 	titlebar = section->Get_string("titlebar");
+	if(titlebar == "GNU GPL") {
+		titlebar = "";
+	}
 
 	Prop_multival* p=section->Get_multival("priority");
 	std::string focus = p->GetSection()->Get_string("active");
@@ -2855,7 +2870,7 @@ void Config_Add_SDL() {
 	Pbool = sdl_sec->Add_bool("usescancodes",Property::Changeable::Always,true);
 	Pbool->Set_help("Avoid usage of symkeys, might not work on all operating systems.");
 
-	Pstring = sdl_sec->Add_string("titlebar",Property::Changeable::Always,"GNU GPL");
+	Pstring = sdl_sec->Add_string("titlebar",Property::Changeable::Always,"");
 	Pstring->Set_help("Change the string displayed in the DOSBox title bar.");
 
 	const char* clipboardbutton[] = { "none", "middle", "right", "arrows", 0};
