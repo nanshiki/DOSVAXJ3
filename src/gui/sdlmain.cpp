@@ -344,6 +344,7 @@ int posx = -1;
 int posy = -1;
 static SDL_Block sdl;
 std::string titlebar;
+bool reset_keyboard_state = true;
 
 #if C_OPENGL
 static char const shader_src_default[] =
@@ -458,7 +459,7 @@ SDL_Surface* SDL_SetVideoMode_Wrap(int width,int height,int bpp,Bit32u flags){
 		}
 	}
 #else //SETMODE_RESTARTS_SUBSYSTEM
-	SDL_Surface* s = SDL_SetVideoMode(width,height,bpp,flags);
+	SDL_Surface* s = SDL_SetVideoMode(width,height,bpp,flags | ((reset_keyboard_state) ? 0 : SDL_NORESETKEY));
 #endif //SETMODE_RESTARTS_SUBSYSTEM
 #else  //C_OPENGL
 	SDL_Surface* s = SDL_SetVideoMode(width,height,bpp,flags);
@@ -1778,6 +1779,7 @@ static void GUI_StartUp(Section * sec) {
     else if (!strcmp(clip_mouse_button, "arrows")) mbutton=4;
     else mbutton=0;
 	modifier=section->Get_string("clipboardmodifier");
+	reset_keyboard_state = section->Get_bool("resetkeyboardstate");
 #if SDL_VERSION_ATLEAST(1, 2, 10)
 	const SDL_VideoInfo* vidinfo = SDL_GetVideoInfo();
 #ifdef WIN32
@@ -2557,32 +2559,27 @@ void GFX_Events() {
                 ClipKeySelect(event.key.keysym.sym);
 #if defined(LINUX)
 			if(event.type == SDL_KEYDOWN) {
-				if(event.key.keysym.unicode != 0) {
-					iconv_t ic;
-					unsigned char uni[4], sjis[4];
-					char *puni, *psjis;
-					size_t unisize, sjissize;
-					ic = iconv_open("Shift_JIS", "UTF-16BE");
-					uni[0] = event.key.keysym.unicode >> 8;
-					uni[1] = event.key.keysym.unicode & 0xff;
-					uni[2] = 0;
-					puni = (char *)uni;
-					psjis = (char *)sjis;
-					unisize = 2;
-					sjissize = 4;
-					iconv(ic, &puni, &unisize, &psjis, &sjissize);
-					iconv_close(ic);
-
-					if(isKanji1(sjis[0])) {
-						BIOS_AddKeyToBuffer(0xf000 | sjis[0]);
-						BIOS_AddKeyToBuffer(0xf100 | sjis[1]);
-					} else {
-						BIOS_AddKeyToBuffer(sjis[0]);
+				if(event.key.keysym.scancode == 0 && event.key.keysym.sym == 0) {
+					int len;
+					if(len = SDL_FlushIMString(NULL)) {
+						int flag = 0;
+						unsigned char *buff = (unsigned char *)malloc((len + 2)); 
+						SDL_FlushIMString(buff);
+						for(int no = 0 ; no < len ; no++) {
+							if(flag == 0) {
+								if(isKanji1(buff[no])) {
+									flag = 1;
+									BIOS_AddKeyToBuffer(0xf000 | buff[no]);
+								} else {
+									BIOS_AddKeyToBuffer(buff[no]);
+								}
+							} else {
+								BIOS_AddKeyToBuffer(0xf100 | buff[no]);
+								flag = 0;
+							}
+						}
+						free(buff);
 					}
-					break;
-				}
-				if(debug_flag) {
-					printf("scan=%x, sym=%x, mod=%x\n", event.key.keysym.scancode, event.key.keysym.sym, event.key.keysym.mod);
 				}
 			}
 #endif
@@ -2882,6 +2879,9 @@ void Config_Add_SDL() {
 	Pstring = sdl_sec->Add_string("clipboardmodifier",Property::Changeable::Always,"alt");
 	Pstring->Set_values(clipboardmodifier);
 	Pstring->Set_help("Change the keyboard modifier for the mouse button clipboard copy/paste function.");
+
+	Pbool = sdl_sec->Add_bool("resetkeyboardstate", Property::Changeable::OnlyAtStart, true);
+	Pbool->Set_help("Reset keyboard press state when changing screen modes.");
 }
 
 static void show_warning(char const * const message) {
