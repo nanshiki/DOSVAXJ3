@@ -15,6 +15,7 @@ DOSBox [README](https://github.com/nanshiki/DOSVAXJ3/blob/master/README_DOSBox.t
 Visual Studio 2022 で visualc_net/dosbox.sln を読み込み、ビルドしてください。  
 以前の Visual Studio でビルドする場合は、プラットフォームツールセットを対応するバージョンに変更してください。  
 SDL_net, zlib, libpng, pdcurses 等のライブラリをビルドし、リンクできるようにしておいてください。  
+各ライブラリの置き場所やファイル名はプロジェクトのプロパティを参照してください。  
 
 ### Linux  
 $ ./autogen.sh  
@@ -22,7 +23,7 @@ $ ./configure
 $ make  
 $ sudo make install  
 SDL-IM-plus をビルド、インストールしておく必要があります。  
-Debian 系の場合、automake libsdl-sound1.2 libsdl-net1.2 あたりをインストールしておいてください。  
+Debian 系の場合、automake libsdl-sound1.2 libsdl-net1.2 libpng-dev あたりをインストールしておいてください。  
 東雲フォントを内蔵したため日本語の 8x16, 8x19, 16x16 ドットのフォントファイルは不要です。  
 日本語の 12x24, 24x24 ドットフォントについては Xorg フォントのインストールもしくは別途 FONTX2 のフォントファイルが必要です。
 実行ファイル名は dosboxj、設定ファイルは ~/.dosboxj/dosboxj.conf です。
