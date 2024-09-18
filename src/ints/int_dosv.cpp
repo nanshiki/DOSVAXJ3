@@ -40,14 +40,14 @@ static Bitu dosv_cursor_x;
 static Bitu dosv_cursor_y;
 static enum DOSV_VTEXT_MODE dosv_vtext_mode[VTEXT_MODE_COUNT];
 static enum DOSV_FEP_CTRL dosv_fep_ctrl;
-Bit8u TrueVideoMode;
+static Bit16u TrueVideoMode;
 
-Bit8u GetTrueVideoMode()
+Bit16u GetTrueVideoMode()
 {
 	return TrueVideoMode;
 }
 
-void SetTrueVideoMode(Bit8u mode)
+void SetTrueVideoMode(Bit16u mode)
 {
 	TrueVideoMode = mode;
 }

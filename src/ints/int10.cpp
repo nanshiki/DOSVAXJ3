@@ -674,6 +674,7 @@ graphics_chars:
 			Mouse_BeforeNewVideoMode(true);
 			reg_al=0x4f;
 			reg_ah=VESA_SetSVGAMode(reg_bx);
+			SetTrueVideoMode(reg_bx);
 			Mouse_AfterNewVideoMode(true);
 			break;
 		case 0x03:							/* Get videomode */

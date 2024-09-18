@@ -47,8 +47,8 @@ enum DOSV_VTEXT_MODE DOSV_GetVtextMode(Bitu no = 0);
 void DOSV_SetVTextRows(Bitu no, int row);
 void DOSV_ResetVTextRows();
 enum DOSV_FEP_CTRL DOSV_GetFepCtrl();
-void SetTrueVideoMode(Bit8u mode);
-Bit8u GetTrueVideoMode();
+void SetTrueVideoMode(Bit16u mode);
+Bit16u GetTrueVideoMode();
 bool DOSV_CheckJapaneseVideoMode();
 
 #endif
