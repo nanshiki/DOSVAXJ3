@@ -772,7 +772,13 @@ int 2fh ax=1680h といったアイドル割り込みで HLT を実行し CPU �
 たのを修正しました。
 　画面サイズが変更になった際にキーボード押下状態をリセットするかどうかの設定
 [sdl] resetkeyboardstate を追加しました。
-　Linux 版で SDL_FlushIMString() で確定文字列を取得するよう修正しました。
+　Linux 版も SDL_FlushIMString() で確定文字列を取得するよう修正しました。
+
+・build JP240918 (2024/9/18)
+　Windows 版で IME の入力文字列を Ctrl-M や Ctrl-Enter で確定すると Ctrl キー
+が離された状態になってしまうのを修正しました。
+　日本語環境から VESA のファンクション(int 10h ax=4f02h)を使ってビデオモード
+を変更した場合に画面表示がおかしくなっていたのを修正しました。
 
 ●ライセンス
 　GPL v2
