@@ -1863,7 +1863,7 @@ void ClearExtendAttribute()
 
 static bool IsExtendAttributeMode()
 {
-	uint8_t vmode = GetTrueVideoMode();
+	uint16_t vmode = GetTrueVideoMode();
 	return (vmode == 0x71 || vmode == 0x73);
 }
 

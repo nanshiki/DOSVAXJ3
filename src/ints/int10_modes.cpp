@@ -1466,7 +1466,7 @@ att_text16:
 		case M_DCGA:
 			{
 				Bit8u r, g, b;
-				Bit8u vmode = GetTrueVideoMode();
+				Bit16u vmode = GetTrueVideoMode();
 				J3_GetPalette(0, r, g, b);
 				IO_Write(0x3c9, r);
 				IO_Write(0x3c9, g);
@@ -1488,7 +1488,6 @@ att_text16:
 		case M_CGA2:
 			if(IS_J3_ARCH) {
 				Bit8u r, g, b;
-				Bit8u vmode = GetTrueVideoMode();
 				J3_GetPalette(0, r, g, b);
 				IO_Write(0x3c9, r);
 				IO_Write(0x3c9, g);

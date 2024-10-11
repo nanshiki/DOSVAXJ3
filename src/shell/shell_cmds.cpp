@@ -209,7 +209,7 @@ void DOS_Shell::CMD_CLS(char * args) {
 	reg_ah = 0x00;
 	reg_al = real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE);
 	if(reg_al == 0x70) {
-		reg_al = GetTrueVideoMode();
+		reg_al = (Bit8u)GetTrueVideoMode();
 	}
 	CALLBACK_RunRealInt(0x10);
 }
