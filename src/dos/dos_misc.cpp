@@ -237,9 +237,9 @@ static bool DOS_MultiplexFunctions(void) {
 		if ((reg_dx==1||reg_dx==7)&&OpenClipboard(NULL))
 			{
 			char *text, *buffer;
-			text = new char[reg_cx];
+			text = new char[reg_cx+1];
 			MEM_StrCopy(SegPhys(es)+reg_bx,text,reg_cx);
-			*(text+reg_cx-1)=0;
+			*(text+reg_cx)=0;
 			HGLOBAL clipbuffer;
 			EmptyClipboard();
 			clipbuffer = GlobalAlloc(GMEM_DDESHARE, strlen(text)+1);
