@@ -1219,6 +1219,19 @@ bool localDrive::RemoveDir(char * dir) {
 	return (temp==0);
 }
 
+#if defined(WIN32)
+bool localDrive::GetCurrentRealDir(char *dir)
+{
+	strcpy(dir,basedir);
+	strcat(dir,curdir);
+	CROSS_FILENAME(dir);
+
+	dirCache.ExpandName(dir);
+
+	return true;
+}
+#endif
+
 bool localDrive::TestDir(char * dir) {
 	char newdir[CROSS_LEN];
 	strcpy(newdir,basedir);

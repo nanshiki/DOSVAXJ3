@@ -747,6 +747,38 @@ bool DOS_CreateFile(char const * name,Bit16u attributes,Bit16u * entry,bool fcb)
 	}
 }
 
+#if defined(WIN32)
+bool DOS_GetRealFileName(char const *name, char *realname)
+{
+	Bit8u drive;
+	char fullname[256];
+
+	if(DOS_MakeName(name, fullname, &drive)) {
+		localDrive *ldp = dynamic_cast<localDrive*>(Drives[drive]);
+		if(ldp) {
+			ldp->GetSystemFilename(realname, fullname);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool DOS_GetRealDirName(char const *name, char *dir)
+{
+	Bit8u drive;
+	char fullname[256];
+
+	if(DOS_MakeName(name, fullname, &drive)) {
+		localDrive *ldp = dynamic_cast<localDrive*>(Drives[drive]);
+		if(ldp) {
+			ldp->GetCurrentRealDir(dir);
+			return true;
+		}
+	}
+	return false;
+}
+#endif
+
 bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb) {
 	/* First check for devices */
 	if (flags>2) LOG(LOG_FILES,LOG_ERROR)("Special file open command %X file %s",flags,name);

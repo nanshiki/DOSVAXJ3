@@ -241,6 +241,338 @@ static void SetupCMDLine(Bit16u pspseg,DOS_ParamBlock & block) {
 	psp.SetCommandTail(block.exec.cmdtail);
 }
 
+#if defined(WIN32)
+
+#include <map>
+#include <imagehlp.h>
+#pragma comment(linker, "/DEFAULTLIB:imagehlp.lib")
+
+#define	TEXT_MAX			100
+#define	NO_VC				1
+#define	SET_ENV				2
+#define	NO_ECHO				4
+#define	ENV_SIZE			4096
+#define	VALUE_SIZE			32768
+
+bool DOS_GetRealFileName(char const *name, char *realname);
+bool DOS_GetRealDirName(char const *name, char *dir);
+bool get_key(Bit16u &code);
+
+std::map<std::string, std::string> keep_env;
+
+static bool OutputReadPipe(HANDLE rp, bool err = false)
+{
+	DWORD total, len;
+
+	if(PeekNamedPipe(rp, NULL, 0, NULL, &total, NULL) == 0) {
+		return false;
+	}
+	if(total > 0) {
+		Bit8u c;
+		Bit16u n;
+		char *buff = new char[total + 1];
+		if(ReadFile(rp, buff, total, &len, NULL)) {
+			buff[len] = 0;
+			for(DWORD no = 0 ; no < len ; no++) {
+				c = buff[no];
+				n = 1;
+				DOS_WriteFile(err ? STDERR : STDOUT, &c, &n);
+			}
+		}
+		delete [] buff;
+		return true;
+	}
+	return false;
+}
+
+static void SetEnv()
+{
+	DOS_PSP *psp = new DOS_PSP(dos.psp());
+	PhysPt env_read = PhysMake(psp->GetEnvironment(), 0);
+	char env_string[ENV_SIZE + 1];
+	char value[VALUE_SIZE];
+
+	keep_env.clear();
+	while(1) {
+		MEM_StrCopy(env_read, env_string, ENV_SIZE);
+		if(env_string[0]) {
+			env_read += (PhysPt)(strlen(env_string) + 1);
+			char *equal = strchr(env_string, '=');
+			if(equal) {
+				*equal = 0;
+				if(strcasecmp(env_string, "COMSPEC") && strcasecmp(env_string, "DOSVAXJ3")) {
+					value[0] = '\0';
+					GetEnvironmentVariable(env_string, value, VALUE_SIZE);
+					keep_env[env_string] = value;
+					SetEnvironmentVariable(env_string, equal + 1);
+				}
+			}
+		} else {
+			break;
+		}
+	}
+	delete psp;
+}
+
+static void BackEnv()
+{
+	for(std::map<std::string, std::string>::iterator env = keep_env.begin() ; env != keep_env.end() ; env++) {
+		SetEnvironmentVariable(env->first.c_str(), env->second.empty() ? NULL : env->second.c_str());
+	}
+	keep_env.clear();
+}
+
+static int GetEnvDOSVAXJ3()
+{
+	DOS_PSP *psp = new DOS_PSP(dos.psp());
+	PhysPt env_read = PhysMake(psp->GetEnvironment(), 0);
+	char env_string[ENV_SIZE + 1];
+	int mode = 0;
+
+	while(1) {
+		MEM_StrCopy(env_read, env_string, ENV_SIZE);
+		if(env_string[0]) {
+			env_read += (PhysPt)(strlen(env_string) + 1);
+			char *equal = strchr(env_string, '=');
+			if(equal) {
+				*equal = 0;
+				if(!strcasecmp(env_string, "DOSVAXJ3")) {
+					char *pt;
+					char value[ENV_SIZE];
+					strncpy(value, equal + 1, ENV_SIZE);
+					value[ENV_SIZE - 1] = '\0';
+					pt = strtok(value, ", ");
+					while(pt != NULL) {
+						if(!strcasecmp(pt, "NOVC")) {
+							mode |= NO_VC;
+						} else if(!strcasecmp(pt, "SETENV")) {
+							mode |= SET_ENV;
+						} else if(!strcasecmp(pt, "NOECHO")) {
+							mode |= NO_ECHO;
+						}
+						pt = strtok(NULL, ", ");
+					}
+					break;
+				}
+			}
+		} else {
+			break;
+		}
+	}
+	delete psp;
+
+	return mode;
+}
+
+static bool ExecuteConsoleProgram(char *exename, char *param, char *dir, bool novc_flag)
+{
+	bool result = false;
+	int mode;
+	HANDLE rp, wp;
+	HANDLE erp, ewp;
+	HANDLE irp, iwp;
+	HMODULE hm;
+	SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+
+	mode = GetEnvDOSVAXJ3();
+	if(mode & NO_VC) {
+		novc_flag = true;
+	}
+	if(mode & SET_ENV) {
+		SetEnv();
+	}
+	if(hm = LoadLibraryEx(exename, 0, LOAD_LIBRARY_AS_DATAFILE)) {
+		// Delphi or C++Builder ?
+		if(FindResource(hm, "DVCLAL", RT_RCDATA)) {
+			novc_flag = true;
+		}
+		FreeLibrary(hm);
+	}
+	if(CreatePipe(&rp, &wp, &sa, 0) && CreatePipe(&erp, &ewp, &sa, 0) && CreatePipe(&irp, &iwp, &sa, 0)) {
+		char cmd[256 * 2];
+		PROCESS_INFORMATION pi = { 0 };
+		STARTUPINFO si = { sizeof(STARTUPINFO) };
+		si.dwFlags = STARTF_USESTDHANDLES;
+		if(novc_flag) {
+			si.hStdOutput = wp;
+			si.hStdError = ewp;
+			si.hStdInput = irp;
+		}
+		si.wShowWindow = SW_HIDE;
+		sprintf(cmd, "%s %s", exename, param);
+		SetHandleInformation(rp, HANDLE_FLAG_INHERIT, 0);
+		SetHandleInformation(erp, HANDLE_FLAG_INHERIT, 0);
+		if(!novc_flag) {
+			SetHandleInformation(iwp, HANDLE_FLAG_INHERIT, 0);
+
+			// Undocumented CreateProcess
+			// It seems to work even though the handle size is different in x64, 
+			// so I think the OS is probably doing the conversion.
+			WORD size = (sizeof(long) + (3 * (sizeof(char) + sizeof(HANDLE))));
+			if(si.lpReserved2 = (LPBYTE)calloc(size, 1)) {
+				si.cbReserved2 = size;
+				*((UNALIGNED long *)si.lpReserved2) = 3;
+				char *pt = (char *)(si.lpReserved2 + sizeof(long));
+				// 0x41 = FOPEN | FDEV
+				*pt++ = 0x41;
+				*pt++ = 0x41;
+				*pt++ = 0x41;
+				UNALIGNED HANDLE *handle_pt = (UNALIGNED HANDLE *)pt;
+				*handle_pt++ = irp;
+				*handle_pt++ = wp;
+				*handle_pt = ewp;
+			}
+		}
+		if(CreateProcess(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, dir, &si, &pi)) {
+			CloseHandle(wp);
+			CloseHandle(ewp);
+			CloseHandle(irp);
+
+			int pos = 0;
+			Bit16u text[TEXT_MAX];
+			Bit16u code;
+			while(1) {
+				if(!OutputReadPipe(erp, true)) {
+					OutputReadPipe(rp);
+				}
+				CALLBACK_Idle();
+
+				if(get_key(code)) {
+					DWORD len;
+					Bit16u n;
+					unsigned char c = code & 0xff;
+					if(c == 0x03) {
+						n = 2;
+						DOS_WriteFile(STDOUT, (Bit8u *)"^C", &n);
+						// If the attribute CREATE_NO_WINDOW,
+						// GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId);
+						// does not work.
+						// If the attribute CREATE_NO_WINDOW is not present,
+						// the console screen will be displayed;
+						// there are various problems if AllocConsole() is used to pre-generate and hide it.
+						TerminateProcess(pi.hProcess, 0);
+					} else {
+						if(mode & NO_ECHO) {
+							if(c == 0x0d) {
+								c = 0x0a;
+							}
+							WriteFile(iwp, &c, 1, &len, 0);
+						} else {
+							if(c == 0x08) {
+								if(pos >= 2 && (text[pos - 1] & 0xff00) == 0xf100) {
+									n = 6;
+									DOS_WriteFile(STDOUT, (Bit8u *)"\b\b  \b\b", &n);
+									pos -= 2;
+								} else if(pos >= 1) {
+									n = 3;
+									DOS_WriteFile(STDOUT, (Bit8u *)"\b \b", &n);
+									pos--;
+								}
+							} else if(c != 0xf0) {
+								if(c == 0x0a || c == 0x0d) {
+									for(int p = 0 ; p < pos ; p++) {
+										WriteFile(iwp, &text[p], 1, &len, 0);
+									}
+									pos = 0;
+
+									n = 1;
+									c = 0x0a;
+									DOS_WriteFile(STDOUT, &c, &n);
+									WriteFile(iwp, &c, 1, &len, 0);
+								} else if(pos < TEXT_MAX) {
+									n = 1;
+									DOS_WriteFile(STDOUT, &c, &n);
+									text[pos++] = code;
+								}
+							}
+						}
+					}
+				}
+				if(WaitForSingleObject(pi.hProcess, 0) == WAIT_OBJECT_0) {
+					bool flag;
+					do {
+						flag = false;
+						if(OutputReadPipe(erp, true)) {
+							flag = true;
+						} else if(OutputReadPipe(rp)) {
+							flag = true;
+						}
+					} while(flag);
+					break;
+				}
+			}
+			CloseHandle(rp);
+			CloseHandle(erp);
+			CloseHandle(iwp);
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			result = true;
+		}
+		if(si.lpReserved2) {
+			free(si.lpReserved2);
+		}
+	}
+	if(mode & SET_ENV) {
+		BackEnv();
+	}
+	return result;
+}
+
+static bool ExecuteWindowProgram(char *exename, char *param, char *dir)
+{
+	char cmd[256 * 2];
+	STARTUPINFO si = { sizeof(si) };
+	PROCESS_INFORMATION pi = { 0 };
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_SHOW;
+	sprintf(cmd, "%s %s", exename, param);
+	if(CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, dir, &si, &pi)) {
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+		return true;
+	}
+	return false;
+}
+
+static void ChangeParamRealName(char *param, char *work)
+{
+	int pos;
+	char name[256 * 2];
+	char realname[256 * 2];
+	char *top = work;
+
+	while(*work != '\0') {
+		if((toupper(*work) >= 'A' && toupper(*work) <= 'Z' && *(work + 1) == ':') || (*work == '\\' && *(work + 1) != '"' && *(work + 1) != '\'')) {
+			char *work_top = work;
+			char *param_top = param;
+			if(*work == '\\') {
+				while(work > top && *(work - 1) > ' ') {
+					work--;
+					param--;
+				}
+			}
+			pos = 0;
+			while(*work > ' ') {
+				name[pos++] = *work++;
+			}
+			name[pos] = '\0';
+			if(DOS_GetRealFileName(name, realname) && (toupper(realname[0]) >= 'A' && toupper(realname[0]) <= 'Z' && realname[1] == ':' && realname[2] == '\\')) {
+				strcpy(param, realname);
+				param += strlen(realname);
+			} else {
+				work = work_top;
+				param = param_top;
+				*param++ = *work++;
+			}
+		} else {
+			*param++ = *work++;
+		}
+	}
+	*param = '\0';
+}
+
+#endif
+
 bool DOS_Execute(char * name,PhysPt block_pt,Bit8u flags) {
 	EXE_Header head;Bitu i;
 	Bit16u fhandle;Bit16u len;Bit32u pos;
@@ -258,6 +590,63 @@ bool DOS_Execute(char * name,PhysPt block_pt,Bit8u flags) {
 		return false;
 //		E_Exit("DOS:Not supported execute mode %d for file %s",flags,name);
 	}
+#if defined(WIN32)
+	char realname[256];
+	if(DOS_GetRealFileName(name, realname)) {
+		PLOADED_IMAGE image = ImageLoad(realname, NULL);
+		if(image != NULL) {
+			char dir[256];
+			char work[256 * 2];
+			char param[256 * 2];
+			int no, pos = 0;
+			RealPt pt = block_pt + 0x100;
+			Bit8u len = mem_readb(pt++);
+			while(pos < len && mem_readb(pt) == 0x20) {
+				pos++;
+				pt++;
+			}
+			no = 0;
+			while(pos < len) {
+				work[no++] = mem_readb(pt++);
+				pos++;
+			}
+			work[no] = 0;
+			ChangeParamRealName(param, work);
+			DOS_GetRealDirName(".", dir);
+			if(image->FileHeader->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI) {
+				// .NET ?
+				bool novc_flag = false;
+				ULONG size;
+				PIMAGE_IMPORT_DESCRIPTOR import;
+				if(import = (PIMAGE_IMPORT_DESCRIPTOR)ImageDirectoryEntryToData(image->MappedAddress, FALSE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size)) {
+					while(import->Characteristics != 0 && !novc_flag) {
+						char *dll_name;
+						dll_name = (char *)ImageRvaToVa(image->FileHeader, image->MappedAddress, import->Name, 0);
+						if(!strcasecmp(dll_name, "mscoree.dll")) {
+							PIMAGE_THUNK_DATA thunk = (PIMAGE_THUNK_DATA)ImageRvaToVa(image->FileHeader, image->MappedAddress, import->OriginalFirstThunk ? import->OriginalFirstThunk : import->FirstThunk, 0);
+							while(thunk->u1.Ordinal) {
+								if(!IMAGE_SNAP_BY_ORDINAL(thunk->u1.Ordinal)) {
+									IMAGE_IMPORT_BY_NAME *ii = (IMAGE_IMPORT_BY_NAME *)ImageRvaToVa(image->FileHeader, image->MappedAddress, thunk->u1.AddressOfData, 0);
+									if(!strcasecmp(ii->Name, "_CorExeMain")) {
+										novc_flag = true;
+										break;
+									}
+								}
+								thunk++;
+							}
+						}
+						import++;
+					}
+				}
+				ExecuteConsoleProgram(realname, param, dir, novc_flag);
+			} else if(image->FileHeader->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
+				ExecuteWindowProgram(realname, param, dir);
+			}
+			ImageUnload(image);
+			return true;
+		}
+	}
+#endif
 	/* Check for EXE or COM File */
 	bool iscom=false;
 	if (!DOS_OpenFile(name,OPEN_READ,&fhandle)) {
