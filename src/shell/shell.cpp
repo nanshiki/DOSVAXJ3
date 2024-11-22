@@ -256,7 +256,7 @@ Bitu DOS_Shell::GetRedirection(char *s, char **ifn, char **ofn, char **toc, bool
 }
 
 void DOS_Shell::ParseLine(char * line) {
-	LOG(LOG_EXEC,LOG_ERROR)("Parsing command line: %s",line);
+	LOG(LOG_EXEC,LOG_ERROR)("Parsing command line: %.480s",line);
 	/* Check for a leading @ */
  	if (line[0] == '@') line[0] = ' ';
 	line = trim(line);
