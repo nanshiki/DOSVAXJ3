@@ -147,13 +147,14 @@ void DOS_Shell::DoCommand(char * line) {
 	line=trim(line);
 	char cmd_buffer[CMD_MAXLINE];
 	char * cmd_write=cmd_buffer;
+	int c=0;
 	while (*line) {
 		if (*line == 32) break;
 		if (*line == '/') break;
 		if (*line == '\t') break;
 		if (*line == '=') break;
 //		if (*line == ':') break; //This breaks drive switching as that is handled at a later stage. 
-		if ((*line == '.') ||(*line == '\\')) {  //allow stuff like cd.. and dir.exe cd\kees
+		if ((*line == '.') ||(*line == '\\') || (*line == ':' && !(c == 1 && tolower(*(line-1)) >= 'a' && tolower(*(line-1)) <= 'z'))) {  //allow stuff like cd.. and dir.exe cd\kees
 			*cmd_write=0;
 			Bit32u cmd_index=0;
 			while (cmd_list[cmd_index].name) {
@@ -166,6 +167,7 @@ void DOS_Shell::DoCommand(char * line) {
 				cmd_index++;
 			}
 		}
+		c++;
 		*cmd_write++=*line++;
 	}
 	*cmd_write=0;
@@ -754,13 +756,27 @@ void DOS_Shell::CMD_COPY(char * args) {
 			size_t source_x_len = strlen(source_x);
 			if (source_x_len>0) {
 				if (source_x[source_x_len-1]==':') has_drive_spec = true;
+				else if (uselfn&&strchr(source_x, '*')) {
+					char * find_last;
+					find_last=strrchr_dbcs(source_x,'\\');
+					if (find_last==NULL) find_last=source_x;
+					else find_last++;
+					if (strlen(find_last)>0&&source_x[source_x_len-1]=='*'&&strchr(find_last, '.')==NULL) strcat(source_x, ".*");
+				}
 			}
 			if (!has_drive_spec  && !strpbrk(source_p,"*?") ) { //doubt that fu*\*.* is valid
 				char spath[DOS_PATHLENGTH];
-				if (DOS_GetSFNPath(source_p,spath,false) && DOS_FindFirst(spath,0xffff & ~DOS_ATTR_VOLUME)) {
-					dta.GetResult(name,lname,size,date,time,attr);
-					if (attr & DOS_ATTR_DIRECTORY)
-						strcat(source_x,"\\*.*");
+				if (DOS_GetSFNPath(source_p,spath,false)) {
+					bool root=false;
+					if (strlen(spath)==3&&spath[1]==':'&&spath[2]=='\\') {
+						root=true;
+						strcat(spath, "*.*");
+					}
+					if (DOS_FindFirst(spath,0xffff & ~DOS_ATTR_VOLUME)) {
+						dta.GetResult(name,lname,size,date,time,attr);
+						if (attr & DOS_ATTR_DIRECTORY || root)
+							strcat(source_x,"\\*.*");
+					}
 				}
 			}
 			sources.push_back(copysource(source_x,(plus)?true:false));
@@ -820,7 +836,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 			return;
 		}
 		char* temp = strstr(pathTarget,"*.*");
-		if(temp) *temp = 0;//strip off *.* from target
+		if(temp && (temp == pathTarget || temp[-1] == '\\')) *temp = 0;//strip off *.* from target
 	
 		// add '\\' if target is a directory
 		bool target_is_file = true;
@@ -845,8 +861,59 @@ void DOS_Shell::CMD_COPY(char * args) {
 
 		Bit16u sourceHandle,targetHandle;
 		char nameTarget[DOS_PATHLENGTH];
-		char nameSource[DOS_PATHLENGTH];
+		char nameSource[DOS_PATHLENGTH], nametmp[DOS_PATHLENGTH+2];
 		
+		// Cache so we don't have to recalculate
+		size_t pathTargetLen = strlen(pathTarget);
+		
+		// See if we have to substitute filename or extension
+		char * ext = nullptr;
+		size_t replacementOffset = 0;
+		if (pathTarget[pathTargetLen-1]!='\\') { 
+				// only if it's not a directory
+			ext = strchr(pathTarget, '.');
+			if (ext > pathTarget) { // no possible substitution
+				if (ext[-1] == '*') {
+					// we substitute extension, save it, hide the name
+					ext[-1] = 0;
+					//assert(ext > pathTarget + 1); // pathTarget is fully qualified
+					if (ext[-2] != '\\') {
+						// there is something before the asterisk
+						// save the offset in the source names
+
+						replacementOffset = source.filename.find('*');
+						size_t lastSlash = std::string::npos;
+						bool lead = false;
+						for (unsigned int i=0; i<source.filename.size(); i++) {
+							if (lead) lead = false;
+							else if (isKanji1(source.filename[i])) lead = true;
+							else if (source.filename[i]=='\\') lastSlash = i;
+						}
+						if (std::string::npos == lastSlash)
+							lastSlash = 0;
+						else
+							lastSlash++;
+						if (std::string::npos == replacementOffset
+							  || replacementOffset < lastSlash) {
+							// no asterisk found or in wrong place, error
+							WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));
+							dos.dta(save_dta);
+							return;
+						}
+						replacementOffset -= lastSlash;
+//						WriteOut("[II] replacement offset is %d\n", replacementOffset);
+					}
+				}
+				if (ext[1] == '*') {
+					// we substitute name, clear the extension
+					*ext = 0;
+				} else if (ext[-1]) {
+					// we don't substitute anything, clear up
+					ext = nullptr;
+				}
+			}
+		}
+
 		bool echo=dos.echo;
 		bool second_file_of_current_source = false;
 		while (ret) {
@@ -865,15 +932,41 @@ void DOS_Shell::CMD_COPY(char * args) {
 					// Create Target or open it if in concat mode
 					strcpy(nameTarget,q);
 					strcat(nameTarget,pathTarget);
+
+					if (ext) { // substitute parts if necessary
+						if (!ext[-1]) { // substitute extension
+							strcat(nameTarget, (uselfn?lname:name) + replacementOffset);
+							char *p=strchr(nameTarget, '.');
+							strcpy(p==NULL?nameTarget+strlen(nameTarget):p, ext);
+						}
+						if (ext[1] == '*') { // substitute name (so just add the extension)
+							strcat(nameTarget, strchr(uselfn?lname:name, '.'));
+						}
+					}
+
 					if (nameTarget[strlen(nameTarget)-1]=='\\') strcat(nameTarget,uselfn?lname:name);
 					strcat(nameTarget,q);
 
-					Bit16u fattr;
-					bool exist = DOS_GetFileAttr(nameTarget, &fattr);
 					//Special variable to ensure that copy * a_file, where a_file is not a directory concats.
-					bool special = second_file_of_current_source && target_is_file;
+					bool special = second_file_of_current_source && target_is_file && strchr(target.filename.c_str(), '*')==NULL;
 					second_file_of_current_source = true; 
 					if (special) oldsource.concat = true;
+					if (*nameSource&&*nameTarget) {
+						strcpy(nametmp, nameSource[0]!='\"'&&nameTarget[0]=='\"'?"\"":"");
+						strcat(nametmp, nameSource);
+						strcat(nametmp, nameSource[strlen(nameSource)-1]!='\"'&&nameTarget[strlen(nameTarget)-1]=='\"'?"\"":"");
+					} else
+						strcpy(nametmp, nameSource);
+					if (!oldsource.concat && (!strcasecmp(nameSource, nameTarget) || !strcasecmp(nametmp, nameTarget))) {
+						WriteOut(MSG_Get("SHELL_CMD_COPY_NOSELF"));
+						dos.dta(save_dta);
+						DOS_CloseFile(sourceHandle);
+						if (targetHandle)
+							DOS_CloseFile(targetHandle);
+						return;
+					}
+					Bit16u fattr;
+					bool exist = DOS_GetFileAttr(nameTarget, &fattr);
 					//Don't create a new file when in concat mode
 					if (oldsource.concat || DOS_CreateFile(nameTarget,0,&targetHandle)) {
 						Bit32u dummy=0;
