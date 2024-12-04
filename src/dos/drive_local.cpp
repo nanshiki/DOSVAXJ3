@@ -57,7 +57,7 @@ typedef wchar_t host_cnv_char_t;
 typedef char host_cnv_char_t;
 #endif
 
-static uint16_t ldid[256];
+static Bit16u ldid[256];
 static std::string ldir[256];
 extern int lfn_filefind_handle, file_access_tries;
 static host_cnv_char_t cpcnv_temp[4096], cpcnv_ltemp[4096];
@@ -94,12 +94,12 @@ enum {
 	UTF8ERR_NO_ROOM=-2
 };
 
-int utf8_encode(char **ptr, const char *fence, uint32_t code) {
+int utf8_encode(char **ptr, const char *fence, Bit32u code) {
     int uchar_size=1;
     char *p = *ptr;
 
     if (!p) return UTF8ERR_NO_ROOM;
-    if (code >= (uint32_t)0x80000000UL) return UTF8ERR_INVALID;
+    if (code >= (Bit32u)0x80000000UL) return UTF8ERR_INVALID;
     if (p >= fence) return UTF8ERR_NO_ROOM;
 
     if (code >= 0x4000000) uchar_size = 6;
@@ -223,7 +223,7 @@ template <class MT> bool String_SBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const cha
         MT wc;
             wc = map[ic]; // output: unicode character
 
-        if (utf8_encode(&d,df,(uint32_t)wc) < 0) // will advance d by however many UTF-8 bytes are needed
+        if (utf8_encode(&d,df,(Bit32u)wc) < 0) // will advance d by however many UTF-8 bytes are needed
             return false; // non-representable, or probably just out of room
     }
 
@@ -233,8 +233,8 @@ template <class MT> bool String_SBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const cha
     return true;
 }
 
-template <class MT> bool String_SBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
-    const uint16_t* df = d + CROSS_LEN - 1;
+template <class MT> bool String_SBCS_TO_HOST_UTF16(Bit16u *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const Bit16u* df = d + CROSS_LEN - 1;
 	const char *sf = s + CROSS_LEN - 1;
 
     while (*s != 0 && s < sf) {
@@ -243,7 +243,7 @@ template <class MT> bool String_SBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,cons
         MT wc;
             wc = map[ic]; // output: unicode character
 
-        *d++ = (uint16_t)wc;
+        *d++ = (Bit16u)wc;
     }
 
     if (d > df) return false;
@@ -284,8 +284,8 @@ template <class MT> bool String_HOST_TO_SBCS_UTF8(char *d/*CROSS_LEN*/,const cha
     return true;
 }
 
-template <class MT> bool String_HOST_TO_SBCS_UTF16(char *d/*CROSS_LEN*/,const uint16_t *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
-    const uint16_t *sf = s + CROSS_LEN - 1;
+template <class MT> bool String_HOST_TO_SBCS_UTF16(char *d/*CROSS_LEN*/,const Bit16u *s/*CROSS_LEN*/,const MT *map,const size_t map_max) {
+    const Bit16u *sf = s + CROSS_LEN - 1;
     const char* df = d + CROSS_LEN - 1;
 
     while (*s != 0 && s < sf) {
@@ -352,8 +352,8 @@ template <class MT> bool String_HOST_TO_DBCS_UTF8(char *d/*CROSS_LEN*/,const cha
     return true;
 }
 
-template <class MT> bool String_HOST_TO_DBCS_UTF16(char *d/*CROSS_LEN*/,const uint16_t *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
-    const uint16_t *sf = s + CROSS_LEN - 1;
+template <class MT> bool String_HOST_TO_DBCS_UTF16(char *d/*CROSS_LEN*/,const Bit16u *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const Bit16u *sf = s + CROSS_LEN - 1;
     const char* df = d + CROSS_LEN - 1;
 
     while (*s != 0 && s < sf) {
@@ -386,7 +386,7 @@ template <class MT> bool String_DBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const cha
 	const char *sf = s + CROSS_LEN - 1;
 
     while (*s != 0 && s < sf) {
-        uint16_t ic = (unsigned char)(*s++);
+        Bit16u ic = (unsigned char)(*s++);
         if ((dos.loaded_codepage==932 &&((ic & 0xE0) == 0x80 || (ic & 0xE0) == 0xE0)) && (ic & 0x80) == 0x80) {
             if (*s == 0) return false;
             ic <<= 8U;
@@ -403,7 +403,7 @@ template <class MT> bool String_DBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const cha
         if (wc == 0x0000)
             return false;
 
-        if (utf8_encode(&d,df,(uint32_t)wc) < 0) // will advance d by however many UTF-8 bytes are needed
+        if (utf8_encode(&d,df,(Bit32u)wc) < 0) // will advance d by however many UTF-8 bytes are needed
             return false; // non-representable, or probably just out of room
     }
 
@@ -413,12 +413,12 @@ template <class MT> bool String_DBCS_TO_HOST_UTF8(char *d/*CROSS_LEN*/,const cha
     return true;
 }
 
-template <class MT> bool String_DBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
-    const uint16_t* df = d + CROSS_LEN - 1;
+template <class MT> bool String_DBCS_TO_HOST_UTF16(Bit16u *d/*CROSS_LEN*/,const char *s/*CROSS_LEN*/,const MT *hitbl,const MT *rawtbl,const size_t rawtbl_max) {
+    const Bit16u* df = d + CROSS_LEN - 1;
 	const char *sf = s + CROSS_LEN - 1;
 
     while (*s != 0 && s < sf) {
-        uint16_t ic = (unsigned char)(*s++);
+        Bit16u ic = (unsigned char)(*s++);
         if ((dos.loaded_codepage==932 &&((ic & 0xE0) == 0x80 || (ic & 0xE0) == 0xE0)) && (ic & 0x80) == 0x80) {
             if (*s == 0) return false;
             ic <<= 8U;
@@ -435,7 +435,7 @@ template <class MT> bool String_DBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,cons
         if (wc == 0x0000)
             return false;
 
-        *d++ = (uint16_t)wc;
+        *d++ = (Bit16u)wc;
     }
 
     if (d > df) return false;
@@ -445,18 +445,18 @@ template <class MT> bool String_DBCS_TO_HOST_UTF16(uint16_t *d/*CROSS_LEN*/,cons
 }
 
 #if defined(host_cnv_use_wchar)
-char *CodePageHostToGuestUTF16(char *d, const uint16_t *s) {
-    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF16<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+char *CodePageHostToGuestUTF16(char *d, const Bit16u *s) {
+    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF16<Bit16u>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
         return (char*)cpcnv_temp;
-    else if (String_HOST_TO_SBCS_UTF16<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+    else if (String_HOST_TO_SBCS_UTF16<Bit16u>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
         return (char*)cpcnv_temp;
     return NULL;
 }
 #else
 char *CodePageHostToGuestUTF8(char *d, const char *s) {
-    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF8<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+    if (dos.loaded_codepage==932&&String_HOST_TO_DBCS_UTF8<Bit16u>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
         return (char*)cpcnv_temp;
-    else if (String_HOST_TO_SBCS_UTF8<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+    else if (String_HOST_TO_SBCS_UTF8<Bit16u>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
         return (char*)cpcnv_temp;
     return NULL;
 }
@@ -464,7 +464,7 @@ char *CodePageHostToGuestUTF8(char *d, const char *s) {
 
 char *CodePageHostToGuest(const host_cnv_char_t *s) {
 #if defined(host_cnv_use_wchar)
-    if (!CodePageHostToGuestUTF16((char *)cpcnv_temp,(const uint16_t *)s))
+    if (!CodePageHostToGuestUTF16((char *)cpcnv_temp,(const Bit16u *)s))
 #else
     if (!CodePageHostToGuestUTF8((char *)cpcnv_temp,(char *)s))
 #endif
@@ -475,7 +475,7 @@ char *CodePageHostToGuest(const host_cnv_char_t *s) {
 
 char *CodePageHostToGuestL(const host_cnv_char_t *s) {
 #if defined(host_cnv_use_wchar)
-    if (!CodePageHostToGuestUTF16((char *)cpcnv_ltemp,(const uint16_t *)s))
+    if (!CodePageHostToGuestUTF16((char *)cpcnv_ltemp,(const Bit16u *)s))
 #else
     if (!CodePageHostToGuestUTF8((char *)cpcnv_ltemp,(char *)s))
 #endif
@@ -485,18 +485,18 @@ char *CodePageHostToGuestL(const host_cnv_char_t *s) {
 }
 
 #if defined(host_cnv_use_wchar)
-wchar_t *CodePageGuestToHostUTF16(uint16_t *d, const char *s) {
-    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF16<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+wchar_t *CodePageGuestToHostUTF16(Bit16u *d, const char *s) {
+    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF16<Bit16u>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
         return cpcnv_temp;
-    else if (String_SBCS_TO_HOST_UTF16<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+    else if (String_SBCS_TO_HOST_UTF16<Bit16u>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
         return cpcnv_temp;
     return NULL;
 }
 #else
 char *CodePageGuestToHostUTF8(char *d, const char *s) {
-    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF8<uint16_t>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
+    if (dos.loaded_codepage==932&&String_DBCS_TO_HOST_UTF8<Bit16u>(d,s,cp932_to_unicode_hitbl,cp932_to_unicode_raw,sizeof(cp932_to_unicode_raw)/sizeof(cp932_to_unicode_raw[0])))
         return cpcnv_temp;
-    else if (String_SBCS_TO_HOST_UTF8<uint16_t>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
+    else if (String_SBCS_TO_HOST_UTF8<Bit16u>(d,s,cp437_to_unicode,sizeof(cp437_to_unicode)/sizeof(cp437_to_unicode[0])))
         return cpcnv_temp;
     return NULL;
 }
@@ -504,7 +504,7 @@ char *CodePageGuestToHostUTF8(char *d, const char *s) {
 
 host_cnv_char_t *CodePageGuestToHost(const char *s) {
 #if defined(host_cnv_use_wchar)
-    if (!CodePageGuestToHostUTF16((uint16_t *)cpcnv_temp,s))
+    if (!CodePageGuestToHostUTF16((Bit16u *)cpcnv_temp,s))
 #else
     if (!CodePageGuestToHostUTF8((char *)cpcnv_temp,s))
 #endif
@@ -515,7 +515,7 @@ host_cnv_char_t *CodePageGuestToHost(const char *s) {
 
 host_cnv_char_t *CodePageGuestToHostL(const char *s) {
 #if defined(host_cnv_use_wchar)
-    if (!CodePageGuestToHostUTF16((uint16_t *)cpcnv_ltemp,s))
+    if (!CodePageGuestToHostUTF16((Bit16u *)cpcnv_ltemp,s))
 #else
     if (!CodePageGuestToHostUTF8((char *)cpcnv_ltemp,s))
 #endif
@@ -605,7 +605,7 @@ int lock_file_region(int fd, int cmd, struct flock *fl, long long start, unsigne
 #define DENY_READ	0x03
 #define DENY_NONE	0x04
 #define FCB_MODE	0x07
-bool share(int fd, int mode, uint32_t flags) {
+bool share(int fd, int mode, Bit32u flags) {
   struct flock fl;
   int ret;
   int share_mode = ( flags >> 4 ) & 0x7;
@@ -924,7 +924,7 @@ bool localDrive::FindNext(DOS_DTA & dta) {
 	Bit8u find_attr;
 
 	dta.GetSearchParams(srch_attr,srch_pattern,false);
-	uint16_t id = lfn_filefind_handle>=LFN_FILEFIND_MAX?dta.GetDirID():ldid[lfn_filefind_handle];
+	Bit16u id = lfn_filefind_handle>=LFN_FILEFIND_MAX?dta.GetDirID():ldid[lfn_filefind_handle];
 
 #if defined(LINUX) || defined(MACOSX)
 	ChangeUtf8FileName(srch_pattern);
@@ -1011,7 +1011,7 @@ again:
 	return true;
 }
 
-bool localDrive::SetFileAttr(const char * name,uint16_t attr) {
+bool localDrive::SetFileAttr(const char * name,Bit16u attr) {
 	char newname[CROSS_LEN];
 	strcpy(newname,basedir);
 	strcat(newname,name);
@@ -1030,7 +1030,7 @@ bool localDrive::SetFileAttr(const char * name,uint16_t attr) {
 	}
 
 	if (!SetFileAttributesW(host_name, attr)) {
-		DOS_SetError((uint16_t)GetLastError());
+		DOS_SetError((Bit16u)GetLastError());
 		return false;
 	}
 	dirCache.EmptyCache();
@@ -1073,7 +1073,7 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
     }
 	Bitu attribs = GetFileAttributesW(host_name);
 	if (attribs == INVALID_FILE_ATTRIBUTES) {
-		DOS_SetError((uint16_t)GetLastError());
+		DOS_SetError((Bit16u)GetLastError());
 		return false;
 	}
 	*attr = attribs&0x3f;
@@ -1520,7 +1520,7 @@ bool localFile::Write(Bit8u * data,Bit16u * size) {
 }
 
 #ifndef WIN32
-bool toLock(int fd, bool is_lock, uint32_t pos, uint16_t size) {
+bool toLock(int fd, bool is_lock, Bit32u pos, Bit16u size) {
     struct flock larg;
     unsigned long mask = 0xC0000000;
     int flag = fcntl(fd, F_GETFL);
@@ -1566,7 +1566,7 @@ bool localFile::LockFile(Bit8u mode, Bit32u pos, Bit16u size) {
             }
         else if (::UnlockFile(hFile, pos, 0, size, 0))									// This is a somewhat permanent condition!
             return true;
-        DOS_SetError((uint16_t)GetLastError());
+        DOS_SetError((Bit16u)GetLastError());
         return false;
     }
 	BOOL bRet;

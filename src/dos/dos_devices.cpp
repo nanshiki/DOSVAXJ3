@@ -258,7 +258,7 @@ Bit16u DOS_Device::GetInformation(void) {
 	return Devices[devnum]->GetInformation();
 }
 
-void DOS_Device::SetInformation(uint16_t info) {
+void DOS_Device::SetInformation(Bit16u info) {
 	if(Devices[devnum]->IsName("CON") && !(Devices[devnum]->GetInformation() & EXT_DEVICE_BIT)) {
 		Devices[devnum]->SetInformation(info);
 	}

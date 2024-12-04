@@ -920,7 +920,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 			dta.GetResult(name,lname,size,date,time,attr);
 
 			if ((attr & DOS_ATTR_DIRECTORY)==0) {
-				uint16_t ftime,fdate;
+				Bit16u ftime,fdate;
 
 				strcpy(nameSource,pathSource);
 				strcat(nameSource,name);

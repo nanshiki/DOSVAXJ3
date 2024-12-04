@@ -38,7 +38,7 @@ public:
 	bool Close();
 	void ClearAnsi(void);
 	Bit16u GetInformation(void);
-	void SetInformation(uint16_t info) {
+	void SetInformation(Bit16u info) {
 		binary = info & 0x20;
 	}
 	bool ReadFromControlChannel(PhysPt /*bufptr*/,Bit16u /*size*/,Bit16u * /*retcode*/){return false;}

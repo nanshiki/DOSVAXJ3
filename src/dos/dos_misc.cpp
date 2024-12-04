@@ -72,7 +72,7 @@ static Bitu INT2A_Handler(void) {
 	return CBRET_NONE;
 }
 
-extern uint16_t seg_win_startup_info;
+extern Bit16u seg_win_startup_info;
 
 static bool DOS_MultiplexFunctions(void) {
 	char name[256];

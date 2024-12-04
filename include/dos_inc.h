@@ -123,7 +123,7 @@ bool DOS_FlushFile(Bit16u handle);
 bool DOS_DuplicateEntry(Bit16u entry,Bit16u * newentry);
 bool DOS_ForceDuplicateEntry(Bit16u entry,Bit16u newentry);
 bool DOS_GetFileDate(Bit16u entry, Bit16u* otime, Bit16u* odate);
-bool DOS_SetFileDate(uint16_t entry, uint16_t ntime, uint16_t ndate);
+bool DOS_SetFileDate(Bit16u entry, Bit16u ntime, Bit16u ndate);
 
 /* Routines for Drive Class */
 bool DOS_OpenFile(char const * name,Bit8u flags,Bit16u * entry,bool fcb = false);
@@ -394,7 +394,7 @@ class DOS_InfoBlock:public MemStruct {
 public:
 	DOS_InfoBlock			() {};
 	void SetLocation(Bit16u  seg);
-    void SetFirstDPB(uint32_t _first_dpb);
+    void SetFirstDPB(Bit32u _first_dpb);
 	void SetFirstMCB(Bit16u _first_mcb);
 	void SetBuffers(Bit16u x,Bit16u y);
 	void SetCurDirStruct(Bit32u _curdirstruct);
@@ -667,8 +667,8 @@ struct DOS_Block {
 		RealPt upcase;
 		//Bit8u* country;//Will be copied to dos memory. resides in real mem
 		Bit16u dpb = 0; //Fake Disk parameter system using only the first entry so the drive letter matches
-		uint16_t dpb_size = 0x21; // bytes per DPB entry (MS-DOS 4.x-6.x size)
-		uint16_t mediaid_offset = 0x17; // media ID offset in DPB (MS-DOS 4.x-6.x case)
+		Bit16u dpb_size = 0x21; // bytes per DPB entry (MS-DOS 4.x-6.x size)
+		Bit16u mediaid_offset = 0x17; // media ID offset in DPB (MS-DOS 4.x-6.x case)
 		Bit16u country_seg;
 		Bit16u dcp;	// Device command packet
 	} tables;

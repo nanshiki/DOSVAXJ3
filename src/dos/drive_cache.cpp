@@ -551,7 +551,7 @@ void DOS_Drive_Cache::CreateShortName(CFileInfo* curDir, CFileInfo* info) {
 		unsigned int i = 0;
 		bool lead = false;
 		while (tmpName[i] != 0) {
-			if ((uint8_t)tmpName[i]<=32||tmpName[i]==127||tmpName[i]=='"'||tmpName[i]=='+'||tmpName[i]=='='||tmpName[i]==','||tmpName[i]==';'||tmpName[i]==':'||tmpName[i]=='<'||tmpName[i]=='>'||((tmpName[i]=='['||tmpName[i]==']'||tmpName[i]=='|'||tmpName[i]=='\\')&&(!lead))||tmpName[i]=='?'||tmpName[i]=='*') tmpName[i]='_';
+			if ((Bit8u)tmpName[i]<=32||tmpName[i]==127||tmpName[i]=='"'||tmpName[i]=='+'||tmpName[i]=='='||tmpName[i]==','||tmpName[i]==';'||tmpName[i]==':'||tmpName[i]=='<'||tmpName[i]=='>'||((tmpName[i]=='['||tmpName[i]==']'||tmpName[i]=='|'||tmpName[i]=='\\')&&(!lead))||tmpName[i]=='?'||tmpName[i]=='*') tmpName[i]='_';
 			if (lead) lead = false;
 			else if (isKanji1(tmpName[i])) lead = true;
 			i++;

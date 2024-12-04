@@ -125,7 +125,7 @@ static Bit16u DOS_GetAmount(void) {
 	return amount;
 }
 
-void set_dword(char *buff, uint32_t data)
+void set_dword(char *buff, Bit32u data)
 {
 	*buff++ = (char)data;
 	data >>= 8;
@@ -1035,7 +1035,7 @@ static Bitu DOS_21Handler(void) {
 	case 0x3f:		/* READ Read from file or device */
 		{ 
 			Bit16u toread=DOS_GetAmount();
-			uint32_t handle = RealHandle(reg_bx);
+			Bit32u handle = RealHandle(reg_bx);
 			bool fRead = false;
 			dos.echo=true;
 			if(handle >= DOS_FILES) {
@@ -1071,7 +1071,7 @@ static Bitu DOS_21Handler(void) {
 		{
 			Bit16u towrite=DOS_GetAmount();
 			bool fWritten = false;
-			uint32_t handle = RealHandle(reg_bx);
+			Bit32u handle = RealHandle(reg_bx);
 			MEM_BlockRead(SegPhys(ds)+reg_dx,dos_copybuf,towrite);
 			if(handle >= DOS_FILES) {
 				DOS_SetError(DOSERR_INVALID_HANDLE);
@@ -1429,8 +1429,8 @@ static Bitu DOS_21Handler(void) {
 	case 0x5c:			/* FLOCK File region locking */
 		/* ert, 20100711: Locking extensions */
 		{
-			uint32_t pos = ((unsigned int)reg_cx << 16u) + reg_dx;
-			uint32_t size = ((unsigned int)reg_si << 16u) + reg_di;
+			Bit32u pos = ((unsigned int)reg_cx << 16u) + reg_dx;
+			Bit32u size = ((unsigned int)reg_si << 16u) + reg_di;
 			if(!enable_share_exe) {
 				DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
 				reg_ax = dos.errorcode;
@@ -2140,8 +2140,8 @@ static Bitu DOS_21Handler(void) {
 							ftm.tm_sec = (reg_cx & 0x1f) * 2;
 							ftm.tm_isdst = -1;
 							long long ff = 116444736000000000LL + (long long)mktime(&ftm) * 10000000LL + reg_bh * 100000LL;
-							mem_writed(SegPhys(es) + reg_di, (uint32_t)ff);
-							mem_writed(SegPhys(es) + reg_di + 4, (uint32_t)(ff >> 32));
+							mem_writed(SegPhys(es) + reg_di, (Bit32u)ff);
+							mem_writed(SegPhys(es) + reg_di + 4, (Bit32u)(ff >> 32));
 							reg_ax = 0;
 							CALLBACK_SCF(false);
 						}

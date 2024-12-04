@@ -71,7 +71,7 @@ static Bit8u country_info[0x22] = {
 /* Reservered 5     */  0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-uint16_t seg_win_startup_info;
+Bit16u seg_win_startup_info;
 
 void DOS_SetupTables(void) {
 	Bit16u seg;Bitu i;

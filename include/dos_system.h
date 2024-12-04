@@ -44,7 +44,7 @@
 #define DOS_PATHLENGTH 255
 #define DOS_TEMPSIZE 1024
 #define DOSERR_FUNCTION_NUMBER_INVALID 1
-void DOS_SetError(uint16_t code);
+void DOS_SetError(Bit16u code);
 
 enum {
 	DOS_ATTR_READ_ONLY=	0x01,
@@ -76,7 +76,7 @@ public:
 	virtual bool	Seek(Bit32u * pos,Bit32u type)=0;
 	virtual bool	Close()=0;
 	/* ert, 20100711: Locking extensions */
-	virtual bool    LockFile(uint8_t mode, uint32_t pos, uint16_t size) { (void)mode; (void)pos; (void)size; DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);return false; };
+	virtual bool    LockFile(Bit8u mode, Bit32u pos, Bit16u size) { (void)mode; (void)pos; (void)size; DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);return false; };
 	virtual Bit16u	GetInformation(void)=0;
 	virtual void	SetName(const char* _name)	{ if (name) delete[] name; name = new char[strlen(_name)+1]; strcpy(name,_name); }
 	virtual char*	GetName(void)				{ return name; };
@@ -121,7 +121,7 @@ public:
 	virtual bool	Seek(Bit32u * pos,Bit32u type);
 	virtual bool	Close();
 	virtual Bit16u	GetInformation(void);
-	virtual void	SetInformation(uint16_t info);
+	virtual void	SetInformation(Bit16u info);
 	virtual bool	ReadFromControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
 	virtual bool	WriteToControlChannel(PhysPt bufptr,Bit16u size,Bit16u * retcode);
 	virtual Bit8u	GetStatus(bool input_flag);
@@ -303,10 +303,10 @@ public:
 	virtual void UpdateDPB(unsigned char dos_drive) { (void)dos_drive; };
 
     // INT 25h/INT 26h
-    virtual uint32_t GetSectorCount(void) { return 0; }
-    virtual uint32_t GetSectorSize(void) { return 0; } // LOGICAL sector size (from the FAT driver) not PHYSICAL disk sector size
-	virtual uint8_t Read_AbsoluteSector_INT25(uint32_t sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
-	virtual uint8_t Write_AbsoluteSector_INT25(uint32_t sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
+    virtual Bit32u GetSectorCount(void) { return 0; }
+    virtual Bit32u GetSectorSize(void) { return 0; } // LOGICAL sector size (from the FAT driver) not PHYSICAL disk sector size
+	virtual Bit8u Read_AbsoluteSector_INT25(Bit32u sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
+	virtual Bit8u Write_AbsoluteSector_INT25(Bit32u sectnum, void * data) { (void)sectnum; (void)data; return 0x05; }
 };
 
 enum { OPEN_READ=0, OPEN_WRITE=1, OPEN_READWRITE=2, OPEN_READ_NO_MOD=4, DOS_NOT_INHERIT=128};

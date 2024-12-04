@@ -243,11 +243,11 @@ private:
 };
 
 
-void time_t_to_DOS_DateTime(uint16_t &t,uint16_t &d,time_t unix_time) {
+void time_t_to_DOS_DateTime(Bit16u &t,Bit16u &d,time_t unix_time) {
         struct tm time;
         time.tm_isdst = -1;
 
-        uint16_t oldax=reg_ax, oldcx=reg_cx, olddx=reg_dx;
+        Bit16u oldax=reg_ax, oldcx=reg_cx, olddx=reg_dx;
         reg_ah=0x2a; // get system date
         CALLBACK_RunRealInt(0x21);
 
@@ -1167,13 +1167,13 @@ void fatDrive::UpdateDPB(unsigned char dos_drive) {
         mem_writew(ptr+0x06,bootbuffer.reservedsectors);                 // +6 = number of reserved sectors at start of partition
         mem_writeb(ptr+0x08,bootbuffer.fatcopies);                       // +8 = number of FATs (file allocation tables)
         mem_writew(ptr+0x09,bootbuffer.rootdirentries);                  // +9 = number of root directory entries
-        mem_writew(ptr+0x0B,(uint16_t)(firstDataSector-partSectOff));    // +11 = number of first sector containing user data
+        mem_writew(ptr+0x0B,(Bit16u)(firstDataSector-partSectOff));    // +11 = number of first sector containing user data
 
-        mem_writew(ptr+0x0D,(uint16_t)CountOfClusters + 1);              // +13 = highest cluster number
+        mem_writew(ptr+0x0D,(Bit16u)CountOfClusters + 1);              // +13 = highest cluster number
 
-        mem_writew(ptr+0x0F,(uint16_t)bootbuffer.sectorsperfat);         // +15 = sectors per FAT
+        mem_writew(ptr+0x0F,(Bit16u)bootbuffer.sectorsperfat);         // +15 = sectors per FAT
 
-        mem_writew(ptr+0x11,(uint16_t)(firstRootDirSect-partSectOff));   // +17 = sector number of first directory sector
+        mem_writew(ptr+0x11,(Bit16u)(firstRootDirSect-partSectOff));   // +17 = sector number of first directory sector
 
         mem_writed(ptr+0x13,0xFFFFFFFF);                            // +19 = address of device driver header (NOT IMPLEMENTED) Windows 98 behavior
         mem_writeb(ptr+0x17,bootbuffer.mediadescriptor);            // +23 = media ID byte
@@ -1627,7 +1627,7 @@ bool fatDrive::SetFileAttr(const char *name, Bit16u attr) {
 	if(!getFileDirEntry(name, &fileEntry, &dirClust, &subEntry, /*dirOk*/true)) {
 		return false;
 	} else {
-		fileEntry.attrib=(uint8_t)attr;
+		fileEntry.attrib=(Bit8u)attr;
 		directoryChange(dirClust, &fileEntry, (int32_t)subEntry);
 	}
 	return true;
@@ -1890,7 +1890,7 @@ bool fatDrive::MakeDir(char *dir) {
 	direntry tmpentry;
 	char dirName[DOS_NAMELENGTH_ASCII];
 	char pathName[11], path[LFN_NAMELENGTH+2];
-    uint16_t ct,cd;
+    Bit16u ct,cd;
 
 	/* Can we even get the name of the directory itself? */
 	if(!getEntryName(dir, &dirName[0])) return false;

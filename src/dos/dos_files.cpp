@@ -979,7 +979,7 @@ bool DOS_SetFileAttr(char const * const name,Bit16u attr)
 
 	/* This function must prevent changing a file into a directory, volume label into a file, etc.
 	 * Also Windows 95 setup likes to create WINBOOT.INI as a file and then chattr it into a directory for some stupid reason. */
-	uint16_t old_attr;
+	Bit16u old_attr;
 	if (!Drives[drive]->GetFileAttr(fullname,&old_attr))
 	{
 		DOS_SetError(DOSERR_FILE_NOT_FOUND);
@@ -995,7 +995,7 @@ bool DOS_SetFileAttr(char const * const name,Bit16u attr)
 		LOG(LOG_DOSMISC,LOG_WARN)("Attempted to change directory attribute of '%s' with SetFileAttr",name);
 
 	/* define what cannot be changed */
-	const uint16_t attr_mask = (DOS_ATTR_VOLUME|DOS_ATTR_DIRECTORY);
+	const Bit16u attr_mask = (DOS_ATTR_VOLUME|DOS_ATTR_DIRECTORY);
 
 	attr = (attr & ~attr_mask) | (old_attr & attr_mask);
 
@@ -1638,9 +1638,9 @@ bool DOS_GetFileDate(Bit16u entry, Bit16u* otime, Bit16u* odate) {
 	return true;
 }
 
-bool DOS_SetFileDate(uint16_t entry, Bit16u ntime, Bit16u ndate)
+bool DOS_SetFileDate(Bit16u entry, Bit16u ntime, Bit16u ndate)
 {
-	uint32_t handle=RealHandle(entry);
+	Bit32u handle=RealHandle(entry);
 	if (handle>=DOS_FILES) {
 		DOS_SetError(DOSERR_INVALID_HANDLE);
 		return false;
