@@ -92,7 +92,7 @@ static void LoadMessageFile(const char * fname, bool japan_flag = false) {
 	FILE * mfile=fopen(fname,"rt");
 	/* This should never happen and since other modules depend on this use a normal printf */
 	if (!mfile) {
-#if defined(LINUX)
+#if defined(LINUX) || defined(MACOSX)
 		if(japan_flag) {
 			char *start = strrchr((char *)fname, '/');
 			if(start != NULL) {
