@@ -65,6 +65,9 @@ TIME [/T] [/H]
 %s ‚ðíœ‚Å‚«‚Ü‚¹‚ñ
 
 .
+:SHELL_CMD_DEL_SURE
+ƒfƒBƒŒƒNƒgƒŠ“à‚Ì‚·‚×‚Ä‚Ìƒtƒ@ƒCƒ‹‚ªíœ‚³‚ê‚Ü‚·‚ªA‘±‚¯‚Ü‚·‚© [Y/N]?
+.
 :SHELL_SYNTAXERROR
 •K—v‚Èƒpƒ‰ƒ[ƒ^‚ª‚ ‚è‚Ü‚¹‚ñ
 
@@ -123,6 +126,7 @@ GOTO: ƒ‰ƒxƒ‹ %s ‚ª‚ ‚è‚Ü‚¹‚ñ
 .
 :SHELL_CMD_PAUSE
 €”õ‚ª‚Å‚«‚½‚çƒL[‚ð‚Ç‚ê‚©‰Ÿ‚µ‚Ä‚­‚¾‚³‚¢DDD
+
 .
 :SHELL_CMD_COPY_FAILURE
 %s ‚ðƒRƒs[‚Å‚«‚Ü‚¹‚ñ
@@ -152,6 +156,27 @@ CD ‚Æ“ü—Í‚·‚é‚ÆAƒJƒŒƒ“ƒgƒhƒ‰ƒCƒu‚ÌŒ»sƒfƒBƒŒƒNƒgƒŠ‚ª•\Ž¦‚³‚ê‚Ü‚·
 .
 :SHELL_CMD_DIR_HELP
 ƒfƒBƒŒƒNƒgƒŠ’†‚ÌƒTƒuƒfƒBƒŒƒNƒgƒŠ‚âƒtƒ@ƒCƒ‹‚Ìˆê——•\Ž¦‚ð‚µ‚Ü‚·
+
+.
+:SHELL_CMD_DIR_HELP_LONG
+DIR [drive:][path][filename] [/[W|B]] [/P] [/A[D|H|S|R|A]] [/O[N|E|G|S|D]]
+
+  [drive:][path][filename]
+              ˆê——‚ð•\Ž¦‚µ‚½‚¢ƒhƒ‰ƒCƒuEƒfƒBƒŒƒNƒgƒŠEƒtƒ@ƒCƒ‹‚ðŽw’è‚µ‚Ü‚·B
+  /W          ƒƒCƒhˆê——Œ`Ž®‚Å•\Ž¦‚µ‚Ü‚·A
+  /B          ƒtƒ@ƒCƒ‹–¼‚Ì‚Ý‚ð•\Ž¦‚µ‚Ü‚· (Œ©o‚µ‚â—v–ñ‚ª‚Â‚«‚Ü‚¹‚ñ)
+  /P          1‰æ–Ê–ˆ‚É’âŽ~‚µ‚Ä•\Ž¦‚µ‚Ü‚·B
+  /A          Žw’è‚³‚ê‚½‘®«‚Ìƒtƒ@ƒCƒ‹‚ð•\Ž¦‚µ‚Ü‚·B
+  ‘®«         D  ƒfƒBƒŒƒNƒgƒŠ               R  “Ç‚ÝŽæ‚èê—p
+               H  ‰B‚µƒtƒ@ƒCƒ‹               A  ƒA[ƒJƒCƒu
+               S  ƒVƒXƒeƒ€ƒtƒ@ƒCƒ‹           -  ‚»‚Ì‘®«ˆÈŠO
+  /O          ƒtƒ@ƒCƒ‹‚ð•À‚×‘Ö‚¦‚Ä•\Ž¦‚µ‚Ü‚·B
+  ƒ\[ƒg‡     N  –¼‘O‡ (ƒAƒ‹ƒtƒ@ƒxƒbƒg)    S  ƒTƒCƒY‡ (¬‚³‚¢•û‚©‚ç)
+               E  Šg’£Žq‡ (ƒAƒ‹ƒtƒ@ƒxƒbƒg)  D  “úŽž‡ (ŒÃ‚¢•û‚©‚ç)
+               G  ƒOƒ‹[ƒv(ƒfƒBƒŒƒNƒgƒŠ‚©‚ç) -  ~‡
+
+ŠÂ‹«•Ï” DIRCMD ‚ÉƒXƒCƒbƒ`‚ðÝ’è‚Å‚«‚Ü‚·B
+/-W‚Ì‚æ‚¤‚É - (ƒnƒCƒtƒ“)‚ð‘O‚É‚Â‚¯‚é‚ÆA‚»‚ÌƒXƒCƒbƒ`‚Í–³Œø‚É‚È‚è‚Ü‚·B
 
 .
 :SHELL_CMD_ECHO_HELP
@@ -204,11 +229,25 @@ REN [drive:][path]ƒtƒ@ƒCƒ‹1 ƒtƒ@ƒCƒ‹2
 
 .
 :SHELL_CMD_ATTRIB_HELP
-‹@”\‚ÍŽÀ‘•‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ
+ƒtƒ@ƒCƒ‹‚Ì‘®«‚ð•\Ž¦E•ÏX‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_ATTRIB_HELP_LONG
+ATTRIB [+R | -R] [+A | -A] [+S | -S] [+H | -H] [drive:][path][filename] [/S]
+
+  +   ‘®«‚ðƒZƒbƒg‚·‚é
+  -   ‘®«‚ðƒNƒŠƒA‚·‚é
+  R   “Ç‚ÝŽæ‚èê—p
+  A   ƒA[ƒJƒCƒu
+  S   ƒVƒXƒeƒ€ƒtƒ@ƒCƒ‹
+  H   ‰B‚µƒtƒ@ƒCƒ‹
+  [drive:][path][filename]
+      ATTRIBƒRƒ}ƒ“ƒh‚ª‘®«‚ðÝ’è‚·‚éƒtƒ@ƒCƒ‹EƒfƒBƒŒƒNƒgƒŠ‚ðŽw’è
+  /S  Žw’è‚ÌƒpƒX‚ÌƒfƒBƒŒƒNƒgƒŠ“à‚Ì‚·‚×‚Ä‚Ìƒtƒ@ƒCƒ‹‚É‘Î‚µ‚Ä‘®«‚ðÝ’è
 
 .
 :SHELL_CMD_PATH_HELP
-ŒÝŠ·«‚Ì‚½‚ß‚É’ñ‹Ÿ‚³‚ê‚Ä‚¢‚Ü‚·
+ŽÀsƒtƒ@ƒCƒ‹‚ðŒŸõ‚·‚éƒpƒX‚ð•\Ž¦EÝ’è‚µ‚Ü‚·
 
 .
 :SHELL_CMD_CHEV_HELP
@@ -216,12 +255,12 @@ REN [drive:][path]ƒtƒ@ƒCƒ‹1 ƒtƒ@ƒCƒ‹2
 
 .
 :SHELL_CMD_CHEV_HELP_LONG
-CHEV [[JP][VT][J3][US]]
+CHEV [[JP][VT][VT1][VT3][VT3][VT4][J3][US]] [nn]
   JP: “ú–{ŒêŠÂ‹« DOS/V,AX
-  VT: “ú–{ŒêŠÂ‹« DOS/V(V-Text)
+  VT,VT1,VT2,VT3,VT4: “ú–{ŒêŠÂ‹« DOS/V(V-Text)
   J3: “ú–{ŒêŠÂ‹« J-3100
   US: ‰pŒêŠÂ‹«
-
+  nn: s” –¢Žw’è‚Ìê‡ƒfƒtƒHƒ‹ƒg’l
 .
 :SHELL_CMD_CHEV_STATUS
 Œ»Ý %s “ú–{ŒêŠÂ‹«‚Å‚·
@@ -231,6 +270,10 @@ CHEV [[JP][VT][J3][US]]
 :SHELL_CMD_CHEV_CHANGE
 %s “ú–{ŒêŠÂ‹«‚ÉØ‚è‘Ö‚¦‚Ü‚µ‚½
 Œ»Ý‚ÌƒrƒfƒIƒ‚[ƒh‚Í %02xh ‚Å‚·
+
+.
+:SHELL_CMD_VER_HELP
+DOS ƒo[ƒWƒ‡ƒ“‚ð•\Ž¦EÝ’è‚µ‚Ü‚·B
 
 .
 :SHELL_EXECUTE_DRIVE_NOT_FOUND
@@ -251,4 +294,576 @@ CHEV [[JP][VT][J3][US]]
 .
 :SHELL_EXECUTE_DRIVE_ACCESS_LOCAL
 ƒ[ƒJƒ‹ƒhƒ‰ƒCƒu %c ‚ðŽg—p‚µ‚Ü‚·‚© [Y/N]?
+.
+:SHELL_CMD_HELP
+ƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚é“à•”ƒRƒ}ƒ“ƒh‚Ìˆê——‚ð•\Ž¦‚·‚é‚É‚Í [33;1mHELP /ALL[0m ‚Æ
+ƒ^ƒCƒv‚µ‚Ä‚­‚¾‚³‚¢BŠO•”ƒRƒ}ƒ“ƒh‚Í Z: ƒhƒ‰ƒCƒu“à‚ÌƒvƒƒOƒ‰ƒ€‚Æ‚µ‚Ä‘¶Ý‚µ‚Ü‚·B
+‚æ‚­Žg‚í‚ê‚éƒRƒ}ƒ“ƒh‚Ìˆê——:
+
+.
+:SHELL_CMD_BREAK_HELP
+CTRL+C‚Ì‰Ÿ‰ºƒ`ƒFƒbƒN‚Ì“®ì‚ðÝ’èE‰ðœ‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_TITLE_HELP
+DOSVAXJ3‚ÌƒEƒBƒ“ƒhƒEƒ^ƒCƒgƒ‹‚ðÝ’è‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_CHCP_HELP
+Œ»Ý‚Ì DOS ƒR[ƒhƒy[ƒW‚ð•\Ž¦E•ÏX‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_LOADHIGH_HELP
+ƒvƒƒOƒ‰ƒ€‚ðãˆÊƒƒ‚ƒŠ—Ìˆæ‚É“Ç‚Ýž‚Ý‚Ü‚· (XMSEUMB ƒƒ‚ƒŠ‚ª•K—v)
+
+.
+:SHELL_CMD_IF_HELP
+ƒoƒbƒ`ƒvƒƒOƒ‰ƒ€‚ÅðŒ•ªŠò‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_SHIFT_HELP
+ƒoƒbƒ`ƒtƒ@ƒCƒ‹’†‚Ì’u‚«Š·‚¦‰Â”\‚Èƒpƒ‰ƒ[ƒ^‚ÌˆÊ’u‚ð•ÏX‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_PAUSE_HELP
+ƒL[‚ðˆê‚Â‰Ÿ‚³‚ê‚½‚çA‘±s‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_PROMPT_HELP
+ƒRƒ}ƒ“ƒhƒvƒƒ“ƒvƒg‚ð•ÏX‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_SUBST_HELP
+“à•”‚ÌƒfƒBƒŒƒNƒgƒŠ‚ð‰¼‘z“I‚Èƒhƒ‰ƒCƒu‚ÉŠ„‚è“–‚Ä‚Ü‚·B
+
+.
+:SHELL_CMD_FOR_HELP
+Žw’è‚³‚ê‚½ƒRƒ}ƒ“ƒh‚ðƒtƒ@ƒCƒ‹ƒZƒbƒg‚ÌŠeƒtƒ@ƒCƒ‹‚É‘Î‚µŽÀs‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_CALL_HELP
+ƒoƒbƒ`ƒtƒ@ƒCƒ‹‚©‚ç•Ê‚Ìƒoƒbƒ`ƒtƒ@ƒCƒ‹‚ðŽÀs‚µ‚Ü‚·B
+
+.
+:SHELL_CMD_CHOICE_HELP
+ƒ†[ƒU[‚ªƒL[‚ð‰Ÿ‚µ‚Ä‘I‘ðŽˆ‚Ì1‚Â‚ð‘I‘ð‚·‚é‚Ì‚ð‘Ò‚¿‚Ü‚·B
+
+.
+:SHELL_CMD_GOTO_HELP
+ƒoƒbƒ`ƒvƒƒOƒ‰ƒ€‚ÌŽw’è‚Ìƒ‰ƒxƒ‹s‚ÖƒWƒƒƒ“ƒv‚µ‚Ü‚·B
+
+.
+:PROGRAM_MOUNT_WARNING_WIN
+[31;1mŒx: C:\ ‚ðƒ}ƒEƒ“ƒg‚·‚é‚±‚Æ‚Í„§‚³‚ê‚Ü‚¹‚ñB[0m
+
+.
+:PROGRAM_MOUNT_WARNING_OTHER
+[31;1mŒx: / ‚ðƒ}ƒEƒ“ƒg‚·‚é‚±‚Æ‚Í„§‚³‚ê‚Ü‚¹‚ñB[0m
+
+.
+:PROGRAM_MOUNT_CDROMS_FOUND
+Œ©‚Â‚©‚Á‚½CDROM: %d
+
+.
+:PROGRAM_MOUNT_ERROR_1
+ƒfƒBƒŒƒNƒgƒŠ %s ‚Í–³Œø‚Å‚·B
+
+.
+:PROGRAM_MOUNT_ERROR_2
+%s ‚ÍƒfƒBƒŒƒNƒgƒŠ‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+
+.
+:PROGRAM_MOUNT_ILL_TYPE
+–³Œø‚Èƒ^ƒCƒv %s
+
+.
+:PROGRAM_MOUNT_ALREADY_MOUNTED
+%c ƒhƒ‰ƒCƒu‚É‚Í‚·‚Å‚É %s‚ªƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚Ü‚·B
+
+.
+:PROGRAM_MOUNT_USAGE
+ƒzƒXƒg‚ÌƒfƒBƒŒƒNƒgƒŠ‚âƒhƒ‰ƒCƒu‚ðDOSVAXJ3 ‚Ìƒhƒ‰ƒCƒu‚Æ‚µ‚Äƒ}ƒEƒ“ƒg‚µ‚Ü‚·B
+Žg—p–@: [34;1m[32;1mMOUNT[0m [37;1mdrive[0m [36;1mlocal_directory[0m [option][0m
+ [37;1mdrive[0m            ƒfƒBƒŒƒNƒgƒŠ‚Ü‚½‚Íƒhƒ‰ƒCƒu‚ðƒ}ƒEƒ“ƒg‚·‚éƒhƒ‰ƒCƒu
+ [36;1mlocal_directory[0m  ƒ}ƒEƒ“ƒg‚·‚éƒzƒXƒgƒVƒXƒeƒ€‚ÌƒfƒBƒŒƒNƒgƒŠ‚Ü‚½‚Íƒhƒ‰ƒCƒu
+ [option]         Ý’è‰Â”\‚ÈƒIƒvƒVƒ‡ƒ“:
+ -t               ƒ}ƒEƒ“ƒg‚·‚éƒhƒ‰ƒCƒu‚Ìƒ^ƒCƒv‚ðŽw’èB
+                  Ý’è‰Â”\‚Èƒ^ƒCƒv: dir, floppy, cdrom, overlay
+ ('overlay'‚ðŽw’è‚·‚é‚Æƒ}ƒEƒ“ƒg‚µ‚½ƒhƒ‰ƒCƒu‚Ö‚Ì‘‚«ž‚Ý‚ð•Ê‚ÌƒfƒBƒŒƒNƒgƒŠ‚Ö
+ ƒŠƒ_ƒCƒŒƒNƒg‚³‚ê‚é)
+ -label [–¼‘O]    ƒhƒ‰ƒCƒu‚Ìƒ{ƒŠƒ…[ƒ€ƒ‰ƒxƒ‹ (‚·‚×‚Ä‘å•¶Žš‚Æ‚·‚é‚±‚Æ)B
+ -nl              ƒhƒ‰ƒCƒu‚ªƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚éê‡‚ÍAŽŸ‚Ìƒhƒ‰ƒCƒu‚ðŽg—pB
+ -ro              ƒhƒ‰ƒCƒu‚ð‘‚«ž‚Ý‹ÖŽ~‚Åƒ}ƒEƒ“ƒg‚·‚éB
+ -pr              ƒpƒX‚ªÝ’èƒtƒ@ƒCƒ‹‚ÌˆÊ’u‚©‚ç‚Ì‘Š‘ÎˆÊ’u‚Å‚ ‚é‚±‚Æ‚Æ‚·‚éB
+ -cd              ƒzƒXƒgƒVƒXƒeƒ€‚ÌCDƒhƒ‰ƒCƒu‚Ì"drive #" ‚Ì’l‚Ìˆê——‚ð•\Ž¦‚·‚éB
+ -usecd [drive #] ƒI[ƒfƒBƒIÄ¶“™‚Ì’¼Úƒn[ƒhƒEƒFƒAEƒGƒ~ƒ…ƒŒ[ƒVƒ‡ƒ“Žž‚ÉŽw’è
+ -ioctl           Å‚àlowƒŒƒxƒ‹‚Èƒn[ƒhƒEƒFƒAƒAƒNƒZƒX‚ðŽg—p (-usecd ‚ÌŒã‚ÉŽw’è)
+ -aspi            ƒCƒ“ƒXƒg[ƒ‹‚³‚ê‚½ ASPI ƒŒƒCƒ„[‚ðŽg—p (-usecd ‚ÌŒã‚ÉŽw’è)
+ -freesize [size] ƒhƒ‰ƒCƒu‚Ì‹ó—e—Ê‚ðMB(ƒtƒƒbƒs[‚ÌŽž‚ÍKB)‚ÅŽw’èB
+ -nocachedir      ƒŠƒAƒ‹ƒ^ƒCƒ€XV‚ð—LŒø‰»‚µAƒhƒ‰ƒCƒu‚ðƒLƒƒƒbƒVƒ…‚µ‚È‚¢B
+ -z drive         ‰¼‘zƒhƒ‰ƒCƒu Z: ‚Ìƒhƒ‰ƒCƒu•¶Žš‚ð•Ê‚Ì•¶Žš‚É•ÏXB
+ -o               ƒhƒ‰ƒCƒu‚Ì local, remote ‚ÌŽí•Ê‚ð•\Ž¦B
+ -q               •\Ž¦‚ð—}§‚·‚é (ƒƒbƒZ[ƒW‚ð”ñ•\Ž¦).
+ -u               ƒhƒ‰ƒCƒu‚Ìƒ}ƒEƒ“ƒg‚ð‰ðœB
+ [32;1m-examples        Žg—p—á‚ð•\Ž¦[0m
+ƒ}ƒEƒ“ƒg‚³‚ê‚½ƒhƒ‰ƒCƒu‚Ìˆê——‚ð•\Ž¦‚·‚é‚É‚ÍAƒIƒvƒVƒ‡ƒ“‚È‚µ‚Å MOUNT ‚Æ“ü—Í‚·‚é
+.
+:PROGRAM_MOUNT_UMOUNT_NOT_MOUNTED
+%c ƒhƒ‰ƒCƒu‚Íƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB
+
+.
+:PROGRAM_MOUNT_UMOUNT_SUCCESS
+%c ƒhƒ‰ƒCƒu‚Ìƒ}ƒEƒ“ƒg‚ð‰ðœ‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_MOUNT_UMOUNT_NO_VIRTUAL
+‰¼‘zƒhƒ‰ƒCƒu‚Ìƒ}ƒEƒ“ƒg‚ð‰ðœ‚·‚é‚±‚Æ‚Í‚Å‚«‚Ü‚¹‚ñB
+
+.
+:PROGRAM_MOUNT_STATUS_2
+%c ƒhƒ‰ƒCƒu‚É %s ‚ðƒ}ƒEƒ“ƒg‚µ‚Ü‚µ‚½
+.
+:PROGRAM_MOUNT_STATUS_1
+Œ»Ýƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚éƒhƒ‰ƒCƒu:
+
+.
+:PROGRAM_LOADFIX_ALLOC
+%d kb Šm•Û‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_LOADFIX_DEALLOC
+%d kb ‰ð•ú‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_LOADFIX_ERROR
+ƒƒ‚ƒŠŠm•ÛƒGƒ‰[B
+
+.
+:MSCDEX_SUCCESS
+MSCDEX ‚ðƒCƒ“ƒXƒg[ƒ‹‚µ‚Ü‚µ‚½B
+
+.
+:MSCDEX_ERROR_MULTIPLE_CDROMS
+MSCDEX: ƒGƒ‰[: •¡”‚ÌCD-ROMƒhƒ‰ƒCƒu‚Ìƒhƒ‰ƒCƒu•¶Žš‚Í˜A‘±‚³‚¹‚é•K—v‚ª‚ ‚è‚Ü‚·B
+
+.
+:MSCDEX_ERROR_NOT_SUPPORTED
+MSCDEX: ƒGƒ‰[: –¢ƒTƒ|[ƒg
+
+.
+:MSCDEX_ERROR_PATH
+MSCDEX: ƒGƒ‰[: Žw’è‚ÌêŠ‚ÍCD-ROM ƒhƒ‰ƒCƒu‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+
+.
+:MSCDEX_ERROR_OPEN
+MSCDEX: ƒGƒ‰[: ƒtƒ@ƒCƒ‹‚ª–³Œø‚Ü‚½‚ÍŠJ‚¯‚Ü‚¹‚ñB
+
+.
+:MSCDEX_TOO_MANY_DRIVES
+MSCDEX: ƒGƒ‰[: CD-ROM ƒhƒ‰ƒCƒu‚ª‘½‚·‚¬‚Ü‚· (Å‘å: 5). MSCDEX ƒCƒ“ƒXƒg[ƒ‹‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+
+.
+:MSCDEX_LIMITED_SUPPORT
+MSCDEX: ƒTƒuƒfƒBƒŒƒNƒgƒŠ‚ðƒ}ƒEƒ“ƒg‚µ‚Ü‚µ‚½B: •”•ª“IƒTƒ|[ƒg
+
+.
+:MSCDEX_INVALID_FILEFORMAT
+MSCDEX: ƒGƒ‰[: Žw’è‚Ìƒtƒ@ƒCƒ‹‚ÍISO/CUE ƒCƒ[ƒW‚Å‚È‚¢‚©A•s‹ï‡‚ª‚ ‚è‚Ü‚·B
+
+.
+:MSCDEX_UNKNOWN_ERROR
+MSCDEX: ƒGƒ‰[: •s–¾‚ÈƒGƒ‰[B
+
+.
+:PROGRAM_RESCAN_SUCCESS
+ƒhƒ‰ƒCƒuƒLƒƒƒbƒVƒ…‚ðƒNƒŠƒA‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_INTRO
+[2J[32;1mDOSVAXJ3‚Ö‚æ‚¤‚±‚»![0m, ‰¹ºEƒOƒ‰ƒtƒBƒbƒNƒX‚ðƒTƒ|[ƒg‚·‚éƒI[ƒvƒ“ƒ\[ƒX‚È x86 ƒGƒ~ƒ…ƒŒ[ƒ^‚Å‚·B
+DOSVAXJ3 ‚ÍDOS‚Æ‘S‚­“¯‚¶‚æ‚¤‚ÈƒVƒFƒ‹‚ð•\Ž¦‚µ‚Ü‚·B
+
+[31;1mƒGƒ‰[‚ª‚ ‚é‚ÆADOSVAXJ3 ‚ÍŒx‚È‚µ‚É’âŽ~EI—¹‚·‚é‚±‚Æ‚ª‚ ‚è‚Ü‚·![0m
+
+
+
+.
+:PROGRAM_INTRO_MOUNT_START
+[32;1m‚±‚ê‚ç‚ÍAŽn‚ß‚é‚½‚ß‚É’m‚Á‚Ä‚¨‚­‚×‚«ƒRƒ}ƒ“ƒh‚Å‚·:[0m
+ƒtƒ@ƒCƒ‹ƒVƒXƒeƒ€‚É‚ ‚éƒtƒ@ƒCƒ‹‚ðŽg‚¦‚é‚æ‚¤‚É‚·‚é‚½‚ß‚É‚ÍA
+‚»‚Ìƒtƒ@ƒCƒ‹‚ª‚ ‚éƒfƒBƒŒƒNƒgƒŠ‚ðƒ}ƒEƒ“ƒg‚·‚é•K—v‚ª‚ ‚è‚Ü‚·B
+
+
+.
+:PROGRAM_INTRO_MOUNT_WINDOWS
+[32mmount c c:\dosgames\[37m ‚ÅA’†g‚ª c:\dosgames ‚ÌC:ƒhƒ‰ƒCƒu‚ªì¬‚³‚ê‚Ü‚·B
+c:\dosgames\[37m ‚Í—á‚Å‚ ‚èA‚²Ž©•ª‚ÌƒQ[ƒ€ƒfƒBƒŒƒNƒgƒŠ‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B[37m 
+
+.
+:PROGRAM_INTRO_MOUNT_OTHER
+[32mmount c ~/dosgames[37m ‚ÅA ~/dosgames ‚ð’†g‚Æ‚·‚é C ƒhƒ‰ƒCƒu‚ªì¬‚³‚ê‚Ü‚·B
+[32m~/dosgames[37m ‚Í—á‚Å‚ ‚èA‚²Ž©•ª‚ÌƒQ[ƒ€ƒfƒBƒŒƒNƒgƒŠ‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B[37m  
+
+.
+:PROGRAM_INTRO_MOUNT_END
+ƒ}ƒEƒ“ƒg‚É¬Œ÷‚µ‚½‚çA[34;1mc:[0m ‚Åƒ}ƒEƒ“ƒg‚µ‚½C:ƒhƒ‰ƒCƒu‚ÉˆÚ“®‚Å‚«‚Ü‚·B
+[34;1mdir[0m ‚Æƒ^ƒCƒv‚·‚é‚ÆA’†g‚Ìˆê——‚ª•\Ž¦‚³‚ê‚Ü‚·B 
+[34;1mcd[0m ‚ÅƒfƒBƒŒƒNƒgƒŠ‚ðˆÚ“®‚Å‚«‚Ü‚·(ˆê——‚Ì’†‚Å[33;1m[][0m‚ÅŽ¯•Ê‚Å‚«‚Ü‚·)B
+[31m.exe .bat[0m, [31m.com[0m‚ÅI‚í‚éƒvƒƒOƒ‰ƒ€Eƒtƒ@ƒCƒ‹‚ÍŽÀs‰Â”\‚Å‚·B
+
+.
+:PROGRAM_INTRO_CDROM
+[2J[32;1mDOSVAXJ3‚ÅŽÀ‹@E‰¼‘zCD-ROM ƒhƒ‰ƒCƒu‚ðƒ}ƒEƒ“ƒg‚·‚é•û–@:[0m
+DOSVAXJ3 ‚Í‚¢‚­‚Â‚©‚ÌƒŒƒxƒ‹‚Ì CD-ROM ƒGƒ~ƒ…ƒŒ[ƒVƒ‡ƒ“‚ð’ñ‹Ÿ‚µ‚Ü‚·B
+
+[33mŠî–{[0m ƒŒƒxƒ‹‚ÍA‘S‚Ä‚ÌCD-ROMƒhƒ‰ƒCƒu‚Æ’Êí‚ÌƒfƒBƒŒƒNƒgƒŠ‚Å“®ì‚µ‚Ü‚·B
+MSCDEX ‚ðƒCƒ“ƒXƒg[ƒ‹‚µAƒtƒ@ƒCƒ‹‚Ì‘®«‚ð‚ð“Ç‚Ýž‚Ýê—p‚Æ‚µ‚Ü‚·B
+’Êí‚ÍA‚±‚ê‚Å‚Ù‚Æ‚ñ‚Ç‚ÌƒQ[ƒ€‚Å\•ª‚Å‚·:
+[34;1mmount d [0;31mD:\[34;1m -t cdrom[0m   or   [34;1mmount d C:\example -t cdrom[0m
+‚¤‚Ü‚­“®ì‚µ‚È‚¢ê‡‚ÍADOSVAXJ3‚ÉCD-ROMƒ‰ƒxƒ‹î•ñ‚ðÝ’è‚µ‚Ä‚Ý‚Ä‚­‚¾‚³‚¢:
+[34;1mmount d C:\example -t cdrom -label CDLABEL[0m
+
+[33mŽŸ[0m ‚ÌƒŒƒxƒ‹‚Å‚ÍA‚¢‚­‚Â‚©‚Ì low-level ƒTƒ|[ƒg‚ð’Ç‰Á‚µ‚Ü‚·B
+‚æ‚Á‚ÄACD-ROM ƒhƒ‰ƒCƒu‚Å‚Ì‚Ý“®ì‚µ‚Ü‚·:
+[34;1mmount d [0;31mD:\[34;1m -t cdrom -usecd [33m0[0m
+
+[33mÅŒã[0m ‚ÌƒŒƒxƒ‹‚ÌƒTƒ|[ƒg‚ÍAƒIƒyƒŒ[ƒeƒBƒ“ƒOƒVƒXƒeƒ€‚É‚æ‚èˆÙ‚È‚è‚Ü‚·:
+[1mWindows 2000[0m, [1mWindows XP[0m, [1mLinux[0m‚Ìê‡:
+[34;1mmount d [0;31mD:\[34;1m -t cdrom -usecd [33m0 [34m-ioctl[0m
+[1mWindows 9x[0m (ASPI ƒŒƒCƒ„[‚ª•K—v)‚Ìê‡:
+[34;1mmount d [0;31mD:\[34;1m -t cdrom -usecd [33m0 [34m-aspi[0m
+
+[0;31mD:\[0m ‚Í‚ ‚È‚½‚Ì CD-ROM ‚É‡‚í‚¹‚Ä•ÏX‚µ‚Ä‚­‚¾‚³‚¢B.
+[34;1m-usecd [33m0[0m ‚Ì [33;1m0[0m ‚ÍAˆÈ‰º‚ÌƒRƒ}ƒ“ƒh‚ðƒ^ƒCƒv‚µ‚½‚Æ‚«‚Ì”Žš‚Æ‚µ‚Ä‰º‚³‚¢:
+[34;1mmount -cd[0m
+
+.
+:PROGRAM_INTRO_SPECIAL
+[2J[32;1mƒXƒyƒVƒƒƒ‹ƒL[[0m
+‚±‚ê‚ç‚ÍƒfƒtƒHƒ‹ƒg‚ÌƒL[ƒoƒCƒ“ƒh‚Å‚·B
+[33mƒL[ƒ}ƒbƒp[[0m‚Å•ÏX‚Å‚«‚Ü‚·B
+
+[33;1mALT-ENTER[0m   : ‘S‰æ–Ê•\Ž¦‚ÉØ‚è‘Ö‚¦‚é‚©AŒ³‚É–ß‚µ‚Ü‚·B
+[33;1mALT-PAUSE[0m   : ˆêŽž’âŽ~‚µ‚Ü‚·B
+[33;1mCTRL-F1[0m     : [33mƒL[ƒ}ƒbƒp[[0m‚ÌÝ’è‰æ–Ê‚ð•\Ž¦‚µ‚Ü‚·B
+[33;1mCTRL-F4[0m     : ƒ}ƒEƒ“ƒg‚³‚ê‚½ƒhƒ‰ƒCƒu‚ÉŠÖ‚·‚éƒLƒƒƒbƒVƒ…î•ñ‚ðXV‚µ‚Ü‚·B
+[33;1mCTRL-ALT-F5[0m : AVIƒrƒfƒI‚Ì˜^‰æ‚ðŠJŽn/’âŽ~‚µ‚Ü‚·B
+[33;1mCTRL-F5[0m     : ƒXƒNƒŠ[ƒ“ƒVƒ‡ƒbƒg‚ð•Û‘¶‚µ‚Ü‚·B
+[33;1mCTRL-F6[0m     : ƒTƒEƒ“ƒho—Í‚ÌWAVƒtƒ@ƒCƒ‹‚Ö‚Ì˜^‰¹‚ðŠJŽn/•Û‘¶‚µ‚Ü‚·B
+[33;1mCTRL-ALT-F7[0m : OPLƒRƒ}ƒ“ƒh‚Ì‹L˜^‚ðŠJŽn/’âŽ~‚µ‚Ü‚·B
+[33;1mCTRL-ALT-F8[0m : ¶‚ÌMIDIƒRƒ}ƒ“ƒh‚Ì˜^‰¹‚ðŠJŽn/’âŽ~‚µ‚Ü‚·B
+[33;1mCTRL-F7[0m     : ƒtƒŒ[ƒ€ƒXƒLƒbƒv‚ðŒ¸‚ç‚µ‚Ü‚·B
+[33;1mCTRL-F8[0m     : ƒtƒŒ[ƒ€ƒXƒLƒbƒv‚ð‘‚â‚µ‚Ü‚·B
+[33;1mCTRL-F9[0m     : I—¹‚µ‚Ü‚·B
+[33;1mCTRL-F10[0m    : ƒ}ƒEƒX‚ðƒLƒƒƒvƒ`ƒƒ/ƒŠƒŠ[ƒX‚µ‚Ü‚·B
+[33;1mCTRL-F11[0m    : ƒXƒs[ƒh‚ð—Ž‚Æ‚µ‚Ü‚·B(DOSBoxƒTƒCƒNƒ‹‚ðŒ¸‚ç‚µ‚Ü‚·)
+[33;1mCTRL-F12[0m    : ƒXƒs[ƒh‚ðã‚°‚Ü‚·B(DOSBoxƒTƒCƒNƒ‹‚ð‘‚â‚µ‚Ü‚·)
+[33;1mALT-F12[0m     : ‘¬“xƒƒbƒN‚ð‰ðœ‚µ‚Ü‚·B
+
+.
+:PROGRAM_BOOT_NOT_EXIST
+‹N“®ƒfƒBƒXƒN‚Ìƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB’†Ž~‚µ‚Ü‚·B
+
+.
+:PROGRAM_BOOT_NOT_OPEN
+‹N“®ƒfƒBƒXƒN‚Ìƒtƒ@ƒCƒ‹‚ªŠJ‚¯‚Ü‚¹‚ñB’†Ž~‚µ‚Ü‚·B
+
+.
+:PROGRAM_BOOT_WRITE_PROTECTED
+ƒCƒ[ƒWƒtƒ@ƒCƒ‹‚Í‘‚«ž‚Ý‹ÖŽ~‚Å‚·I ‘‚«ž‚Ý‹ÖŽ~ƒ‚[ƒh‚Å‹N“®‚µ‚Ü‚·B
+
+.
+:PROGRAM_BOOT_PRINT_ERROR
+‚±‚ÌƒRƒ}ƒ“ƒh‚Í DOSVAXJ3 ‚ðƒtƒƒbƒs[‚Ü‚½‚Íƒn[ƒhƒfƒBƒXƒNƒCƒ[ƒW‚©‚ç‹N“®‚µ‚Ü‚·
+
+‚±‚ÌƒRƒ}ƒ“ƒh‚ÍAƒƒjƒ…[ƒRƒ}ƒ“ƒh‚Å“ü‘Ö‰Â”\‚Èƒtƒƒbƒs[ƒfƒBƒXƒNŒQ‚ðŽw’è‚Å‚«‚Ü‚·
+drive: ‚Íƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚é‚à‚Ì‚Ì‚¤‚¿A‹N“®‚·‚éƒhƒ‰ƒCƒu‚ðŽw’è‚µ‚Ü‚·B
+ƒhƒ‰ƒCƒu•¶Žš‚ðŽw’è‚µ‚È‚¢ê‡‚ÍAƒfƒtƒHƒ‹ƒg‚ÅAƒhƒ‰ƒCƒu‚©‚ç‹N“®‚µ‚Ü‚·B
+ƒpƒ‰ƒ[ƒ^‚ðŽw’è‚µ‚È‚¢ê‡AƒJƒŒƒ“ƒgƒhƒ‰ƒCƒu‚©‚ç‹N“®‚ðŽŽ‚Ý‚Ü‚·B
+‹N“®‰Â”\‚Èƒhƒ‰ƒCƒu•¶Žš‚Í A, C, D‚Å‚·B  ƒn[ƒhƒfƒBƒXƒN(C: D:ƒhƒ‰ƒCƒu)‚©‚ç‹N“®
+‚·‚éê‡‚ÍAƒCƒ[ƒW‚ª[34;1mIMGMOUNT[0mƒRƒ}ƒ“ƒh‚Åƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚é•K—v‚ª‚ ‚è‚Ü‚·B
+
+Žg—p–@: [34;1mBOOT diskimg1.img [diskimg2.img ...] [-L driveletter][0m
+
+.
+:PROGRAM_BOOT_UNABLE
+%cƒhƒ‰ƒCƒu‚©‚ç‹N“®‚Å‚«‚Ü‚¹‚ñB
+
+.
+:PROGRAM_BOOT_IMAGE_MOUNTED
+ƒtƒƒbƒs[ƒCƒ[ƒW‚Í‚·‚Å‚Éƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚Ü‚·B
+
+.
+:PROGRAM_BOOT_IMAGE_OPEN
+ƒCƒ[ƒWƒtƒ@ƒCƒ‹‚ðŠJ‚«‚Ü‚·: %s
+
+.
+:PROGRAM_BOOT_IMAGE_NOT_OPEN
+ƒCƒ[ƒW‚ðŠJ‚¯‚Ü‚¹‚ñ %s
+
+.
+:PROGRAM_BOOT_BOOTING
+ƒhƒ‰ƒCƒu‚©‚çƒu[ƒg‚µ‚Ü‚· 
+.
+:PROGRAM_BOOT_CART_WO_PCJR
+PCjr ƒJ[ƒgƒŠƒbƒW‚ªŒ©‚Â‚©‚è‚Ü‚µ‚½‚ªAƒ}ƒVƒ“‚ªPCjr‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+.
+:PROGRAM_BOOT_CART_LIST_CMDS
+Žg—p‰Â”\‚È PCjr cartridge commandos:%s
+.
+:PROGRAM_BOOT_CART_NO_CMDS
+PCjr cartridge commandos ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB
+.
+:PROGRAM_LOADROM_SPECIFY_FILE
+“Ç‚Ýž‚ÞROMƒtƒ@ƒCƒ‹‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_LOADROM_CANT_OPEN
+ROM ƒtƒ@ƒCƒ‹‚ÉƒAƒNƒZƒX‚Å‚«‚Ü‚¹‚ñB
+
+.
+:PROGRAM_LOADROM_TOO_LARGE
+ROMƒtƒ@ƒCƒ‹‚ª‘å‚«‚·‚¬‚Ü‚·B
+
+.
+:PROGRAM_LOADROM_INCOMPATIBLE
+Video BIOS ‚ª‚±‚Ìƒ}ƒVƒ“Eƒ^ƒCƒv‚Å‚ÍƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB
+
+.
+:PROGRAM_LOADROM_UNRECOGNIZED
+ROM ƒtƒ@ƒCƒ‹‚ª”FŽ¯‚Å‚«‚Ü‚¹‚ñB
+
+.
+:PROGRAM_LOADROM_BASIC_LOADED
+BASIC ROM ‚ð“Ç‚Ýž‚Ý‚Ü‚µ‚½B
+
+.
+:PROGRAM_IMGMOUNT_SPECIFY_DRIVE
+ƒCƒ[ƒW‚ðƒ}ƒEƒ“ƒg‚·‚éƒhƒ‰ƒCƒu•¶Žš‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_SPECIFY2
+ƒCƒ[ƒW‚ðƒ}ƒEƒ“ƒg‚·‚éƒhƒ‰ƒCƒu”Ô† (0 to %d)‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢(0,1=fda,fdb;2,3=hda,hdb)B
+
+.
+:PROGRAM_IMGMOUNT_INVALID_IMAGE
+ƒCƒ[ƒWƒtƒ@ƒCƒ‹‚ð“Ç‚Ýž‚ß‚Ü‚¹‚ñB
+ƒCƒ[ƒW‚Ö‚ÌƒpƒX‚ÆƒAƒNƒZƒXŒ ‚ðŠm”F‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_INVALID_GEOMETRY
+ƒCƒ[ƒW‚©‚çƒWƒIƒƒgƒŠî•ñ‚ªŽæ“¾‚Å‚«‚Ü‚¹‚ñB
+ƒpƒ‰ƒ[ƒ^ -size bps,spc,hpc,cyl ‚ÅƒWƒIƒƒgƒŠî•ñ‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_TYPE_UNSUPPORTED
+ƒ}ƒEƒ“ƒgŒ`Ž® "%s" ‚Í–³Œø‚Å‚·B"hdd" "floppy" "iso"‚Ì‚¢‚¸‚ê‚©‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_FORMAT_UNSUPPORTED
+ƒtƒH[ƒ}ƒbƒgŒ`Ž® "%s" ‚Í–³Œø‚Å‚·B"fat" "iso" "none"‚Ì‚¢‚¸‚ê‚©‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_SPECIFY_FILE
+ƒ}ƒEƒ“ƒg‚·‚éƒCƒ[ƒWƒtƒ@ƒCƒ‹‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_FILE_NOT_FOUND
+ƒCƒ[ƒWƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB
+
+.
+:PROGRAM_IMGMOUNT_MOUNT
+ƒfƒBƒŒƒNƒgƒŠ‚ðƒ}ƒEƒ“ƒg‚·‚é‚½‚ß‚É‚Í, [34;1mIMGMOUNT[0m ‚Å‚Í‚È‚­ [34;1mMOUNT[0m ‚ðŽg‚Á‚Ä‚­‚¾‚³‚¢B
+
+.
+:PROGRAM_IMGMOUNT_ALREADY_MOUNTED
+‚»‚Ìƒhƒ‰ƒCƒu•¶Žš‚É‚Í‚·‚Å‚Éƒ}ƒEƒ“ƒg‚³‚ê‚Ä‚¢‚Ü‚·B
+
+.
+:PROGRAM_IMGMOUNT_CANT_CREATE
+ƒtƒ@ƒCƒ‹‚©‚çƒhƒ‰ƒCƒu‚ðì¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+
+.
+:PROGRAM_IMGMOUNT_MOUNT_NUMBER
+ƒhƒ‰ƒCƒu”Ô† %d ‚É %s ‚ðƒ}ƒEƒ“ƒg‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_IMGMOUNT_NON_LOCAL_DRIVE
+ƒCƒ[ƒW‚ÍƒzƒXƒg‚©ƒ[ƒJƒ‹‚©ƒlƒbƒgƒ[ƒNƒhƒ‰ƒCƒu‚É‚ ‚é•K—v‚ª‚ ‚è‚Ü‚·B
+
+.
+:PROGRAM_IMGMOUNT_MULTIPLE_NON_CUEISO_FILES
+•¡”ƒtƒ@ƒCƒ‹‚ÌŽw’è‚Í cue/iso ƒCƒ[ƒW‚Ì‚ÝƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚Ü‚·B.
+
+.
+:PROGRAM_KEYB_INFO
+ƒR[ƒhƒy[ƒW %i ‚ÉÝ’è‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_KEYB_INFO_LAYOUT
+ƒR[ƒhƒy[ƒW %i ‚ðƒL[ƒŒƒCƒAƒEƒg %s—p‚É“Ç‚Ýž‚Ý‚Ü‚µ‚½B
+
+.
+:PROGRAM_KEYB_SHOWHELP
+ƒL[ƒ{[ƒh‚ðŽw’è‚ÌŒ¾Œê‚ÉÝ’è‚µ‚Ü‚·B
+
+Žg—p–@: [32;1mKEYB[0m [ƒL[ƒ{[ƒhƒŒƒCƒAƒEƒgID [ƒR[ƒhƒy[ƒW”Ô† [ƒR[ƒhƒy[ƒWƒtƒ@ƒCƒ‹]]]
+  ƒŒƒCƒAƒEƒgID     “Ç‚Ýž‚ÞƒŒƒCƒAƒEƒg–¼‚Ü‚½‚ÍƒL[ƒ{[ƒhƒtƒ@ƒCƒ‹(.kl)
+  ƒR[ƒhƒy[ƒW”Ô† “Ç‚Ýž‚ÞƒR[ƒhƒy[ƒW‚Ì”Ô†
+  ƒR[ƒhƒy[ƒWƒtƒ@ƒCƒ‹ Žw’è‚µ‚½ƒR[ƒhƒy[ƒW‚Ìî•ñ‚ðŠÜ‚Þ.cpi/.cpxƒtƒ@ƒCƒ‹
+
+.
+:PROGRAM_KEYB_NOERROR
+ƒL[ƒ{[ƒhƒŒƒCƒAƒEƒg %s ‚ðƒR[ƒhƒy[ƒW %i—p‚É“Ç‚Ýž‚Ý‚Ü‚µ‚½B
+
+.
+:PROGRAM_KEYB_FILENOTFOUND
+ƒL[ƒ{[ƒhƒtƒ@ƒCƒ‹ %s ‚ªŒ©‚Â‚©‚ç‚È‚¢‚©–³Œø‚ÈƒŒƒCƒAƒEƒgID‚Å‚·B
+
+
+.
+:PROGRAM_KEYB_INVALIDFILE
+ƒL[ƒ{[ƒhƒtƒ@ƒCƒ‹ %s ‚Í–³Œø‚Å‚·B
+
+.
+:PROGRAM_KEYB_LAYOUTNOTFOUND
+ƒL[ƒ{[ƒhƒŒƒCƒAƒEƒg %s ‚ÍƒR[ƒhƒy[ƒW %i —p‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+
+.
+:PROGRAM_KEYB_INVCPFILE
+ƒL[ƒ{[ƒhƒtƒ@ƒCƒ‹ %s ‚Ì‚½‚ß‚ÌƒR[ƒhƒy[ƒWƒtƒ@ƒCƒ‹‚ª‚È‚¢‚©–³Œø‚Å‚·B
+
+
+.
+:AUTOEXEC_CONFIGFILE_HELP
+‚±‚ÌƒZƒNƒVƒ‡ƒ“‚É‹LÚ‚Ìs‚Í‹N“®Žž‚ÉŽÀs‚³‚ê‚Ü‚·B
+MOUNT ‚µ‚½‚¢ê‡‚Í‚±‚±‚É‹LÚ‚Å‚«‚Ü‚·B
+
+.
+:CONFIGFILE_INTRO
+# ‚±‚ê‚Í DOSVAXJ3 %s ‚ÌÝ’èƒtƒ@ƒCƒ‹‚Å‚·B (ÅV‚Ìƒo[ƒWƒ‡ƒ“‚ÌDOSVAXJ3‚ðŽg—p‚µ‚Ä‚­‚¾‚³‚¢)
+# # ‚©‚çŽn‚Ü‚és‚ÍƒRƒƒ“ƒgs‚ÅADOSVAXJ3‚Í–³Ž‹‚µ‚Ü‚·B
+# ‚»‚ê‚¼‚ê‚ÌƒIƒvƒVƒ‡ƒ“‚ÌˆÓ–¡(‚ÌŠT—v)‚ðà–¾‚·‚é‚½‚ß‚É—p‚¢‚Ü‚·B
+# ‚·‚×‚Ä‚ÌƒIƒvƒVƒ‡ƒ“‚ð‘‚«o‚·‚½‚ß‚É‚Í, 'config -all'@ƒRƒ}ƒ“ƒh‚É -wc ‚Ü‚½‚Í -writeconf ‚ÌƒIƒvƒVƒ‡ƒ“‚ð‰Á‚¦‚ÄŽÀs‚µ‚Ä‚­‚¾‚³‚¢B
+
+.
+:CONFIG_SUGGESTED_VALUES
+Ý’è‰Â”\‚È’l
+.
+:PROGRAM_CONFIG_NOCONFIGFILE
+Config ƒtƒ@ƒCƒ‹‚ª“Ç‚Ýž‚Ü‚ê‚Ä‚¢‚Ü‚¹‚ñ!
+
+.
+:PROGRAM_CONFIG_PRIMARY_CONF
+‰Šú‚ÌÝ’èƒtƒ@ƒCƒ‹:
+%s
+
+.
+:PROGRAM_CONFIG_ADDITIONAL_CONF
+’Ç‰Á‚ÌÝ’èƒtƒ@ƒCƒ‹:
+
+.
+:PROGRAM_CONFIG_CONFDIR
+DOSVAXJ3 %s Ý’è—pƒfƒBƒŒƒNƒgƒŠ:
+%s
+
+
+.
+:PROGRAM_CONFIG_FILE_ERROR
+
+ƒtƒ@ƒCƒ‹ %s ‚ðŠJ‚¯‚Ü‚¹‚ñB
+
+.
+:PROGRAM_CONFIG_FILE_WHICH
+Ý’èƒtƒ@ƒCƒ‹ %s ‚ð‘‚«ž‚Ý’†
+.
+:PROGRAM_CONFIG_USAGE
+ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“Ý’èƒ†[ƒeƒBƒŠƒeƒB Ý’è‰Â”\‚ÈƒIƒvƒVƒ‡ƒ“:
+-wc (or -writeconf) ƒpƒ‰ƒ[ƒ^‚È‚µ‚Ìê‡: primary loaded file‚É‘‚«ž‚ÝB
+-wc (or -writeconf) ƒtƒ@ƒCƒ‹–¼: ƒtƒ@ƒCƒ‹‚ðÝ’è—pƒfƒBƒŒƒNƒgƒŠ‚É‘‚«o‚·B
+-wl (or -writelang) ƒtƒ@ƒCƒ‹–¼: Œ»Ý‚Ì language strings‚ð‘‚«o‚·B
+-wcp [ƒtƒ@ƒCƒ‹–¼]: ƒvƒƒOƒ‰ƒ€ƒfƒBƒŒƒNƒgƒŠ‚É‘o‚·(dosboxj.conf / ƒtƒ@ƒCƒ‹–¼)
+-wcd: Ý’è—pƒfƒBƒŒƒNƒgƒŠ‚ÉƒfƒtƒHƒ‹ƒgÝ’èƒtƒ@ƒCƒ‹‚ð‘‚«o‚·B
+-l Ý’è—pƒpƒ‰ƒ[ƒ^‚Ìˆê——‚ð•\Ž¦B
+-h, -help, -?: ‚±‚Ìƒwƒ‹ƒv‚ð•\Ž¦B"sections"‚ð‰Á‚¦‚½ê‡‚ÍƒZƒNƒVƒ‡ƒ“‚Ìˆê——B
+-h, -help, -?: ƒZƒNƒVƒ‡ƒ“/ƒvƒƒpƒeƒB Žw’è‚ÌƒZƒNƒVƒ‡ƒ“,ƒvƒƒpƒeƒB‚Ìî•ñ‚ð•\Ž¦B
+-axclear: [autoexec] ƒZƒNƒVƒ‡ƒ“‚ðƒNƒŠƒA‚·‚éB
+-axadd [line]: [autoexec] ƒZƒNƒVƒ‡ƒ“‚És‚ð’Ç‰ÁB
+-axtype: [autoexec] ƒZƒNƒVƒ‡ƒ“‚Ì“à—e‚ð•\Ž¦B
+-securemode: ƒZƒLƒ…ƒAEƒ‚[ƒh‚ð—LŒø‰»(ƒ}ƒEƒ“ƒg“™‚Ì‹@”\‚ª–³Œø‰»‚³‚ê‚Ü‚·)
+-avistart, -avistop: AVI ˜^‰æ‚ðŠJŽnE’âŽ~B
+-startmapper: ƒ}ƒbƒp[ƒGƒfƒBƒ^[‚ð‹N“®B
+-get "section property": Žw’è‚ÌƒvƒƒpƒeƒB‚Ì’l‚ð•Ô‚·(%%CONFIG%%‚Ö‚à)B
+-set (-setf‚Å‹­§) "section property=value": Žw’è‚ÌƒvƒƒpƒeƒB‚Ì’l‚ðÝ’èB
+
+.
+:PROGRAM_CONFIG_HLP_PROPHLP
+ƒvƒƒpƒeƒB‚Ì–Ú“I "%s" (ŠÜ‚Ü‚ê‚éƒZƒNƒVƒ‡ƒ“: "%s"):
+%s
+
+Ý’è‰Â”\‚È’l: %s
+ƒfƒtƒHƒ‹ƒg’l: %s
+Œ»Ý‚Ì’l: %s
+
+.
+:PROGRAM_CONFIG_HLP_LINEHLP
+ƒZƒNƒVƒ‡ƒ“‚Ì–Ú“I "%s":
+%s
+Œ»Ý‚Ì’l:
+%s
+
+.
+:PROGRAM_CONFIG_HLP_NOCHANGE
+ŽÀs’†‚Í‚±‚ÌƒvƒƒpƒeƒB‚ð•ÏX‚Å‚«‚Ü‚¹‚ñB
+
+.
+:PROGRAM_CONFIG_HLP_POSINT
+³‚Ì®”
+.
+:PROGRAM_CONFIG_HLP_SECTHLP
+ƒZƒNƒVƒ‡ƒ“ %s ‚ÉŠÜ‚Ü‚ê‚éƒvƒƒpƒeƒB:
+.
+:PROGRAM_CONFIG_HLP_SECTLIST
+DOSVAXJ3 configuration ‚ÉŠÜ‚Ü‚ê‚éƒZƒNƒVƒ‡ƒ“:
+.
+:PROGRAM_CONFIG_SECURE_ON
+ƒZƒLƒ…ƒAEƒ‚[ƒh‚É•ÏX‚µ‚Ü‚µ‚½B
+
+.
+:PROGRAM_CONFIG_SECURE_DISALLOW
+ƒZƒLƒ…ƒAEƒ‚[ƒh‚Å‚Í‚±‚Ì‘€ì‚Í‚Å‚«‚Ü‚¹‚ñB
+.
+:PROGRAM_CONFIG_SECTION_ERROR
+ƒZƒNƒVƒ‡ƒ“ %s ‚Í‘¶Ý‚µ‚Ü‚¹‚ñB
+
+.
+:PROGRAM_CONFIG_VALUE_ERROR
+"%s" ‚ÍƒvƒƒpƒeƒB %s ‚Ì—LŒø‚È’l‚Å‚Í‚ ‚è‚Ü‚¹‚ñB
+
+.
+:PROGRAM_CONFIG_PROPERTY_ERROR
+ƒZƒNƒVƒ‡ƒ“‚Ü‚½‚ÍƒvƒƒpƒeƒB‚Í–³Œø‚Å‚·B
+
+.
+:PROGRAM_CONFIG_NO_PROPERTY
+ƒvƒƒpƒeƒB %s ‚ÍƒZƒNƒVƒ‡ƒ“ %s ‚É‘¶Ý‚µ‚Ü‚¹‚ñB
+
+.
+:PROGRAM_CONFIG_SET_SYNTAX
+-set ƒIƒvƒVƒ‡ƒ“‚Ì•¶–@‚ÉŒë‚è‚ª‚ ‚è‚Ü‚·B
+
+.
+:PROGRAM_CONFIG_GET_SYNTAX
+•¶–@‚ªˆá‚¢‚Ü‚·: config -get "ƒZƒNƒVƒ‡ƒ“ ƒvƒƒpƒeƒB".
+
+.
+:PROGRAM_CONFIG_PRINT_STARTUP
+
+DOSVAXJ3 ‚ÍˆÈ‰º‚ÌƒRƒ}ƒ“ƒhƒ‰ƒCƒ“ƒpƒ‰ƒ[ƒ^‚ðŽw’è‚µ‚Ä‹N“®‚³‚ê‚Ü‚µ‚½:
+%s
+
+.
+:PROGRAM_CONFIG_MISSINGPARAM
+ƒpƒ‰ƒ[ƒ^‚ª‘«‚è‚Ü‚¹‚ñB
+
 .
