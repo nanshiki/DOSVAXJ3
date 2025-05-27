@@ -31,6 +31,7 @@
 #include "dos_inc.h"
 #include "jega.h"
 #include "jfont.h"
+#include <algorithm>
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
@@ -97,13 +98,13 @@ static void StripSpaces(char*&args,char also) {
 		args++;
 }
 
-static char* ExpandDot(char*args, char* buffer , size_t bufsize) {
+static char* ExpandDot(char*args, char* buffer , size_t bufsize, bool expand) {
 	if(*args == '.') {
 		if(*(args+1) == 0){
 			safe_strncpy(buffer, "*.*", bufsize);
 			return buffer;
 		}
-		if( (*(args+1) != '.') && (*(args+1) != '\\') ) {
+		if( (*(args+1) != '.') && (*(args+1) != '\\') && expand) {
 			buffer[0] = '*';
 			buffer[1] = 0;
 			if (bufsize > 2) strncat(buffer,args,bufsize - 1 /*used buffer portion*/ - 1 /*trailing zero*/  );
@@ -115,8 +116,6 @@ static char* ExpandDot(char*args, char* buffer , size_t bufsize) {
 	return buffer;
 }
 
-
-
 bool DOS_Shell::CheckConfig(char* cmd_in,char*line) {
 	Section* test = control->GetSectionFromProperty(cmd_in);
 	if(!test) return false;
@@ -127,7 +126,12 @@ bool DOS_Shell::CheckConfig(char* cmd_in,char*line) {
 	}
 	char newcom[1024]; newcom[0] = 0; strcpy(newcom,"z:\\config -set ");
 	strcat(newcom,test->GetName());	strcat(newcom," ");
-	strcat(newcom,cmd_in);strcat(newcom,line);
+	if(cmd_in) {
+		strcat(newcom,cmd_in);
+	}
+	if(line) {
+		strcat(newcom,line);
+	}
 	DoCommand(newcom);
 	return true;
 }
@@ -231,7 +235,7 @@ void DOS_Shell::CMD_DELETE(char * args) {
 
 	char full[DOS_PATHLENGTH],sfull[DOS_PATHLENGTH+2];
 	char buffer[CROSS_LEN];
-	args = ExpandDot(args,buffer, CROSS_LEN);
+	args = ExpandDot(args,buffer, CROSS_LEN, true);
 	StripSpaces(args);
 	if (!DOS_Canonicalize(args,full)) { WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));return; }
 	Bit16u fattr;
@@ -253,7 +257,7 @@ void DOS_Shell::CMD_DELETE(char * args) {
 	}
 	char *p=strrchr_dbcs(full,'\\');
 	if ((!strcmp(full,"*.*") || uselfn && !strcmp(full,"*") || p!=NULL && (!strcmp(p+1,"*.*") || uselfn && !strcmp(p+1,"*")))) {
-		WriteOut("Are you sure to delete all files in directory (Y/N)?");
+		WriteOut(MSG_Get("SHELL_CMD_DEL_SURE"));
 		Bit8u c;
 		Bit16u n=1;
 		DOS_ReadFile (STDIN,&c,&n);
@@ -265,10 +269,10 @@ void DOS_Shell::CMD_DELETE(char * args) {
 	//end can't be 0, but if it is we'll get a nice crash, who cares :)
 	char * end=strrchr_dbcs(full,'\\')+1;*end=0;
 	char name[DOS_NAMELENGTH_ASCII],lname[LFN_NAMELENGTH+1];
-	Bit32u size;Bit16u time,date;Bit8u attr;
+	Bit32u size,hsize;Bit16u time,date;Bit8u attr;
 	DOS_DTA dta(dos.dta());
 	while (res) {
-		dta.GetResult(name,lname,size,date,time,attr);	
+		dta.GetResult(name,lname,size,hsize,date,time,attr);	
 		if (!(attr & (DOS_ATTR_DIRECTORY|DOS_ATTR_HIDDEN|DOS_ATTR_SYSTEM))) {
 			strcpy(end,name);
 			strcpy(sfull,full);
@@ -482,6 +486,40 @@ static void FormatNumber(Bit32u num,char * buf) {
 extern bool check_key(Bit16u &code);
 extern bool get_key(Bit16u &code);
 
+struct DtaResult {
+	char name[DOS_NAMELENGTH_ASCII];
+	char lname[LFN_NAMELENGTH+1];
+	Bit32u size;
+	Bit32u hsize;
+	Bit16u date;
+	Bit16u time;
+	Bit8u attr;
+
+	static bool groupDef(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && strcmp(lhs.name, rhs.name) < 0); }
+	static bool groupExt(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && strcmp(lhs.getExtension(), rhs.getExtension()) < 0); }
+	static bool groupSize(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && lhs.size+lhs.hsize*0x100000000 < rhs.size+rhs.hsize*0x100000000); }
+	static bool groupDate(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && (lhs.date < rhs.date || (lhs.date == rhs.date && lhs.time < rhs.time))); }
+	static bool groupRevDef(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && strcmp(lhs.name, rhs.name) > 0); }
+	static bool groupRevExt(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && strcmp(lhs.getExtension(), rhs.getExtension()) > 0); }
+	static bool groupRevSize(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && lhs.size+lhs.hsize*0x100000000 > rhs.size+rhs.hsize*0x100000000); }
+	static bool groupRevDate(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY)?true:((((lhs.attr & DOS_ATTR_DIRECTORY) && (rhs.attr & DOS_ATTR_DIRECTORY)) || (!(lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY))) && (lhs.date > rhs.date || (lhs.date == rhs.date && lhs.time > rhs.time))); }
+	static bool groupDirs(const DtaResult &lhs, const DtaResult &rhs) { return (lhs.attr & DOS_ATTR_DIRECTORY) && !(rhs.attr & DOS_ATTR_DIRECTORY); }
+	static bool compareName(const DtaResult &lhs, const DtaResult &rhs) { return strcmp(lhs.name, rhs.name) < 0; }
+	static bool compareExt(const DtaResult &lhs, const DtaResult &rhs) { return strcmp(lhs.getExtension(), rhs.getExtension()) < 0; }
+	static bool compareSize(const DtaResult &lhs, const DtaResult &rhs) { return lhs.size+lhs.hsize*0x100000000 < rhs.size+rhs.hsize*0x100000000; }
+	static bool compareDate(const DtaResult &lhs, const DtaResult &rhs) { return lhs.date < rhs.date || (lhs.date == rhs.date && lhs.time < rhs.time); }
+
+	const char * getExtension() const {
+		const char * ext = empty_string;
+		if (name[0] != '.') {
+			ext = strrchr(name, '.');
+			if (!ext) ext = empty_string;
+		}
+		return ext;
+	}
+
+};
+
 void DOS_Shell::CMD_DIR(char * args) {
 	HELP("DIR");
 	char numformat[16];
@@ -502,9 +540,103 @@ void DOS_Shell::CMD_DIR(char * args) {
 	if (ScanCMDBool(args,"WP") || ScanCMDBool(args,"PW")) {
 		optW=optP=true;
 	}
+	if (ScanCMDBool(args,"-W")) optW=false;
+	if (ScanCMDBool(args,"-P")) optP=false;
 	bool optB=ScanCMDBool(args,"B");
+	if (ScanCMDBool(args,"-B")) optB=false;
 	bool optA=ScanCMDBool(args,"A");
-	bool optAD=ScanCMDBool(args,"AD");
+	bool optAD=ScanCMDBool(args,"AD")||ScanCMDBool(args,"A:D");
+	bool optAminusD=ScanCMDBool(args,"A-D")||ScanCMDBool(args,"A:-D");
+	bool optAS=ScanCMDBool(args,"AS")||ScanCMDBool(args,"A:S");
+	bool optAminusS=ScanCMDBool(args,"A-S")||ScanCMDBool(args,"A:-S");
+	bool optAH=ScanCMDBool(args,"AH")||ScanCMDBool(args,"A:H");
+	bool optAminusH=ScanCMDBool(args,"A-H")||ScanCMDBool(args,"A:-H");
+	bool optAR=ScanCMDBool(args,"AR")||ScanCMDBool(args,"A:R");
+	bool optAminusR=ScanCMDBool(args,"A-R")||ScanCMDBool(args,"A:-R");
+	bool optAA=ScanCMDBool(args,"AA")||ScanCMDBool(args,"A:A");
+	bool optAminusA=ScanCMDBool(args,"A-A")||ScanCMDBool(args,"A:-A");
+	if (ScanCMDBool(args,"-A")) {
+		optA = false;
+		optAD = false;
+		optAminusD = false;
+		optAS = false;
+		optAminusS = false;
+		optAH = false;
+		optAminusH = false;
+		optAR = false;
+		optAminusR = false;
+		optAA = false;
+		optAminusA = false;
+	}
+	bool reverseSort = false, rev2Sort = false;
+	bool optON=ScanCMDBool(args,"ON")||ScanCMDBool(args,"O:N");
+	if (ScanCMDBool(args,"O-N")||ScanCMDBool(args,"O:-N")) {
+		optON = true;
+		reverseSort = true;
+	}
+	bool optOD=ScanCMDBool(args,"OD")||ScanCMDBool(args,"O:D");
+	if (ScanCMDBool(args,"O-D")||ScanCMDBool(args,"O:-D")) {
+		optOD = true;
+		reverseSort = true;
+	}
+	bool optOE=ScanCMDBool(args,"OE")||ScanCMDBool(args,"O:E");
+	if (ScanCMDBool(args,"O-E")||ScanCMDBool(args,"O:-E")) {
+		optOE = true;
+		reverseSort = true;
+	}
+	bool optOS=ScanCMDBool(args,"OS")||ScanCMDBool(args,"O:S");
+	if (ScanCMDBool(args,"O-S")||ScanCMDBool(args,"O:-S")) {
+		optOS = true;
+		reverseSort = true;
+	}
+	bool optOG=ScanCMDBool(args,"OG")||ScanCMDBool(args,"O:G");
+	if (ScanCMDBool(args,"O-G")||ScanCMDBool(args,"O:-G")) {
+		optOG = true;
+		reverseSort = true;
+	}
+	bool b0 = false, b1 = false, b2 = false, b3 = false;
+	bool optOGN = false, optOGD = false, optOGE = false, optOGS = false;
+	b0=ScanCMDBool(args,"O")||ScanCMDBool(args,"OGN")||ScanCMDBool(args,"O:GN");b1=ScanCMDBool(args,"O-GN")||ScanCMDBool(args,"O:-GN");
+	b2=ScanCMDBool(args,"O-G-N")||ScanCMDBool(args,"O:-G-N"),b3=ScanCMDBool(args,"OG-N")||ScanCMDBool(args,"O:G-N");
+	if (b0||b1||b2||b3) {
+		optOGN = true;
+		reverseSort = b1||b2;
+		rev2Sort = b2||b3;
+	}
+	b0=ScanCMDBool(args,"OGD")||ScanCMDBool(args,"O:GD");b1=ScanCMDBool(args,"O-GD")||ScanCMDBool(args,"O:-GD");
+	b2=ScanCMDBool(args,"O-G-D")||ScanCMDBool(args,"O:-G-D");b3=ScanCMDBool(args,"OG-D")||ScanCMDBool(args,"O:G-D");
+	if (b0||b1||b2||b3) {
+		optOGD = true;
+		reverseSort = b1||b2;
+		rev2Sort = b2||b3;
+	}
+	b0=ScanCMDBool(args,"OGE")||ScanCMDBool(args,"O:GE");b1=ScanCMDBool(args,"O-GE")||ScanCMDBool(args,"O:-GE");
+	b2=ScanCMDBool(args,"O-G-E")||ScanCMDBool(args,"O:-G-E");b3=ScanCMDBool(args,"OG-E")||ScanCMDBool(args,"O:G-E");
+	if (b0||b1||b2||b3) {
+		optOGE = true;
+		reverseSort = b1||b2;
+		rev2Sort = b2||b3;
+	}
+	b0=ScanCMDBool(args,"OGS")||ScanCMDBool(args,"O:GS");b1=ScanCMDBool(args,"O-GS")||ScanCMDBool(args,"O:-GS");
+	b2=ScanCMDBool(args,"O-G-S")||ScanCMDBool(args,"O:-G-S");b3=ScanCMDBool(args,"OG-S")||ScanCMDBool(args,"O:G-S");
+	if (b0||b1||b2||b3) {
+		optOGS = true;
+		reverseSort = b1||b2;
+		rev2Sort = b2||b3;
+	}
+	if (optOGN||optOGD||optOGE||optOGS) optOG = false;
+	if (ScanCMDBool(args,"-O")) {
+		optOG = false;
+		optON = false;
+		optOD = false;
+		optOE = false;
+		optOS = false;
+		optOGN = false;
+		optOGD = false;
+		optOGE = false;
+		optOGS = false;
+		reverseSort = false;
+	}
 	char * rem=ScanCMDRemain(args);
 	if (rem) {
 		WriteOut(MSG_Get("SHELL_ILLEGAL_SWITCH"),rem);
@@ -527,7 +659,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 			strcat(args,"*.*");
 		}
 	}
-	args = ExpandDot(args,buffer,CROSS_LEN);
+	args = ExpandDot(args,buffer,CROSS_LEN,!uselfn);
 
 	if (!strrchr(args,'*') && !strrchr(args,'?')) {
 		Bit16u attribute=0;
@@ -578,14 +710,67 @@ void DOS_Shell::CMD_DIR(char * args) {
 	Bitu cr_count = mem_readb(BIOS_SCREEN_COLUMNS) / 16;
  
 	Bit16u code;
+	std::vector<DtaResult> results;
 	do {    /* File name and extension */
-		char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH+1];
-		Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
-		dta.GetResult(name,lname,size,date,time,attr);
+		DtaResult result;
+		dta.GetResult(result.name,result.lname,result.size,result.hsize,result.date,result.time,result.attr);
 
 		/* Skip non-directories if option AD is present */
-		if(optAD && !(attr&DOS_ATTR_DIRECTORY) ) continue;
-		
+		if(optAD && !(result.attr&DOS_ATTR_DIRECTORY) ) continue;
+		else if(optAminusD && (result.attr&DOS_ATTR_DIRECTORY) ) continue;
+		else if(optAR && !(result.attr&DOS_ATTR_READ_ONLY) ) continue;
+		else if(optAminusR && (result.attr&DOS_ATTR_READ_ONLY) ) continue;
+		else if(optAH && !(result.attr&DOS_ATTR_HIDDEN) ) continue;
+		else if(optAminusH && (result.attr&DOS_ATTR_HIDDEN) ) continue;
+		else if(optAA && !(result.attr&DOS_ATTR_ARCHIVE) ) continue;
+		else if(optAminusA && (result.attr&DOS_ATTR_ARCHIVE) ) continue;
+		else if(optAS && !(result.attr&DOS_ATTR_SYSTEM) ) continue;
+		else if(optAminusS && (result.attr&DOS_ATTR_SYSTEM) ) continue;
+		else if(!(optA||optAD||optAminusD||optAS||optAminusS||optAH||optAminusH||optAR||optAminusR||optAA||optAminusA) && (result.attr&DOS_ATTR_SYSTEM || result.attr&DOS_ATTR_HIDDEN) && strcmp(result.name, "..") ) continue;
+
+		results.push_back(result);
+	} while ( (ret=DOS_FindNext()) );
+
+	bool oneRev = (reverseSort||rev2Sort)&&reverseSort!=rev2Sort;
+	if (optON) {
+		// Sort by name
+		std::sort(results.begin(), results.end(), DtaResult::compareName);
+	} else if (optOE) {
+		// Sort by extension
+		std::sort(results.begin(), results.end(), DtaResult::compareExt);
+	} else if (optOD) {
+		// Sort by date
+		std::sort(results.begin(), results.end(), DtaResult::compareDate);
+	} else if (optOS) {
+		// Sort by size
+		std::sort(results.begin(), results.end(), DtaResult::compareSize);
+	} else if (optOG) {
+		// Directories first, then files
+		std::sort(results.begin(), results.end(), DtaResult::groupDirs);
+	} else if (optOGN) {
+		// Directories first, then files, both sort by name
+		std::sort(results.begin(), results.end(), oneRev?DtaResult::groupRevDef:DtaResult::groupDef);
+	} else if (optOGE) {
+		// Directories first, then files, both sort by extension
+		std::sort(results.begin(), results.end(), oneRev?DtaResult::groupRevExt:DtaResult::groupExt);
+	} else if (optOGS) {
+		// Directories first, then files, both sort by size
+		std::sort(results.begin(), results.end(), oneRev?DtaResult::groupRevSize:DtaResult::groupSize);
+	} else if (optOGD) {
+		// Directories first, then files, both sort by date
+		std::sort(results.begin(), results.end(), oneRev?DtaResult::groupRevDate:DtaResult::groupDate);
+	}
+	if (reverseSort) std::reverse(results.begin(), results.end());
+
+	for (std::vector<DtaResult>::iterator iter = results.begin(); iter != results.end(); ++iter) {
+		char *name = iter->name;
+		char *lname = iter->lname;
+		Bit32u size = iter->size;
+		Bit32u hsize = iter->hsize;
+		Bit16u date = iter->date;
+		Bit16u time = iter->time;
+		Bit8u attr = iter->attr;
+
 		/* output the file */
 		if (optB) {
 			// this overrides pretty much everything
@@ -664,7 +849,7 @@ void DOS_Shell::CMD_DIR(char * args) {
 				return;
 			}
 		}
-	} while ( (ret=DOS_FindNext()) );
+	}
 	if (optW) {
 		if (w_count % cr_count) {
 			WriteOut("\n");
@@ -705,7 +890,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 	RealPt save_dta=dos.dta();
 	dos.dta(dos.tables.tempdta);
 	DOS_DTA dta(dos.dta());
-	Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
+	Bit32u size,hsize;Bit16u date;Bit16u time;Bit8u attr;
 	char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH+1];
 	std::vector<copysource> sources;
 	// ignore /b and /t switches: always copy binary
@@ -773,7 +958,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 						strcat(spath, "*.*");
 					}
 					if (DOS_FindFirst(spath,0xffff & ~DOS_ATTR_VOLUME)) {
-						dta.GetResult(name,lname,size,date,time,attr);
+						dta.GetResult(name,lname,size,hsize,date,time,attr);
 						if (attr & DOS_ATTR_DIRECTORY || root)
 							strcat(source_x,"\\*.*");
 					}
@@ -842,7 +1027,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 		bool target_is_file = true;
 		if (pathTarget[strlen(pathTarget)-1]!='\\') {
 			if (DOS_FindFirst(pathTarget,0xffff & ~DOS_ATTR_VOLUME)) {
-				dta.GetResult(name,lname,size,date,time,attr);
+				dta.GetResult(name,lname,size,hsize,date,time,attr);
 				if (attr & DOS_ATTR_DIRECTORY) {
 					strcat(pathTarget,"\\");
 					target_is_file = false;
@@ -917,7 +1102,7 @@ void DOS_Shell::CMD_COPY(char * args) {
 		bool echo=dos.echo;
 		bool second_file_of_current_source = false;
 		while (ret) {
-			dta.GetResult(name,lname,size,date,time,attr);
+			dta.GetResult(name,lname,size,hsize,date,time,attr);
 
 			if ((attr & DOS_ATTR_DIRECTORY)==0) {
 				Bit16u ftime,fdate;
@@ -1333,7 +1518,7 @@ void DOS_Shell::CMD_DATE(char * args) {
 	char buffer[15] = {0};
 	Bitu bufferptr=0;
 	for(Bitu i = 0; i < 5; i++) {
-		if(i==1 || i==3) {
+		if((i==1 || i==3) && bufferptr < 15) {
 			buffer[bufferptr] = formatstring[i];
 			bufferptr++;
 		} else {
@@ -1409,15 +1594,20 @@ void DOS_Shell::CMD_SUBST (char * args) {
 		command.FindCommand(1,arg);
 		if( (arg.size()>1) && arg[1] !=':')  throw(0);
 		temp_str[0]=(char)toupper(args[0]);
+		int drive_no = temp_str[0] - 'A';
+		if(drive_no < 0 || drive_no > DOS_DRIVES - 1) {
+			WriteOut(MSG_Get("SHELL_CMD_SUBST_FAILURE"));
+			return;
+		}
 		command.FindCommand(2,arg);
 		if((arg=="/D") || (arg=="/d")) {
-			if(!Drives[temp_str[0]-'A'] ) throw 1; //targetdrive not in use
+			if(!Drives[drive_no]) throw 1; //targetdrive not in use
 			strcat(mountstring,"-u ");
 			strcat(mountstring,temp_str);
 			this->ParseLine(mountstring);
 			return;
 		}
-		if(Drives[temp_str[0]-'A'] ) throw 0; //targetdrive in use
+		if(Drives[drive_no]) throw 0; //targetdrive in use
 		strcat(mountstring,temp_str);
 		strcat(mountstring," ");
 
@@ -1442,7 +1632,7 @@ void DOS_Shell::CMD_SUBST (char * args) {
 		if(a == 0) {
 			WriteOut(MSG_Get("SHELL_CMD_SUBST_FAILURE"));
 		} else {
-		       	WriteOut(MSG_Get("SHELL_CMD_SUBST_NO_REMOVE"));
+			WriteOut(MSG_Get("SHELL_CMD_SUBST_NO_REMOVE"));
 		}
 		return;
 	}
@@ -1629,18 +1819,18 @@ void DOS_Shell::CMD_FOR(char *args){
 						path[k++]=path[i];
 				path[k]=0;
 			}
-			Bit32u size;
+			Bit32u size,hsize;
 			Bit16u date, time;
 			Bit8u attr;
 			DOS_DTA dta(dos.dta());
 			if (DOS_FindFirst(fp, ~(DOS_ATTR_VOLUME|DOS_ATTR_DIRECTORY|DOS_ATTR_DEVICE|DOS_ATTR_HIDDEN|DOS_ATTR_SYSTEM)))
 				{
-				dta.GetResult(name, lname, size, date, time, attr);
+				dta.GetResult(name, lname, size, hsize, date, time, attr);
 				strcpy(tmp,path);
 				DoCommand(str_replace(args, s, strcat(tmp,lfn?lname:name)));
 				while (DOS_FindNext())
 					{
-					dta.GetResult(name, lname, size, date, time, attr);
+					dta.GetResult(name, lname, size, hsize, date, time, attr);
 					strcpy(tmp,path);
 					DoCommand(str_replace(args, s, strcat(tmp,lfn?lname:name)));
 					}
@@ -1653,9 +1843,148 @@ void DOS_Shell::CMD_FOR(char *args){
 		}
 }
 
+std::vector<std::string> dirs, adirs;
+static bool doAttrib(DOS_Shell * shell, char * args, DOS_DTA dta, bool optS, bool adda, bool adds, bool addh, bool addr, bool suba, bool subs, bool subh, bool subr) {
+    char spath[DOS_PATHLENGTH],sargs[DOS_PATHLENGTH+4],path[DOS_PATHLENGTH+4],full[DOS_PATHLENGTH],sfull[DOS_PATHLENGTH+2];
+	if (!DOS_Canonicalize(args,full)||strrchr_dbcs(full,'\\')==NULL) {
+        shell->WriteOut(MSG_Get("SHELL_ILLEGAL_PATH"));
+        return false;
+    }
+	if (!DOS_GetSFNPath(args,spath,false)) {
+		shell->WriteOut(MSG_Get("SHELL_CMD_FILE_NOT_FOUND"),args);
+		return false;
+	}
+	if (!uselfn||!DOS_GetSFNPath(args,sfull,true)) strcpy(sfull,full);
+    sprintf(sargs,"\"%s\"",spath);
+    bool found=false, res=DOS_FindFirst(sargs,0xffff & ~DOS_ATTR_VOLUME);
+	if (!res&&!optS) return false;
+	//end can't be 0, but if it is we'll get a nice crash, who cares :)
+	strcpy(path,full);
+	*(strrchr_dbcs(path,'\\')+1)=0;
+	char * end=strrchr_dbcs(full,'\\')+1;*end=0;
+	char * lend=strrchr_dbcs(sfull,'\\')+1;*lend=0;
+    char name[DOS_NAMELENGTH_ASCII],lname[LFN_NAMELENGTH+1];
+	Bit32u size,hsize; Bit16u time, date; Bit8u attr; Bit16u fattr;
+	while (res) {
+		dta.GetResult(name,lname,size,hsize,date,time,attr);
+		if (!((!strcmp(name, ".") || !strcmp(name, "..") || strchr(sargs, '*')!=NULL || strchr(sargs, '?')!=NULL) && attr & DOS_ATTR_DIRECTORY)) {
+			found=true;
+			strcpy(end,name);
+			strcpy(lend,lname);
+			if (strlen(full)&&DOS_GetFileAttr(((uselfn||strchr(full, ' ')?(full[0]!='"'?"\"":""):"")+std::string(full)+(uselfn||strchr(full, ' ')?(full[strlen(full)-1]!='"'?"\"":""):"")).c_str(), &fattr)) {
+				bool attra=fattr&DOS_ATTR_ARCHIVE, attrs=fattr&DOS_ATTR_SYSTEM, attrh=fattr&DOS_ATTR_HIDDEN, attrr=fattr&DOS_ATTR_READ_ONLY;
+				if (adda||adds||addh||addr||suba||subs||subh||subr) {
+					if (adda) fattr|=DOS_ATTR_ARCHIVE;
+					if (adds) fattr|=DOS_ATTR_SYSTEM;
+					if (addh) fattr|=DOS_ATTR_HIDDEN;
+					if (addr) fattr|=DOS_ATTR_READ_ONLY;
+					if (suba) fattr&=~DOS_ATTR_ARCHIVE;
+					if (subs) fattr&=~DOS_ATTR_SYSTEM;
+					if (subh) fattr&=~DOS_ATTR_HIDDEN;
+					if (subr) fattr&=~DOS_ATTR_READ_ONLY;
+					if (DOS_SetFileAttr(((uselfn||strchr(full, ' ')?(full[0]!='"'?"\"":""):"")+std::string(full)+(uselfn||strchr(full, ' ')?(full[strlen(full)-1]!='"'?"\"":""):"")).c_str(), fattr)) {
+						if (DOS_GetFileAttr(((uselfn||strchr(full, ' ')?(full[0]!='"'?"\"":""):"")+std::string(full)+(uselfn||strchr(full, ' ')?(full[strlen(full)-1]!='"'?"\"":""):"")).c_str(), &fattr)) {
+							shell->WriteOut("  %c  %c%c%c	", fattr&DOS_ATTR_ARCHIVE?'A':' ', fattr&DOS_ATTR_SYSTEM?'S':' ', fattr&DOS_ATTR_HIDDEN?'H':' ', fattr&DOS_ATTR_READ_ONLY?'R':' ');
+							shell->WriteOut_NoParsing(uselfn?sfull:full);
+							shell->WriteOut("\n");
+						}
+					} else
+						shell->WriteOut(MSG_Get("SHELL_CMD_ATTRIB_SET_ERROR"),uselfn?sfull:full);
+				} else {
+					shell->WriteOut("  %c  %c%c%c	", attra?'A':' ', attrs?'S':' ', attrh?'H':' ', attrr?'R':' ');
+					shell->WriteOut_NoParsing(uselfn?sfull:full);
+					shell->WriteOut("\n");
+				}
+			} else
+				shell->WriteOut(MSG_Get("SHELL_CMD_ATTRIB_GET_ERROR"),uselfn?sfull:full);
+		}
+		res=DOS_FindNext();
+	}
+	if (optS) {
+		size_t len=strlen(path);
+		strcat(path, "*.*");
+		bool ret=DOS_FindFirst(path,0xffff & ~DOS_ATTR_VOLUME);
+		*(path+len)=0;
+		if (ret) {
+			std::vector<std::string> cdirs;
+			cdirs.clear();
+			do {    /* File name and extension */
+				dta.GetResult(name,lname,size,hsize,date,time,attr);
+
+				if((attr&DOS_ATTR_DIRECTORY) && strcmp(name, ".")&&strcmp(name, "..")) {
+					strcat(path, name);
+					strcat(path, "\\");
+					char *fname = strrchr_dbcs(args, '\\');
+					if (fname!=NULL) fname++;
+					else {
+						fname = strrchr(args, ':');
+						if (fname!=NULL) fname++;
+						else fname=args;
+					}
+					strcat(path, fname);
+					cdirs.push_back((path[0]!='"'&&path[strlen(path)-1]=='"'?"\"":"")+std::string(path));
+					*(path+len)=0;
+				}
+			} while ( (ret=DOS_FindNext()) );
+			adirs.insert(adirs.begin()+1, cdirs.begin(), cdirs.end());
+		}
+	}
+	return found;
+}
+
 void DOS_Shell::CMD_ATTRIB(char *args){
 	HELP("ATTRIB");
-	// No-Op for now.
+	StripSpaces(args);
+
+	bool optS=ScanCMDBool(args,"S");
+	char * rem=ScanCMDRemain(args);
+	if (rem) {
+		WriteOut(MSG_Get("SHELL_ILLEGAL_SWITCH"),rem);
+		return;
+	}
+	
+	bool adda=false, adds=false, addh=false, addr=false, suba=false, subs=false, subh=false, subr=false;
+	char sfull[DOS_PATHLENGTH+2];
+	char* arg1;
+	strcpy(sfull, "*.*");
+	do {
+		arg1=StripArg(args);
+		if (!strcasecmp(arg1, "+A")) adda=true;
+		else if (!strcasecmp(arg1, "+S")) adds=true;
+		else if (!strcasecmp(arg1, "+H")) addh=true;
+		else if (!strcasecmp(arg1, "+R")) addr=true;
+		else if (!strcasecmp(arg1, "-A")) suba=true;
+		else if (!strcasecmp(arg1, "-S")) subs=true;
+		else if (!strcasecmp(arg1, "-H")) subh=true;
+		else if (!strcasecmp(arg1, "-R")) subr=true;
+		else if (*arg1) {
+			strcpy(sfull, arg1);
+			if (uselfn&&strchr(sfull, '*')) {
+				char * find_last;
+				find_last=strrchr_dbcs(sfull,'\\');
+				if (find_last==NULL) find_last=sfull;
+				else find_last++;
+				if (sfull[strlen(sfull)-1]=='*'&&strchr(find_last, '.')==NULL) strcat(sfull, ".*");
+			}
+		}
+	} while (*args);
+
+	char buffer[CROSS_LEN];
+	args = ExpandDot(sfull,buffer, CROSS_LEN, true);
+	StripSpaces(args);
+	RealPt save_dta=dos.dta();
+	dos.dta(dos.tables.tempdta);
+	DOS_DTA dta(dos.dta());
+	adirs.clear();
+	adirs.emplace_back(std::string(args));
+	bool found=false;
+	while (!adirs.empty()) {
+		if (doAttrib(this, (char *)adirs.begin()->c_str(), dta, optS, adda, adds, addh, addr, suba, subs, subh, subr))
+			found=true;
+		adirs.erase(adirs.begin());
+	}
+	if (!found) WriteOut(MSG_Get("SHELL_CMD_FILE_NOT_FOUND"),args);
+	dos.dta(save_dta);
 }
 
 void DOS_Shell::CMD_PROMPT(char *args){
