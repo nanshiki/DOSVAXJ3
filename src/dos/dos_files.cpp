@@ -286,7 +286,7 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
     char pdir[LFN_NAMELENGTH+4], *p;
     Bit8u drive;char fulldir[DOS_PATHLENGTH],LFNPath[CROSS_LEN];
     char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH];
-    Bit32u size;Bit16u date;Bit16u time;Bit8u attr;
+    Bit32u size,hsize;Bit16u date;Bit16u time;Bit8u attr;
     if (!DOS_MakeName(path,fulldir,&drive)) return false;
     sprintf(SFNPath,"%c:\\",drive+'A');
     strcpy(LFNPath,SFNPath);
@@ -308,7 +308,7 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
 			lfn_filefind_handle=LFN_FILEFIND_INTERNAL;
 			if (DOS_FindFirst(pdir,0xffff & DOS_ATTR_DIRECTORY & ~DOS_ATTR_VOLUME,false)) {
 				lfn_filefind_handle=fbak;
-				dta.GetResult(name,lname,size,date,time,attr);
+				dta.GetResult(name,lname,size,hsize,date,time,attr);
 				strcat(SFNPath,name);
 				strcat(LFNPath,lname);
 				strcat(SFNPath,"\\");
@@ -333,7 +333,7 @@ bool DOS_GetSFNPath(char const * const path,char * SFNPath,bool LFN) {
 		sprintf(pdir,"\"%s%s\"",SFNPath,p);
 		lfn_filefind_handle=LFN_FILEFIND_INTERNAL;
 		if (!strrchr(p,'*')&&!strrchr(p,'?')&&DOS_FindFirst(pdir,0xffff & ~DOS_ATTR_VOLUME,false)) {
-			dta.GetResult(name,lname,size,date,time,attr);
+			dta.GetResult(name,lname,size,hsize,date,time,attr);
 			strcat(SFNPath,name);
 			strcat(LFNPath,lname);
         } else if (checkwat) {
@@ -1270,9 +1270,9 @@ static void DTAExtendName(char * const name,char * const filename,char * const e
 static void SaveFindResult(DOS_FCB & find_fcb) {
 	DOS_DTA find_dta(dos.tables.tempdta);
 	char name[DOS_NAMELENGTH_ASCII],lname[LFN_NAMELENGTH];
-	Bit32u size;Bit16u date;Bit16u time;Bit8u attr;Bit8u drive;
+	Bit32u size,hsize;Bit16u date;Bit16u time;Bit8u attr;Bit8u drive;
 	char file_name[9];char ext[4];
-	find_dta.GetResult(name,lname,size,date,time,attr);
+	find_dta.GetResult(name,lname,size,hsize,date,time,attr);
 	drive=find_fcb.GetDrive()+1;
 	Bit8u find_attr = DOS_ATTR_ARCHIVE;
 	find_fcb.GetAttr(find_attr); /* Gets search attributes if extended */

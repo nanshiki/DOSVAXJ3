@@ -399,11 +399,12 @@ void DOS_DTA::SetResult(const char * _name, const char * _lname, Bit32u _size,Bi
 	}
 }
 
-void DOS_DTA::GetResult(char * _name, char * _lname,Bit32u & _size,Bit16u & _date,Bit16u & _time,Bit8u & _attr) {
+void DOS_DTA::GetResult(char * _name, char * _lname,Bit32u & _size,Bit32u & _hsize,Bit16u & _date,Bit16u & _time,Bit8u & _attr) {
 	strcpy(_lname,fd.lname);
 	if (fd.sname[0]!=0) strcpy(_name,fd.sname);
 	else if (strlen(fd.lname)<DOS_NAMELENGTH_ASCII) strcpy(_name,fd.lname);
 	_size = fd.size;
+	_hsize = fd.hsize;
 	_date = fd.mdate;
 	_time = fd.mtime;
 	_attr = fd.attr;
