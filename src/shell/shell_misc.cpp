@@ -551,7 +551,7 @@ void DOS_Shell::InputCommand(char * line) {
 
 					DOS_DTA dta(dos.dta());
 					char name[DOS_NAMELENGTH_ASCII], lname[LFN_NAMELENGTH], qlname[LFN_NAMELENGTH+2];
-					Bit32u sz;Bit16u date;Bit16u time;Bit8u att;
+					Bit32u size,hsize;Bit16u date;Bit16u time;Bit8u att;
 
 					std::list<std::string> executable;
 					q=0;r=0;
@@ -565,7 +565,7 @@ void DOS_Shell::InputCommand(char * line) {
 						}
 					}
 					while (res) {
-						dta.GetResult(name,lname,sz,date,time,att);
+						dta.GetResult(name,lname,size,hsize,date,time,att);
 						if (strchr(uselfn?lname:name,' ')!=NULL||q/2*2!=q||r)
  							sprintf(qlname,q/2*2!=q?"%s\"":"\"%s\"",uselfn?lname:name);
 						else
