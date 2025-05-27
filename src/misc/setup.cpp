@@ -946,7 +946,9 @@ void Config::SetStartUp(void (*_function)(void)) {
 
 void Config::StartUp(void) {
 	initialised=true;
-	(*_start_function)();
+	if(_start_function) {
+		(*_start_function)();
+	}
 }
 
 bool CommandLine::FindExist(char const * const name,bool remove) {
