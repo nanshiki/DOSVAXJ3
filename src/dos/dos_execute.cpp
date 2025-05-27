@@ -592,7 +592,7 @@ bool DOS_Execute(char * name,PhysPt block_pt,Bit8u flags) {
 	}
 #if defined(WIN32)
 	char realname[256];
-	if(DOS_GetRealFileName(name, realname)) {
+	if(DOS_GetRealFileName(name, realname) && strstr(name, "XCOPY32.MOD") == NULL) {
 		PLOADED_IMAGE image = ImageLoad(realname, NULL);
 		if(image != NULL) {
 			char dir[256];
