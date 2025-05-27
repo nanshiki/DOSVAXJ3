@@ -1083,6 +1083,7 @@ bool localDrive::GetFileAttr(char * name,Bit16u * attr) {
 	if (stat(newname,&status)==0) {
 		if(status.st_mode & S_IFDIR) *attr=DOS_ATTR_DIRECTORY;
 		else *attr=DOS_ATTR_ARCHIVE;
+		if(!(status.st_mode & S_IWUSR)) *attr|=DOS_ATTR_READ_ONLY;
 		return true;
 	}
 	*attr=0;
