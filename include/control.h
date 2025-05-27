@@ -59,7 +59,7 @@ private:
 	typedef std::list<Section*>::reverse_iterator reverse_it;
 	typedef std::list<Section*>::const_iterator const_it;
 	typedef std::list<Section*>::const_reverse_iterator const_reverse_it;
-	void (* _start_function)(void);
+	void (* _start_function)(void) = NULL;
 	bool secure_mode; //Sandbox mode
 public:
 	bool initialised;
@@ -81,7 +81,7 @@ public:
 
 	void SetStartUp(void (*_function)(void));
 	void Init();
-	void ShutDown();
+	//void ShutDown();
 	void StartUp();
 	bool PrintConfig(char const * const configfilename) const;
 	bool ParseConfigFile(char const * const configfilename);

@@ -69,7 +69,6 @@ bool CALLBACK_Setup(Bitu callback,CallBack_Handler handler,Bitu type,const char*
 Bitu CALLBACK_Setup(Bitu callback,CallBack_Handler handler,Bitu type,PhysPt addr,const char* descr);
 
 const char* CALLBACK_GetDescription(Bitu callback);
-bool CALLBACK_Free(Bitu callback);
 
 void CALLBACK_SCF(bool val);
 void CALLBACK_SZF(bool val);
@@ -81,7 +80,7 @@ extern Bitu call_priv_io;
 class CALLBACK_HandlerObject{
 private:
 	bool installed;
-	Bitu m_callback;
+	Bitu m_callback = 0;
 	enum {NONE,SETUP,SETUPAT} m_type;
     struct {	
 		RealPt old_vector;
