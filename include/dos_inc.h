@@ -382,12 +382,12 @@ public:
 		RealPt fcb2;
 		RealPt initsssp;
 		RealPt initcsip;
-	}GCC_ATTRIBUTE(packed);
+	} GCC_ATTRIBUTE(packed);
 	#ifdef _MSC_VER
 	#pragma pack()
 	#endif
-	sExec exec;
-	sOverlay overlay;
+	sExec exec = {};
+	sOverlay overlay = {};
 };
 
 class DOS_InfoBlock:public MemStruct {
@@ -465,7 +465,7 @@ public:
 	#ifdef _MSC_VER
 	#pragma pack ()
 	#endif
-	Bit16u	seg;
+	Bit16u	seg = 0;
 };
 
 class DOS_DTA:public MemStruct{
@@ -478,7 +478,7 @@ public:
 	int GetFindData(int fmt,char * finddata);
 	Bit8u GetSearchDrive(void);
 	void GetSearchParams(Bit8u & _sattr,char * _spattern,bool lfn);
-	void GetResult(char * _name,char * _lname,Bit32u & _size,Bit16u & _date,Bit16u & _time,Bit8u & _attr);
+	void GetResult(char * _name,char * _lname,Bit32u & _size,Bit32u & _hsize,Bit16u & _date,Bit16u & _time,Bit8u & _attr);
 
 	void	SetDirID(Bit16u entry)			{ sSave(sDTA,dirID,entry); };
 	void	SetDirIDCluster(Bit16u entry)	{ sSave(sDTA,dirCluster,entry); };
