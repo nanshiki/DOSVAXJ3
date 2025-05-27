@@ -659,6 +659,7 @@ void SHELL_Init() {
 	MSG_Add("SHELL_CMD_RMDIR_ERROR","Unable to remove: %s.\n");
 	MSG_Add("SHELL_CMD_RENAME_ERROR","Unable to rename: %s.\n");
 	MSG_Add("SHELL_CMD_DEL_ERROR","Unable to delete: %s.\n");
+	MSG_Add("SHELL_CMD_DEL_SURE", "Are you sure to delete all files in directory (Y/N)?");
 	MSG_Add("SHELL_SYNTAXERROR","The syntax of the command is incorrect.\n");
 	MSG_Add("SHELL_CMD_SET_NOT_SET","Environment variable %s not defined.\n");
 	MSG_Add("SHELL_CMD_SET_OUT_OF_SPACE","Not enough environment space left.\n");
@@ -788,6 +789,23 @@ void SHELL_Init() {
 	        "Type CD without parameters to display the current drive and directory.\n");
 	MSG_Add("SHELL_CMD_CLS_HELP","Clear screen.\n");
 	MSG_Add("SHELL_CMD_DIR_HELP","Directory View.\n");
+	MSG_Add("SHELL_CMD_DIR_HELP_LONG","DIR [drive:][path][filename] [/[W|B]] [/P] [/A[D|H|S|R|A]] [/O[N|E|G|S|D]]\n\n"
+		   "  [drive:][path][filename]\n"
+		   "              Specifies drive, directory, and/or files to list.\n"
+		   "  /W          Uses wide list format.\n"
+		   "  /B          Uses bare format (no heading information or summary).\n"
+		   "  /P          Pauses after each screenful of information.\n"
+		   "  /A          Displays files with specified attributes.\n"
+		   "  attributes   D  Directories                R  Read-only files\n"
+		   "               H  Hidden files               A  Files ready for archiving\n"
+		   "               S  System files               -  Prefix meaning not\n"
+		   "  /O          List by files in sorted order.\n"
+		   "  sortorder    N  By name (alphabetic)       S  By size (smallest first)\n"
+		   "               E  By extension (alphabetic)  D  By date & time (earliest first)\n"
+		   "               G  Group directories first    -  Prefix to reverse order\n\n"
+		   "Switches may be preset in the DIRCMD environment variable.  Override\n"
+		   "preset switches by prefixing any switch with - (hyphen)--for example, /-W.\n"
+		   );
 	MSG_Add("SHELL_CMD_ECHO_HELP","Display messages and enable/disable command echoing.\n");
 	MSG_Add("SHELL_CMD_EXIT_HELP","Exit from the shell.\n");
 	MSG_Add("SHELL_CMD_HELP_HELP","Show help.\n");
@@ -822,10 +840,24 @@ void SHELL_Init() {
 	        "  /N  -  Do not display the choices at end of prompt.\n"
 	        "  /S  -  Enables case-sensitive choices to be selected.\n"
 	        "  text  -  The text to display as a prompt.\n");
-	MSG_Add("SHELL_CMD_ATTRIB_HELP","Does nothing. Provided for compatibility.\n");
+	MSG_Add("SHELL_CMD_ATTRIB_HELP","Displays or changes file attributes.\n");
+	MSG_Add("SHELL_CMD_ATTRIB_HELP_LONG","ATTRIB [+R | -R] [+A | -A] [+S | -S] [+H | -H] [drive:][path][filename] [/S]\n\n"
+			"  +   Sets an attribute.\n"
+			"  -   Clears an attribute.\n"
+			"  R   Read-only file attribute.\n"
+			"  A   Archive file attribute.\n"
+			"  S   System file attribute.\n"
+			"  H   Hidden file attribute.\n"
+			"  [drive:][path][filename]\n"
+			"      Specifies file(s) or directory for ATTRIB to process.\n"
+			"  /S  Processes files in all directories in the specified path.\n");
 	MSG_Add("SHELL_CMD_PATH_HELP","Provided for compatibility.\n");
+	MSG_Add("SHELL_CMD_PATH_HELP_LONG","PATH [[drive:]path[;...][;%PATH%]\n"
+		   "PATH ;\n\n"
+		   "Type PATH ; to clear all search path settings.\n"
+		   "Type PATH without parameters to display the current path.\n");
 	MSG_Add("SHELL_CMD_VER_HELP","View and set the reported DOS version.\n");
-	MSG_Add("SHELL_CMD_VER_VER","DOSBox version %s. Reported DOS version %d.%02d.\n");
+	MSG_Add("SHELL_CMD_VER_VER","DOSVAXJ3 version %s. Reported DOS version %d.%02d.\n");
 	MSG_Add("SHELL_CMD_CHEV_HELP","Change environment.\n");
 	MSG_Add("SHELL_CMD_CHEV_HELP_LONG","CHEV [[JP][VT][VT1][VT2][VT3][VT4][J3][US]] [nn]\n"
 	        "  JP: Japanese DOS/V,AX\n"
@@ -837,7 +869,8 @@ void SHELL_Init() {
 	MSG_Add("SHELL_CMD_CHEV_CHANGE","Change to the %s environment.\nCurrent video mode is %02xh");
 	MSG_Add("SHELL_CMD_BREAK_HELP","Sets or clears extended CTRL+C checking.\n");
 	MSG_Add("SHELL_CMD_BREAK_HELP_LONG","BREAK [ON | OFF]\n\nType BREAK without a parameter to display the current BREAK setting.\n");
-	MSG_Add("SHELL_CMD_TITLE_HELP","Sets the window title for the DOSBox window.\n");
+	MSG_Add("SHELL_CMD_TITLE_HELP","Sets the window title for the DOSVAXJ3 window.\n");
+	MSG_Add("SHELL_CMD_CHCP_HELP","Displays or changes the current directory.\n");
 
 	/* Regular startup */
 	call_shellstop=CALLBACK_Allocate();
