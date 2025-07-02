@@ -272,6 +272,8 @@ typedef struct {
 	Bit8u reserved[8];
 } ext_space_info_t;
 
+extern void empty_keyboard_buffer();
+
 #define DOSNAMEBUF 256
 static Bitu DOS_21Handler(void) {
 	if (((reg_ah != 0x50) && (reg_ah != 0x51) && (reg_ah != 0x62) && (reg_ah != 0x64)) && (reg_ah<0x6c)) {
@@ -291,6 +293,8 @@ static Bitu DOS_21Handler(void) {
 
     if(dos.breakcheck && (reg_ah != 0x00 && reg_ah != 0x4c && reg_ah != 0x31)) {
 		if(CtrlCFlag) {
+			CtrlCFlag = false;
+			empty_keyboard_buffer();
 			DOS_BreakAction();
 			if (!DOS_BreakTest()) return CBRET_NONE;
 		}
