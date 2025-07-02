@@ -41,6 +41,8 @@ DOS_Shell * first_shell = 0;
 Bit16u cmd_line_seg;
 bool LineInputFlag;
 
+extern bool CtrlCFlag;
+
 static Bitu shellstop_handler(void) {
 	return CBRET_STOP;
 }
@@ -427,6 +429,8 @@ void DOS_Shell::Run(void) {
 				};
 				ParseLine(input_line);
 				if (echo) WriteOut("\n");
+			} else if(CtrlCFlag) {
+				CtrlCFlag = false;
 			}
 		} else {
 			if (echo) ShowPrompt();

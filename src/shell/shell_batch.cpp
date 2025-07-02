@@ -23,6 +23,8 @@
 #include "shell.h"
 #include "support.h"
 
+extern bool CtrlCFlag;
+
 BatchFile::BatchFile(DOS_Shell * host,char const * const resolved_name,char const * const entered_name, char const * const cmd_line) {
 	location = 0;
 	prev=host->bf;
@@ -78,7 +80,7 @@ emptyline:
 		}
 	} while (c!='\n' && n);
 	*cmd_write=0;
-	if (!n && cmd_write==temp) {
+	if ((!n && cmd_write==temp) || CtrlCFlag) {
 		//Close file and delete bat file
 		DOS_CloseFile(file_handle);
 		delete this;
