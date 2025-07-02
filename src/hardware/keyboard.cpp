@@ -53,6 +53,8 @@ static struct {
 	bool scanning;
 	bool scheduled;
 	bool kanaLocked = false;//for AX
+	bool leftctrl_pressed;
+	bool rightctrl_pressed;
 } keyb;
 
 static void KEYBOARD_SetPort60(Bit8u val) {
@@ -268,7 +270,10 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_leftbracket:ret=26;break;
 	case KBD_rightbracket:ret=27;break;
 	case KBD_enter:ret=28;break;
-	case KBD_leftctrl:ret=29;break;
+	case KBD_leftctrl:
+		ret=29;
+		keyb.leftctrl_pressed = pressed;
+		break;
 
 	case KBD_a:ret=30;break;
 	case KBD_s:ret=31;break;
@@ -314,7 +319,19 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_f10:ret=68;break;
 
 	case KBD_numlock:ret=69;break;
-	case KBD_scrolllock:ret=70;break;
+	case KBD_scrolllock:
+		if(keyb.leftctrl_pressed || keyb.rightctrl_pressed) {
+			if(pressed) {
+				// Ctrl+Break
+				KEYBOARD_AddBuffer(0xe0);
+				KEYBOARD_AddBuffer(70);
+				KEYBOARD_AddBuffer(0xe0);
+				KEYBOARD_AddBuffer(70 | 0x80);
+			}
+			return;
+		}
+		ret=70;
+		break;
 
 	case KBD_kp7:ret=71;break;
 	case KBD_kp8:ret=72;break;
@@ -341,6 +358,7 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	{
 		extend = true;
 		ret = 29;//0x1d
+		keyb.rightctrl_pressed = pressed;
 		break;
 	}
 	case KBD_kpdivide:extend=true;ret=53;break;
@@ -362,9 +380,29 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_insert:extend=true;ret=82;break;
 	case KBD_delete:extend=true;ret=83;break;
 	case KBD_pause:
-		KEYBOARD_AddBuffer(0xe1);
-		KEYBOARD_AddBuffer(29|(pressed?0:0x80));
-		KEYBOARD_AddBuffer(69|(pressed?0:0x80));
+		if (!pressed) {
+			/* keyboards send both make&break codes for this key on
+			   key press and nothing on key release */
+			return;
+		}
+		if (!keyb.leftctrl_pressed && !keyb.rightctrl_pressed) {
+			/* neither leftctrl, nor rightctrl pressed -> PAUSE key */
+			KEYBOARD_AddBuffer(0xe1);
+			KEYBOARD_AddBuffer(29);
+			KEYBOARD_AddBuffer(69);
+			KEYBOARD_AddBuffer(0xe1);
+			KEYBOARD_AddBuffer(29|0x80);
+			KEYBOARD_AddBuffer(69|0x80);
+		} else if (!keyb.leftctrl_pressed || !keyb.rightctrl_pressed) {
+			/* exactly one of [leftctrl, rightctrl] is pressed -> Ctrl+BREAK */
+			KEYBOARD_AddBuffer(0xe0);
+			KEYBOARD_AddBuffer(70);
+			KEYBOARD_AddBuffer(0xe0);
+			KEYBOARD_AddBuffer(70|0x80);
+		}
+		/* pressing this key also disables any previous key repeat */
+		keyb.repeat.key=KBD_NONE;
+		keyb.repeat.wait=0;
 		return;
 	case KBD_printscreen:
 		KEYBOARD_AddBuffer(0xe0);
@@ -465,5 +503,7 @@ void KEYBOARD_Init(Section* /*sec*/) {
 	keyb.repeat.pause = 500;
 	keyb.repeat.rate = 33;
 	keyb.repeat.wait = 0;
+	keyb.leftctrl_pressed = false;
+	keyb.rightctrl_pressed = false;
 	KEYBOARD_ClrBuffer();
 }
