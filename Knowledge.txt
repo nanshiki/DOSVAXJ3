@@ -92,8 +92,8 @@ both に設定する必要があります。
 使用するプログラムは存在しないと思われます。
 
 ・デバイスドライバ
-　オリジナルの adddev (https://www.vector.co.jp/soft/dos/writing/se002001.html)
-を使用する場合、ver set でバージョンを 6 以下に設定してください。
+　オリジナルの adddev を使用する場合、ver set でバージョンを 6 以下に設定して
+ください。
 　sava 氏版 adddev (http://hp.vector.co.jp/authors/VA003720/lpproj/dostools.htm)
 の場合、DOSBOX 対応版でなくても動作します。
 　adddev で登録したキャラクタデバイスに対しては下記の DOS ファンクションが使
@@ -211,5 +211,11 @@ MS$KANJI については MS-KANJI API を参照してください。
 　　参照時の変換位置は常にカーソル位置となります。
 
 　KKOpen, KKClose, KKInOut には対応していません。
+
+・DOSVAXJ3 上で動作しているかどうかの判定
+　int 2fh
+　　ax=7476h
+　　実機上の PC DOS 等では ax に 7476h を入れて int 2fh を実行しても ax の
+　　値は変化しませんが、DOSVAXJ3 上では ax は 0002h になります。
 
                                                                       takapyu
