@@ -61,6 +61,9 @@ static Bitu INT2F_Handler(void) {
 		reg_ax = 0x0000;
 		reg_bx = dos.loaded_codepage;
 		return CBRET_NONE;
+	} else if(reg_ax == 0x7476) {
+		reg_ax = 0x0002;
+		return CBRET_NONE;
 	}
 
 	LOG(LOG_DOSMISC,LOG_ERROR)("DOS:Multiplex Unhandled call %4X",reg_ax);
