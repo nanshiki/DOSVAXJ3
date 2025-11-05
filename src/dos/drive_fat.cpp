@@ -1183,7 +1183,7 @@ void fatDrive::UpdateDPB(unsigned char dos_drive) {
     }
 }
 
-bool fatDrive::AllocationInfo(Bit16u *_bytes_sector, Bit8u *_sectors_cluster, Bit16u *_total_clusters, Bit16u *_free_clusters) {
+bool fatDrive::AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend) {
 	Bit32u hs, cy, sect,sectsize;
 	Bit32u countFree = 0;
 	Bit32u i;

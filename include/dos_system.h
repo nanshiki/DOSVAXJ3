@@ -276,7 +276,7 @@ public:
 	virtual DWORD GetCompressedSize(char* name)=0;
 	virtual HANDLE CreateOpenFile(char const* const name)=0;
 	virtual bool Rename(char * oldname,char * newname)=0;
-	virtual bool AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters)=0;
+	virtual bool AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend)=0;
 	virtual bool FileExists(const char* name)=0;
 	virtual bool FileStat(const char* name, FileStat_Block * const stat_block)=0;
 	virtual Bit8u GetMediaByte(void)=0;

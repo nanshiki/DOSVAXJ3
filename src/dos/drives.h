@@ -73,7 +73,7 @@ public:
 	virtual DWORD GetCompressedSize(char* name);
 	virtual HANDLE CreateOpenFile(char const* const name);
 	virtual bool Rename(char * oldname,char * newname);
-	virtual bool AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters);
+	virtual bool AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend);
 	virtual bool FileExists(const char* name);
 	virtual bool FileStat(const char* name, FileStat_Block * const stat_block);
 	virtual Bit8u GetMediaByte(void);
@@ -186,7 +186,7 @@ public:
 	virtual DWORD GetCompressedSize(char* name);
 	virtual HANDLE CreateOpenFile(char const* const name);
 	virtual bool Rename(char * oldname,char * newname);
-	virtual bool AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters);
+	virtual bool AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend);
 	virtual bool FileExists(const char* name);
 	virtual bool FileStat(const char* name, FileStat_Block * const stat_block);
 	virtual Bit8u GetMediaByte(void);
@@ -386,7 +386,7 @@ public:
 	virtual DWORD GetCompressedSize(char* name);
 	virtual HANDLE CreateOpenFile(char const* const name);
 	virtual bool Rename(char * oldname,char * newname);
-	virtual bool AllocationInfo(Bit16u *bytes_sector, Bit8u *sectors_cluster, Bit16u *total_clusters, Bit16u *free_clusters);
+	virtual bool AllocationInfo(Bit32u *bytes_sector, Bit32u *sectors_cluster, Bit32u *total_clusters, Bit32u *free_clusters, bool extend);
 	virtual bool FileExists(const char *name);
    	virtual bool FileStat(const char *name, FileStat_Block *const stat_block);
 	virtual Bit8u GetMediaByte(void);
@@ -454,7 +454,7 @@ public:
 	DWORD GetCompressedSize(char* name);
 	HANDLE CreateOpenFile(char const* const name);
 	bool Rename(char * oldname,char * newname);
-	bool AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters);
+	bool AllocationInfo(Bit32u *_bytes_sector,Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend);
 	bool FileExists(const char* name);
 	bool FileStat(const char* name, FileStat_Block* const stat_block);
 	Bit8u GetMediaByte(void);

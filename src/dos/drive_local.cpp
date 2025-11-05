@@ -28,6 +28,7 @@
 #ifndef WIN32
 #include <utime.h>
 #include <sys/file.h>
+#include <sys/statvfs.h>
 #else
 #include <fcntl.h>
 #include <sys/utime.h>
@@ -1301,11 +1302,60 @@ bool localDrive::Rename(char * oldname,char * newname) {
 
 }
 
-bool localDrive::AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters) {
-	*_bytes_sector=allocation.bytes_sector;
-	*_sectors_cluster=allocation.sectors_cluster;
-	*_total_clusters=allocation.total_clusters;
-	*_free_clusters=allocation.free_clusters;
+bool localDrive::AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend)
+{
+#if defined(WIN32)
+	DWORD sector;
+	DWORD bytes;
+	DWORD freec;
+	DWORD totalc;
+	char root[4] = "A:\\";
+
+	root[0] = basedir[0];
+	GetDiskFreeSpace(root, &sector, &bytes, &freec, &totalc);
+	if(extend) {
+		*_bytes_sector = bytes;
+		*_sectors_cluster = sector;
+		*_total_clusters = totalc;
+		*_free_clusters = freec;
+	} else {
+		DWORD total = totalc * sector;
+		int ratio = total > 2097120 ? 64 : (total > 1048560 ? 32 : (total > 524280 ? 16 : (total > 262140 ? 8 : (total > 131070 ? 4 : (total > 65535 ? 2 : 1))))), ratio2 = ratio * bytes / 512;
+		*_bytes_sector = 512;
+		*_sectors_cluster = ratio;
+		*_total_clusters = total > 4194240 ? 65535 : (Bit16u)(total * sector / ratio2);
+    	*_free_clusters = freec ? (total > 4194240 ? 61440 : (Bit16u)(freec * sector / ratio2)) : 0;
+	}
+#else
+	struct statvfs vfs;
+
+	statvfs(basedir, &vfs);
+	if(extend) {
+		Bit64u total, freec;
+
+		freec = vfs.f_bavail;
+		total = vfs.f_blocks;
+		*_bytes_sector = 512;
+		*_sectors_cluster = vfs.f_frsize / 512;
+		*_total_clusters = total;
+    	*_free_clusters = freec;
+	} else {
+		Bit32u sector;
+		Bit32u freec;
+		Bit32u total;
+		Bit32u totalc;
+
+		sector = vfs.f_frsize / 512;
+		freec = (Bit32u)((Bit64u)vfs.f_frsize * vfs.f_bavail / sector);
+		total = (Bit32u)((Bit64u)vfs.f_frsize * vfs.f_blocks / sector);
+
+		int ratio = total > 2097120 ? 64 : (total > 1048560 ? 32 : (total > 524280 ? 16 : (total > 262140 ? 8 : (total > 131070 ? 4 : (total > 65535 ? 2 : 1)))));
+		*_bytes_sector = 512;
+		*_sectors_cluster = ratio;
+		*_total_clusters = total > 4194240 ? 65535 : (Bit16u)(total * sector / ratio);
+	    *_free_clusters = freec ? (total > 4194240 ? 61440 : (Bit16u)(freec * sector / ratio)) : 0;
+	}
+#endif
 	return true;
 }
 

@@ -364,7 +364,7 @@ HANDLE isoDrive::CreateOpenFile(const char* name) {
 	return INVALID_HANDLE_VALUE;
 }
 
-bool isoDrive::AllocationInfo(Bit16u *bytes_sector, Bit8u *sectors_cluster, Bit16u *total_clusters, Bit16u *free_clusters) {
+bool isoDrive::AllocationInfo(Bit32u *bytes_sector, Bit32u *sectors_cluster, Bit32u *total_clusters, Bit32u *free_clusters, bool extend) {
 	*bytes_sector = 2048;
 	*sectors_cluster = 1; // cluster size for cdroms ?
 	*total_clusters = 65535;

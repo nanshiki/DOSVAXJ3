@@ -285,7 +285,7 @@ bool Virtual_Drive::Rename(char * /*oldname*/,char * /*newname*/) {
 	return false;
 }
 
-bool Virtual_Drive::AllocationInfo(Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters,Bit16u * _free_clusters) {
+bool Virtual_Drive::AllocationInfo(Bit32u *_bytes_sector, Bit32u *_sectors_cluster, Bit32u *_total_clusters, Bit32u *_free_clusters, bool extend) {
 	*_bytes_sector = 512;
 	*_sectors_cluster = 32;
 	*_total_clusters = 32765; // total size is always 500 mb

@@ -877,13 +877,12 @@ static Bitu DOS_21Handler(void) {
 		break;
 	case 0x36:		/* Get Free Disk Space */
 		{
-			Bit16u bytes,clusters,free;
-			Bit8u sectors;
-			if (DOS_GetFreeDiskSpace(reg_dl,&bytes,&sectors,&clusters,&free)) {
-				reg_ax=sectors;
-				reg_bx=free;
-				reg_cx=bytes;
-				reg_dx=clusters;
+			Bit32u bytes, clusters, free, sectors;
+			if (DOS_GetFreeDiskSpace(reg_dl, &bytes, &sectors, &clusters, &free, false)) {
+				reg_ax = (Bit16u)sectors;
+				reg_bx = (Bit16u)free;
+				reg_cx = (Bit16u)bytes;
+				reg_dx = (Bit16u)clusters;
 			} else {
 				Bit8u drive=reg_dl;
 				if (drive==0) drive=DOS_GetDefaultDrive();
@@ -2213,20 +2212,17 @@ static Bitu DOS_21Handler(void) {
 			dos.restore_dta();
 		break;
 	case 0x73:
-		if (reg_al==3)
-			{
+		if (reg_al==3) {
 			MEM_StrCopy(SegPhys(ds)+reg_dx,name1,reg_cx);
-			if (name1[1]==':'&&name1[2]=='\\')
+			if (name1[1]==':'&&name1[2]=='\\') {
 				reg_dl=name1[0]-'A'+1;
-			else {
+			} else {
 				reg_ax=0xffff;
 				CALLBACK_SCF(true);
 				break;
 			}
-			Bit16u bytes_per_sector,total_clusters,free_clusters;
-			Bit8u sectors_per_cluster;
-			if (DOS_GetFreeDiskSpace(reg_dl,&bytes_per_sector,&sectors_per_cluster,&total_clusters,&free_clusters))
-				{
+			Bit32u bytes_per_sector, sectors_per_cluster, total_clusters,free_clusters;
+			if (DOS_GetFreeDiskSpace(reg_dl, &bytes_per_sector, &sectors_per_cluster, &total_clusters, &free_clusters, true)) {
 				ext_space_info_t *info = new ext_space_info_t;
 				info->size_of_structure = sizeof(ext_space_info_t);
 				info->structure_version = 0;
@@ -2242,14 +2238,12 @@ static Bitu DOS_21Handler(void) {
 				delete(info);
 				reg_ax=0;
 				CALLBACK_SCF(false);
-				}
-			else
-				{
+			} else {
 				reg_ax=dos.errorcode;
 				CALLBACK_SCF(true);
-				}
-			break;
 			}
+			break;
+		}
 
 	case 0xE0:
 	case 0x18:	            	/* NULL Function for CP/M compatibility or Extended rename FCB */

@@ -1014,14 +1014,15 @@ bool DOS_Canonicalize(char const * const name,char * const big) {
 	return true;
 }
 
-bool DOS_GetFreeDiskSpace(Bit8u drive,Bit16u * bytes,Bit8u * sectors,Bit16u * clusters,Bit16u * free) {
+bool DOS_GetFreeDiskSpace(Bit8u drive, Bit32u *bytes,Bit32u *sectors, Bit32u *clusters, Bit32u *free, bool extend)
+{
 	if (drive==0) drive=DOS_GetDefaultDrive();
 	else drive--;
 	if ((drive>=DOS_DRIVES) || (!Drives[drive])) {
 		DOS_SetError(DOSERR_INVALID_DRIVE);
 		return false;
 	}
-	return Drives[drive]->AllocationInfo(bytes,sectors,clusters,free);
+	return Drives[drive]->AllocationInfo(bytes, sectors, clusters, free, extend);
 }
 
 bool DOS_DuplicateEntry(Bit16u entry,Bit16u * newentry) {
@@ -1595,17 +1596,21 @@ bool DOS_FileExists(char const * const name) {
 	return Drives[drive]->FileExists(fullname);
 }
 
-bool DOS_GetAllocationInfo(Bit8u drive,Bit16u * _bytes_sector,Bit8u * _sectors_cluster,Bit16u * _total_clusters) {
+bool DOS_GetAllocationInfo(Bit8u drive, Bit16u *_bytes_sector, Bit8u *_sectors_cluster, Bit16u *_total_clusters)
+{
 	if (!drive) drive =  DOS_GetDefaultDrive();
 	else drive--;
 	if (drive >= DOS_DRIVES || !Drives[drive]) {
 		DOS_SetError(DOSERR_INVALID_DRIVE);
 		return false;
 	}
-	Bit16u _free_clusters;
-	Drives[drive]->AllocationInfo(_bytes_sector,_sectors_cluster,_total_clusters,&_free_clusters);
-	SegSet16(ds,RealSeg(dos.tables.mediaid));
-	reg_bx=RealOff(dos.tables.mediaid+drive*dos.tables.dpb_size);
+	Bit32u bytes_sector32, sectors_cluster32, total_clusters32, free_clusters32;
+	Drives[drive]->AllocationInfo(&bytes_sector32, &sectors_cluster32, &total_clusters32, &free_clusters32, false);
+	*_bytes_sector = (Bit16u)bytes_sector32;
+	*_sectors_cluster = (Bit16u)sectors_cluster32;
+	*_total_clusters = (Bit16u)total_clusters32;
+	SegSet16(ds, RealSeg(dos.tables.mediaid));
+	reg_bx = RealOff(dos.tables.mediaid + drive * dos.tables.dpb_size);
 	return true;
 }
 
