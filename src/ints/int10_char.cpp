@@ -27,6 +27,7 @@
 #include "pic.h"
 #include "regs.h"
 #include "callback.h"
+#include "mouse.h"
 #include "jega.h"//for AX
 #include "j3.h"
 #include "jfont.h"
@@ -451,10 +452,12 @@ static void TEXT_FillRow(Bit8u cleft,Bit8u cright,Bit8u row,PhysPt base,Bit8u at
 
 void INT10_ScrollWindow(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit8u attr,Bit8u page) {
 /* Do some range checking */
+	bool mouse_flag = false;
 	if(IS_J3_ARCH && J3_IsJapanese()) {
 		J3_OffCursor();
 	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		DOSV_OffCursor();
+		mouse_flag = Mouse_HideCursor();
 	}
 	if (CurMode->type!=M_TEXT) page=0xff;
 	BIOS_NCOLS;BIOS_NROWS;
@@ -591,6 +594,9 @@ filling:
 		}	
 		start++;
 	} 
+	if(mouse_flag) {
+		Mouse_ShowCursor();
+	}
 }
 
 void INT10_SetActivePage(Bit8u page) {

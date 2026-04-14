@@ -130,6 +130,7 @@ static struct {
 	bool in_UIR;
 	Bit8u mode;
 	Bit16s gran_x,gran_y;
+	float ratio_x, ratio_y;
 } mouse;
 
 bool Mouse_SetPS2State(bool use) {
@@ -246,7 +247,15 @@ void RestoreCursorBackgroundText() {
 	if (mouse.hidden || mouse.inhibit_draw) return;
 
 	if (mouse.background) {
-		WriteChar(mouse.backposx,mouse.backposy,real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE),mouse.backData[0],mouse.backData[1],true);
+		if(mouse.backData[4] == 1) {
+			WriteChar(mouse.backposx, mouse.backposy, real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE), mouse.backData[0], mouse.backData[1], true);
+			WriteChar(mouse.backposx + 1, mouse.backposy, real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE), mouse.backData[2], mouse.backData[3], true);
+		} else if(mouse.backData[4] == 2) {
+			WriteChar(mouse.backposx - 1, mouse.backposy, real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE), mouse.backData[2], mouse.backData[3], true);
+			WriteChar(mouse.backposx, mouse.backposy, real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE), mouse.backData[0], mouse.backData[1], true);
+		} else {
+			WriteChar(mouse.backposx, mouse.backposy, real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE), mouse.backData[0], mouse.backData[1], true);
+		}
 		mouse.background = false;
 	}
 }
@@ -271,13 +280,30 @@ void DrawCursorText() {
 	
 	if (mouse.cursorType == 0) {
 		Bit16u result;
-		ReadCharAttr(mouse.backposx,mouse.backposy,page,&result);
-		mouse.backData[0]	= (Bit8u)(result & 0xFF);
-		mouse.backData[1]	= (Bit8u)(result>>8);
+		ReadCharAttr(mouse.backposx, mouse.backposy, page, &result);
+		mouse.backData[0] = (Bit8u)(result & 0xFF);
+		mouse.backData[1] = (Bit8u)(result >> 8);
 		mouse.background	= true;
+		mouse.backData[4] = (CurMode->type == M_TEXT) ? 0 : GetKanjiAttr(mouse.backposx, mouse.backposy);
 		// Write Cursor
 		result = (result & mouse.textAndMask) ^ mouse.textXorMask;
-		WriteChar(mouse.backposx,mouse.backposy,page,(Bit8u)(result&0xFF),(Bit8u)(result>>8),true);
+		if(mouse.backData[4] == 1) {
+			Bit16u result2;
+			ReadCharAttr(mouse.backposx + 1, mouse.backposy, page, &result2);
+			mouse.backData[2] = (Bit8u)(result2 & 0xFF);
+			mouse.backData[3] = (Bit8u)(result2 >> 8);
+			WriteChar(mouse.backposx,mouse.backposy, page, (Bit8u)(result & 0xFF), (Bit8u)(result >> 8), true);
+			WriteChar(mouse.backposx + 1, mouse.backposy, page, (Bit8u)(result2 & 0xFF), (Bit8u)(result >> 8), true);
+		} else if(mouse.backData[4] == 2) {
+			Bit16u result2;
+			ReadCharAttr(mouse.backposx - 1, mouse.backposy, page, &result2);
+			mouse.backData[2] = (Bit8u)(result2 & 0xFF);
+			mouse.backData[3] = (Bit8u)(result2 >> 8);
+			WriteChar(mouse.backposx - 1, mouse.backposy, page, (Bit8u)(result2 & 0xFF), (Bit8u)(result >> 8), true);
+			WriteChar(mouse.backposx, mouse.backposy, page, (Bit8u)(result & 0xFF), (Bit8u)(result >> 8), true);
+		} else {
+			WriteChar(mouse.backposx, mouse.backposy, page, (Bit8u)(result & 0xFF), (Bit8u)(result >> 8), true);
+		}
 	} else {
 		Bit16u address=page * real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE);
 		address += (mouse.backposy * real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS) + mouse.backposx) * 2;
@@ -386,7 +412,7 @@ void DrawCursor() {
 	if (mouse.hidden || mouse.inhibit_draw) return;
 	INT10_SetCurMode();
 	// In Textmode ?
-	if (CurMode->type==M_TEXT) {
+	if (CurMode->type == M_TEXT || !DOSV_CheckMouseGraphicCursor()) {
 		DrawCursorText();
 		return;
 	}
@@ -413,6 +439,12 @@ void DrawCursor() {
 
 	mouse.clipx = (Bit16s)((Bits)CurMode->swidth-1);	/* Get from bios ? */
 	mouse.clipy = (Bit16s)((Bits)CurMode->sheight-1);
+	if(DOSV_CheckMouseGraphicCursor()) {
+		Bit16s clipy = (Bit16s)((real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1) * real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT));
+		if(clipy > mouse.clipy) {
+			mouse.clipy = clipy;
+		}
+	}
 
 	/* might be vidmode == 0x13?2:1 */
 	Bit16s xratio = 640;
@@ -469,6 +501,21 @@ void DrawCursor() {
 	RestoreVgaRegisters();
 }
 
+void Mouse_ShowCursor(void)
+{
+	DrawCursor();
+}
+
+bool Mouse_HideCursor(void)
+{
+	if(!mouse.hidden && !mouse.inhibit_draw) {
+		if (CurMode->type == M_TEXT || !DOSV_CheckMouseGraphicCursor()) RestoreCursorBackgroundText();
+		else RestoreCursorBackground();
+		return true;
+	}
+	return false;
+}
+
 void Mouse_CursorMoved(float xrel,float yrel,float x,float y,bool emulate) {
 	float dx = xrel * mouse.pixelPerMickey_x;
 	float dy = yrel * mouse.pixelPerMickey_y;
@@ -494,6 +541,9 @@ void Mouse_CursorMoved(float xrel,float yrel,float x,float y,bool emulate) {
 			if ((mouse.max_x > 0) && (mouse.max_y > 0)) {
 				mouse.x = x*mouse.max_x;
 				mouse.y = y*mouse.max_y;
+				if(DOSV_CheckMouseGraphicCursor()) {
+					mouse.y *= mouse.ratio_y;
+				}
 			} else {
 				mouse.x += xrel;
 				mouse.y += yrel;
@@ -505,16 +555,19 @@ void Mouse_CursorMoved(float xrel,float yrel,float x,float y,bool emulate) {
 	}
 
 	/* ignore constraints if using PS2 mouse callback in the bios */
-
-	if (!useps2callback) {		
-		if (mouse.x > mouse.max_x) mouse.x = mouse.max_x;
-		if (mouse.x < mouse.min_x) mouse.x = mouse.min_x;
-		if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
-			float max_y = (float)(mouse.max_y * (480.0f / 200.0f));
-			float min_y = (float)(mouse.min_y * (480.0f / 200.0f));
+	if (!useps2callback) {
+		if(DOSV_CheckMouseGraphicCursor()) {
+			float max_x = (float)(mouse.max_x * mouse.ratio_x);
+			float min_x = (float)(mouse.min_x * mouse.ratio_x);
+			float max_y = (float)(mouse.max_y * mouse.ratio_y);
+			float min_y = (float)(mouse.min_y * mouse.ratio_y);
+			if (mouse.x > max_x) mouse.x = max_x;
+			if (mouse.x < min_x) mouse.x = min_x;
 			if (mouse.y > max_y) mouse.y = max_y;
 			if (mouse.y < min_y) mouse.y = min_y;
 		} else {
+			if (mouse.x > mouse.max_x) mouse.x = mouse.max_x;
+			if (mouse.x < mouse.min_x) mouse.x = mouse.min_x;
 			if (mouse.y > mouse.max_y) mouse.y = mouse.max_y;
 			if (mouse.y < mouse.min_y) mouse.y = mouse.min_y;
 		}
@@ -524,6 +577,7 @@ void Mouse_CursorMoved(float xrel,float yrel,float x,float y,bool emulate) {
 		if (mouse.y >= 32768.0) mouse.y -= 65536.0;
 		else if (mouse.y <= -32769.0) mouse.y += 65536.0;
 	}
+
 	Mouse_AddEvent(MOUSE_HAS_MOVED);
 	DrawCursor();
 }
@@ -754,8 +808,8 @@ static void Mouse_ResetHardware(void){
 }
 
 void Mouse_BeforeNewVideoMode(bool setmode) {
-	if (CurMode->type!=M_TEXT) RestoreCursorBackground();
-	else RestoreCursorBackgroundText();
+	if (CurMode->type == M_TEXT || !DOSV_CheckMouseGraphicCursor()) RestoreCursorBackgroundText();
+	else RestoreCursorBackground();
 	mouse.hidden = 1;
 	mouse.oldhidden = 1;
 	mouse.background = false;
@@ -769,6 +823,9 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 	if (setmode && mode == mouse.mode) LOG(LOG_MOUSE,LOG_NORMAL)("New video mode is the same as the old");
 	mouse.gran_x = (Bit16s)0xffff;
 	mouse.gran_y = (Bit16s)0xffff;
+	mouse.min_x = 0;
+	mouse.min_y = 0;
+	mouse.max_x = 639;
 	switch (mode) {
 	case 0x00:
 	case 0x01:
@@ -777,12 +834,17 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 	case 0x07: {
 		mouse.gran_x = (mode<2)?0xfff0:0xfff8;
 		mouse.gran_y = (Bit16s)0xfff8;
-		Bitu rows = (IS_EGAVGA_ARCH || IS_J3_ARCH)?real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS):24;
+		Bitu rows = (IS_EGAVGA_ARCH || IS_J3_ARCH) ? real_readb(BIOSMEM_SEG,BIOSMEM_NB_ROWS) : 24;
 		if ((rows == 0) || (rows > 250)) rows = 25 - 1;
-		mouse.max_y = 8*(rows+1) - 1;
-		if(mode == 0x03 && IS_DOS_JAPANESE) {
+		Bitu cols = real_readb(BIOSMEM_SEG, BIOSMEM_NB_COLS);
+		if((cols == 0) || (cols > 250)) cols = 80;
+		mouse.max_x = cols * 8 - 1;
+		mouse.max_y = (rows + 1) * 8 - 1;
+		if(mode == 0x03 && DOSV_CheckMouseGraphicCursor()) {
 			mouse.gran_x = (Bit16s)0xffff;
 			mouse.gran_y = (Bit16s)0xffff;
+			mouse.ratio_x = 1.0f;
+			mouse.ratio_y = 480.0f / 200.0f;
 		}
 		break;
 	}
@@ -812,15 +874,31 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 	case 0x75:
 		mouse.max_y = 399;
 		break;
+	case 0x70:
+		if(DOSV_CheckJapaneseVideoMode()) {
+			mouse.gran_x = (Bit16s)0xfff8;
+			mouse.gran_y = (Bit16s)0xfff8;
+			mouse.max_y = (real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1) * 8 - 1;
+			mouse.max_x = real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) * 8 - 1;
+			if(DOSV_CheckMouseGraphicCursor()) {
+				mouse.gran_x = (Bit16s)0xffff;
+				mouse.gran_y = (Bit16s)0xffff;
+				if(real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) == 24) {
+					mouse.ratio_x = 12.0f / 8.0f;
+					mouse.ratio_y = 24.0f / 8.0f;
+				} else {
+					mouse.ratio_x = 1.0f;
+					mouse.ratio_y = 2.0f;
+				}
+			}
+			break;
+		}
 	default:
 		LOG(LOG_MOUSE,LOG_ERROR)("Unhandled videomode %X on reset",mode);
 		mouse.inhibit_draw = true;
 		return;
 	}
 	mouse.mode = mode;
-	mouse.max_x = 639;
-	mouse.min_x = 0;
-	mouse.min_y = 0;
 
 	mouse.events = 0;
 	mouse.timer_in_progress = false;
@@ -868,6 +946,10 @@ static void Mouse_Reset(void) {
 	// Dont set max coordinates here. it is done by SetResolution!
 	mouse.x = static_cast<float>((mouse.max_x + 1)/ 2);
 	mouse.y = static_cast<float>((mouse.max_y + 1)/ 2);
+	if(DOSV_CheckMouseGraphicCursor()) {
+		mouse.x = static_cast<float>(CurMode->swidth / 2);
+		mouse.y = static_cast<float>((real_readb(BIOSMEM_SEG, BIOSMEM_NB_ROWS) + 1) * real_readb(BIOSMEM_SEG, BIOSMEM_CHAR_HEIGHT) / 2);
+	}
 	mouse.sub_mask = 0;
 	mouse.in_UIR = false;
 }
@@ -899,17 +981,18 @@ static Bitu INT33_Handler(void) {
 		break;
 	case 0x02:	/* Hide Mouse */
 		{
-			if (CurMode->type!=M_TEXT) RestoreCursorBackground();
-			else RestoreCursorBackgroundText();
+			if (CurMode->type == M_TEXT || !DOSV_CheckMouseGraphicCursor()) RestoreCursorBackgroundText();
+			else RestoreCursorBackground();
 			mouse.hidden++;
 		}
 		break;
 	case 0x03:	/* Return position and Button Status */
 		reg_bx=mouse.buttons;
-		reg_cx=POS_X;
-		if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
-			reg_dx=(Bit16u)(mouse.y * (200.0f / 480.0f));
+		if(DOSV_CheckMouseGraphicCursor()) {
+			reg_cx=(Bit16u)(mouse.x / mouse.ratio_x) & 0xfff8;
+			reg_dx=(Bit16u)(mouse.y / mouse.ratio_y) & 0xfff8;
 		} else {
+			reg_cx=POS_X;
 			reg_dx=POS_Y;
 		}
 		Mouse_Used();
@@ -1161,6 +1244,15 @@ static Bitu INT33_Handler(void) {
 		SegSet16(es, version_table_seg);
 		reg_di = 0x0000;
 		break;
+	case 0x4a33:
+		if(reg_bl == 0xff) {
+			reg_bl = (Bit8u)DOSV_GetMouseCursorMode();
+		} else if(reg_bl == 0 || reg_bl == 1) {
+			Mouse_HideCursor();
+			DOSV_SetMouseCursorMode((bool)reg_bl);
+			Mouse_Reset();
+		}
+		break;
 	default:
 		LOG(LOG_MOUSE,LOG_ERROR)("Mouse Function %04X not implemented!",reg_ax);
 		break;
@@ -1234,10 +1326,11 @@ static Bitu INT74_Handler(void) {
 		if (mouse.sub_mask & mouse.event_queue[mouse.events].type) {
 			reg_ax=mouse.event_queue[mouse.events].type;
 			reg_bx=mouse.event_queue[mouse.events].buttons;
-			reg_cx=POS_X;
-			if(IS_DOS_JAPANESE && real_readb(BIOSMEM_SEG, BIOSMEM_CURRENT_MODE) == 0x03) {
-				reg_dx=(Bit16u)(mouse.y * (200.0f / 480.0f));
+			if(DOSV_CheckMouseGraphicCursor()) {
+				reg_cx=(Bit16u)(mouse.x / mouse.ratio_x) & 0xfff8;
+				reg_dx=(Bit16u)(mouse.y / mouse.ratio_y) & 0xfff8;
 			} else {
+				reg_cx=POS_X;
 				reg_dx=POS_Y;
 			}
 			reg_si=static_cast<Bit16s>(mouse.mickey_x);

@@ -483,13 +483,15 @@ SDL_Surface* SDL_SetVideoMode_Wrap(int width,int height,int bpp,Bit32u flags){
 
 extern const char* RunningProgram;
 extern bool CPU_CycleAutoAdjust;
+extern bool image_boot_flag;
 //Globals for keyboard initialisation
 bool startup_state_numlock=false;
 bool startup_state_capslock=false;
 bool selmark = false;
 int selsrow = -1, selscol = -1;
 int selerow = -1, selecol = -1;
-int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, fy=-1, mbutton=3;
+int mouse_start_x=-1, mouse_start_y=-1, mouse_end_x=-1, mouse_end_y=-1, fx=-1, fy=-1, mbutton=3, wheel_key=0;
+bool wheel_guest = false;
 const char *modifier;
 
 void GFX_SetTitle(Bit32s cycles,int frameskip,bool paused){
@@ -1780,6 +1782,9 @@ static void GUI_StartUp(Section * sec) {
     else mbutton=0;
 	modifier=section->Get_string("clipboardmodifier");
 	reset_keyboard_state = section->Get_bool("resetkeyboardstate");
+    wheel_key = section->Get_int("mouse_wheel_key");
+    wheel_guest = wheel_key > 0;
+    if (wheel_key < 0) wheel_key = -wheel_key;
 #if SDL_VERSION_ATLEAST(1, 2, 10)
 	const SDL_VideoInfo* vidinfo = SDL_GetVideoInfo();
 #ifdef WIN32
@@ -2270,12 +2275,14 @@ void ClipKeySelect(int sym) {
 #endif
 
 static void HandleMouseMotion(SDL_MouseMotionEvent * motion) {
-	if (sdl.mouse.locked || !sdl.mouse.autoenable)
+	if (sdl.mouse.locked || !sdl.mouse.autoenable) {
+JTrace("%.1f %.1f %.1f %.1f\n", (float)motion->yrel, (float)motion->y, (float)sdl.mouse.ysensitivity, (float)sdl.clip.h);
 		Mouse_CursorMoved((float)motion->xrel*sdl.mouse.xsensitivity/100.0f,
 						  (float)motion->yrel*sdl.mouse.ysensitivity/100.0f,
 						  (float)(motion->x-sdl.clip.x)/(sdl.clip.w-1)*sdl.mouse.xsensitivity/100.0f,
 						  (float)(motion->y-sdl.clip.y)/(sdl.clip.h-1)*sdl.mouse.ysensitivity/100.0f,
 						  sdl.mouse.locked);
+	}
 #if C_CLIPBOARD
 	else if (mouse_start_x >= 0 && mouse_start_y >= 0) {
 		if (fx>=0 && fy>=0)
@@ -2328,6 +2335,70 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 		case SDL_BUTTON_MIDDLE:
 			Mouse_ButtonPressed(2);
 			break;
+		case SDL_BUTTON_WHEELUP:
+			if (wheel_key && (wheel_guest || !image_boot_flag)) {
+#if defined(WIN32)
+				if (wheel_key < 4) {
+					INPUT ip = {0};
+					ip.type = INPUT_KEYBOARD;
+					ip.ki.wScan = wheel_key==2 ? 75 : (wheel_key == 3 ? 73 : 72);
+					ip.ki.time = 0;
+					ip.ki.dwExtraInfo = 0;
+					ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY;
+					SendInput(1, &ip, sizeof(INPUT));
+					ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY;
+					SendInput(1, &ip, sizeof(INPUT));
+				} else
+#endif
+				if (wheel_key==7) {
+					bool ctrlup = sdl.lctrlstate == SDL_KEYUP && sdl.rctrlstate == SDL_KEYUP;
+					if (ctrlup) KEYBOARD_AddKey(KBD_leftctrl, true);
+					KEYBOARD_AddKey(KBD_w, true);
+					if (ctrlup) KEYBOARD_AddKey(KBD_leftctrl, false);
+					KEYBOARD_AddKey(KBD_w, false);
+				} else {
+					bool ctrlup = sdl.lctrlstate == SDL_KEYUP && sdl.rctrlstate == SDL_KEYUP;
+					if (wheel_key >= 4 && wheel_key <= 6 && ctrlup) KEYBOARD_AddKey(KBD_leftctrl, true);
+					KEYBOARD_AddKey(wheel_key == 2 || wheel_key == 5 ? KBD_left : (wheel_key == 3 || wheel_key == 6 ? KBD_pageup : KBD_up), true);
+					if (wheel_key >= 4 && wheel_key <= 6 && ctrlup) KEYBOARD_AddKey(KBD_leftctrl, false);
+					KEYBOARD_AddKey(wheel_key == 2 || wheel_key == 5 ? KBD_left : (wheel_key == 3 || wheel_key == 6 ? KBD_pageup : KBD_up), false);
+				}
+			} else {
+				Mouse_ButtonPressed(100-1);
+			}
+			break;
+		case SDL_BUTTON_WHEELDOWN:
+			if (wheel_key && (wheel_guest || !image_boot_flag)) {
+#if defined(WIN32)
+				if (wheel_key < 4) {
+					INPUT ip = {0};
+					ip.type = INPUT_KEYBOARD;
+					ip.ki.wScan = wheel_key == 2 ? 77 : (wheel_key == 3 ? 81 : 80);
+					ip.ki.time = 0;
+					ip.ki.dwExtraInfo = 0;
+					ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY;
+					SendInput(1, &ip, sizeof(INPUT));
+					ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY;
+					SendInput(1, &ip, sizeof(INPUT));
+				} else
+#endif
+				if (wheel_key==7) {
+					bool ctrlup = sdl.lctrlstate == SDL_KEYUP && sdl.rctrlstate == SDL_KEYUP;
+					if (ctrlup) KEYBOARD_AddKey(KBD_leftctrl, true);
+					KEYBOARD_AddKey(KBD_z, true);
+					if (ctrlup) KEYBOARD_AddKey(KBD_leftctrl, false);
+					KEYBOARD_AddKey(KBD_z, false);
+				} else {
+					bool ctrlup = sdl.lctrlstate == SDL_KEYUP && sdl.rctrlstate == SDL_KEYUP;
+					if (wheel_key >= 4 && wheel_key <= 6 && ctrlup) KEYBOARD_AddKey(KBD_leftctrl, true);
+					KEYBOARD_AddKey(wheel_key ==2 || wheel_key == 5 ? KBD_right : (wheel_key == 3 || wheel_key == 6 ? KBD_pagedown : KBD_down), true);
+					if (wheel_key >= 4 && wheel_key <= 6 && ctrlup) KEYBOARD_AddKey(KBD_leftctrl, false);
+					KEYBOARD_AddKey(wheel_key == 2 || wheel_key == 5 ? KBD_right : (wheel_key == 3 || wheel_key == 6 ? KBD_pagedown : KBD_down), false);
+				}
+			} else {
+				Mouse_ButtonPressed(100+1);
+			}
+			break;
 		}
 		break;
 	case SDL_RELEASED:
@@ -2359,6 +2430,12 @@ static void HandleMouseButton(SDL_MouseButtonEvent * button, SDL_MouseMotionEven
 			break;
 		case SDL_BUTTON_MIDDLE:
 			Mouse_ButtonReleased(2);
+			break;
+		case SDL_BUTTON_WHEELUP:
+			Mouse_ButtonReleased(100-1);
+			break;
+		case SDL_BUTTON_WHEELDOWN:
+			Mouse_ButtonReleased(100+1);
 			break;
 		}
 		break;
@@ -2882,6 +2959,14 @@ void Config_Add_SDL() {
 
 	Pbool = sdl_sec->Add_bool("resetkeyboardstate", Property::Changeable::OnlyAtStart, true);
 	Pbool->Set_help("Reset keyboard press state when changing screen modes.");
+
+	Pint = sdl_sec->Add_int("mouse_wheel_key", Property::Changeable::WhenIdle, -1);
+	Pint->SetMinMax(-7,7);
+	Pint->Set_help("Convert mouse wheel movements into keyboard presses such as arrow keys.\n"
+		"0: disabled; 1: up/down arrows; 2: left/right arrows; 3: PgUp/PgDn keys.\n"
+		"4: Ctrl+up/down arrows; 5: Ctrl+left/right arrows; 6: Ctrl+PgUp/PgDn keys.\n"
+		"7: Ctrl+W/Z, as supported by text editors like WordStar and MS-DOS EDIT.\n"
+		"Putting a minus sign in front will disable the conversion for guest systems.");
 }
 
 static void show_warning(char const * const message) {

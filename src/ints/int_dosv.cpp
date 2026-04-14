@@ -41,6 +41,7 @@ static Bitu dosv_cursor_y;
 static enum DOSV_VTEXT_MODE dosv_vtext_mode[VTEXT_MODE_COUNT];
 static enum DOSV_FEP_CTRL dosv_fep_ctrl;
 static Bit16u TrueVideoMode;
+static bool dosv_graphic_mouse_cursor = false;
 
 Bit16u GetTrueVideoMode()
 {
@@ -50,6 +51,24 @@ Bit16u GetTrueVideoMode()
 void SetTrueVideoMode(Bit16u mode)
 {
 	TrueVideoMode = mode;
+}
+
+void DOSV_SetMouseCursorMode(bool flag)
+{
+	dosv_graphic_mouse_cursor = flag;
+}
+
+bool DOSV_GetMouseCursorMode()
+{
+	return dosv_graphic_mouse_cursor;
+}
+
+bool DOSV_CheckMouseGraphicCursor()
+{
+	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x12 || (TrueVideoMode >= 0x70 && TrueVideoMode <= 0x73) || (TrueVideoMode >= 0x78 && TrueVideoMode < 0x78 + VTEXT_MODE_COUNT - 1))) {
+		return dosv_graphic_mouse_cursor;
+	}
+	return false;
 }
 
 bool DOSV_CheckJapaneseVideoMode()
@@ -450,6 +469,7 @@ void DOSV_SetConfig(Section_prop *section)
 		dosv_vtext_mode[no] = DOSV_StringVtextMode(p->GetSection()->Get_string("type"));
 		INT10_SetDOSVVtextRowsDefault(no, dosv_vtext_mode[no], p->GetSection()->Get_int("rows"));
 	}
+	dosv_graphic_mouse_cursor = section->Get_bool("dosv_graphic_mouse_cursor");
 }
 
 void DOSV_Setup()
