@@ -50,5 +50,8 @@ enum DOSV_FEP_CTRL DOSV_GetFepCtrl();
 void SetTrueVideoMode(Bit16u mode);
 Bit16u GetTrueVideoMode();
 bool DOSV_CheckJapaneseVideoMode();
+bool DOSV_CheckMouseGraphicCursor();
+void DOSV_SetMouseCursorMode(bool flag);
+bool DOSV_GetMouseCursorMode();
 
 #endif

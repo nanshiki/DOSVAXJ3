@@ -25,7 +25,7 @@
 
 
 void Mouse_ShowCursor(void);
-void Mouse_HideCursor(void);
+bool Mouse_HideCursor(void);
 
 bool Mouse_SetPS2State(bool use);
 
