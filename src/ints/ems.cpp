@@ -480,7 +480,7 @@ static Bit8u EMM_GetPagesForAllHandles(PhysPt table,Bit16u & handles) {
 }
 
 static Bit8u EMM_PartialPageMapping(void) {
-	PhysPt list,data;Bit16u count;
+	PhysPt list,data;Bit16u count,page;
 	switch (reg_al) {
 	case 0x00:	/* Save Partial Page Map */
 		list = SegPhys(ds)+reg_si;
@@ -490,38 +490,41 @@ static Bit8u EMM_PartialPageMapping(void) {
 		for (;count>0;count--) {
 			Bit16u segment=mem_readw(list);list+=2;
 			if ((segment>=emm_pageframe) && (segment<emm_pageframe+0x1000)) {
-				Bit16u page = (segment-emm_pageframe) / (EMM_PAGE_SIZE>>4);
-				mem_writew(data,segment);data+=2;
-				MEM_BlockWrite(data,&emm_mappings[page],sizeof(EMM_Mapping));
-				data+=sizeof(EMM_Mapping);
+				page=(segment-emm_pageframe)>>10;
+				mem_writeb(data++,(Bit8u)page);
+				mem_writeb(data++,(Bit8u)emm_mappings[page].handle);
+				mem_writew(data,emm_mappings[page].page);
 			} else if ((ems_type==1) || (ems_type==3) || ((segment>=emm_pageframe-0x1000) && (segment<emm_pageframe)) || ((segment>=0xa000) && (segment<0xb000))) {
-				mem_writew(data,segment);data+=2;
-				MEM_BlockWrite(data,&emm_segmentmappings[segment>>10],sizeof(EMM_Mapping));
-				data+=sizeof(EMM_Mapping);
+				page=segment>>10;
+				mem_writeb(data++,(Bit8u)page);
+				mem_writeb(data++,(Bit8u)emm_segmentmappings[page].handle);
+				mem_writew(data,emm_segmentmappings[page].page);
 			} else {
 				return EMM_ILL_PHYS;
 			}
+			data+=2;
 		}
 		break;
 	case 0x01:	/* Restore Partial Page Map */
 		data = SegPhys(ds)+reg_si;
 		count= mem_readw(data);data+=2;
 		for (;count>0;count--) {
-			Bit16u segment=mem_readw(data);data+=2;
-			if ((segment>=emm_pageframe) && (segment<emm_pageframe+0x1000)) {
-				Bit16u page = (segment-emm_pageframe) / (EMM_PAGE_SIZE>>4);
-				MEM_BlockRead(data,&emm_mappings[page],sizeof(EMM_Mapping));
-			} else if ((ems_type==1) || (ems_type==3) || ((segment>=emm_pageframe-0x1000) && (segment<emm_pageframe)) || ((segment>=0xa000) && (segment<0xb000))) {
-				MEM_BlockRead(data,&emm_segmentmappings[segment>>10],sizeof(EMM_Mapping));
+			page=(Bit16u)mem_readb(data++);
+			if (page<EMM_MAX_PHYS) {
+				emm_mappings[page].handle=(Bit16u)mem_readb(data++);
+				emm_mappings[page].page=mem_readw(data);
+			} else if (page<0x40) {
+				emm_segmentmappings[page].handle=(Bit16u)mem_readb(data++);
+				emm_segmentmappings[page].page=mem_readw(data);
 			} else {
 				return EMM_ILL_PHYS;
 			}
-			data+=sizeof(EMM_Mapping);
+			data+=2;
 		}
 		return EMM_RestoreMappingTable();
 		break;
 	case 0x02:	/* Get Partial Page Map Array Size */
-		reg_al=(Bit8u)(2+reg_bx*(2+sizeof(EMM_Mapping)));
+		reg_al=(Bit8u)(2+reg_bx*4);
 		break;
 	default:
 		LOG(LOG_MISC,LOG_ERROR)("EMS:Call %2X Subfunction %2X not supported",reg_ah,reg_al);
