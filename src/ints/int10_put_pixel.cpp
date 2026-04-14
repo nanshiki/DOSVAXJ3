@@ -144,36 +144,13 @@ void INT10_PutPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u color) {
 	}
 	break;
 	case M_LIN4:
-		if (svgaCard == SVGA_TsengET4K) {
-			IO_Write(0x3ce,5);IO_Write(0x3cf,0);
-			/* Set the correct bitmask for the pixel position */
-			IO_Write(0x3ce,0x8);Bit8u mask=128>>(x&7);IO_Write(0x3cf,mask);
-			/* Set the color to set/reset register */
-			IO_Write(0x3ce,0x0);IO_Write(0x3cf,color);
-			/* Enable all the set/resets */
-			IO_Write(0x3ce,0x1);IO_Write(0x3cf,0xf);
-			/* test for xorring */
-			if (color & 0x80) { IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x18); }
-			PhysPt off = y * 128 + (x >> 3);
-			if(off >= 0x10000) {
-				IO_Write(0x3cd, 0x11);
-				off -= 0x10000;
-			} else {
-				IO_Write(0x3cd, 0x00);
-			}
-			off += 0xa0000;
-			/* Bitmask and set/reset should do the rest */
-			mem_readb(off);
-			mem_writeb(off,0xff);
-			/* Restore bitmask */	
-			IO_Write(0x3ce,0x8);IO_Write(0x3cf,0xff);
-			IO_Write(0x3ce,0x1);IO_Write(0x3cf,0);
-			/* Restore write operating if changed */
-			if (color & 0x80) { IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x0); }
+		if (svgaCard != SVGA_TsengET4K && svgaCard != SVGA_S3Trio) {
+			break;
 		}
-		break;
 	case M_EGA:
 		{
+			/* Enable writing to all planes */
+			IO_Write(0x3c4,0x2);IO_Write(0x3c5,0xf);
 			/* Set the correct bitmask for the pixel position */
 			IO_Write(0x3ce,0x8);Bit8u mask=128>>(x&7);IO_Write(0x3cf,mask);
 			/* Set the color to set/reset register */
@@ -184,12 +161,38 @@ void INT10_PutPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u color) {
 			if (color & 0x80) { IO_Write(0x3ce,0x3);IO_Write(0x3cf,0x18); }
 			//Perhaps also set mode 1 
 			/* Calculate where the pixel is in video memory */
-			if (CurMode->plength!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE))
-				LOG(LOG_INT10,LOG_ERROR)("PutPixel_EGA_p: %" sBitfs(x) "!=%x",CurMode->plength,real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE));
-			if (CurMode->swidth!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8)
-				LOG(LOG_INT10,LOG_ERROR)("PutPixel_EGA_w: %" sBitfs(x) "!=%x",CurMode->swidth,real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8);
-			PhysPt off=0xa0000+real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE)*page+
-				((y*real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8+x)>>3);
+			PhysPt off;
+			if (CurMode->type == M_EGA) {
+				if (CurMode->plength!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE))
+					LOG(LOG_INT10,LOG_ERROR)("PutPixel_EGA_p: %" sBitfs(x) "!=%x",CurMode->plength,real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE));
+				if (CurMode->swidth!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8)
+					LOG(LOG_INT10,LOG_ERROR)("PutPixel_EGA_w: %" sBitfs(x) "!=%x",CurMode->swidth,real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8);
+				off = real_readw(BIOSMEM_SEG, BIOSMEM_PAGE_SIZE) * page + ((y * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) * 8 + x) >> 3);
+			} else {
+				off = ((y * CurMode->swidth + x) >> 3);
+				if(off >= 0x20000) {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x22);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x02);
+					}
+					off -= 0x20000;
+				} else if(off >= 0x10000) {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x11);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x01);
+					}
+					off -= 0x10000;
+				} else {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x00);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x00);
+					}
+				}
+			}
+			off += 0xa0000;
 			/* Bitmask and set/reset should do the rest */
 			mem_readb(off);
 			mem_writeb(off,0xff);
@@ -266,15 +269,45 @@ void INT10_GetPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u * color) {
 			*color=(val>>((x&1)?0:4)) & 0xf;
 		}
 		break;
+	case M_LIN4:
+		if (svgaCard != SVGA_TsengET4K && svgaCard != SVGA_S3Trio) {
+			break;
+		}
 	case M_EGA:
 		{
 			/* Calculate where the pixel is in video memory */
-			if (CurMode->plength!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE))
-				LOG(LOG_INT10,LOG_ERROR)("GetPixel_EGA_p: %" sBitfs(x) "!=%x",CurMode->plength,real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE));
-			if (CurMode->swidth!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8)
-				LOG(LOG_INT10,LOG_ERROR)("GetPixel_EGA_w: %" sBitfs(x) "!=%x",CurMode->swidth,real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8);
-			PhysPt off=0xa0000+real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE)*page+
-				((y*real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8+x)>>3);
+			PhysPt off;
+			if (CurMode->type == M_EGA) {
+				if (CurMode->plength!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE))
+					LOG(LOG_INT10,LOG_ERROR)("GetPixel_EGA_p: %" sBitfs(x) "!=%x",CurMode->plength,real_readw(BIOSMEM_SEG,BIOSMEM_PAGE_SIZE));
+				if (CurMode->swidth!=(Bitu)real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8)
+					LOG(LOG_INT10,LOG_ERROR)("GetPixel_EGA_w: %" sBitfs(x) "!=%x",CurMode->swidth,real_readw(BIOSMEM_SEG,BIOSMEM_NB_COLS)*8);
+				off = real_readw(BIOSMEM_SEG, BIOSMEM_PAGE_SIZE) * page + ((y * real_readw(BIOSMEM_SEG, BIOSMEM_NB_COLS) * 8 + x) >> 3);
+			} else {
+				off = ((y * CurMode->swidth + x) >> 3);
+				if(off >= 0x20000) {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x22);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x02);
+					}
+					off -= 0x20000;
+				} else if(off >= 0x10000) {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x11);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x01);
+					}
+					off -= 0x10000;
+				} else {
+					if(svgaCard == SVGA_TsengET4K) {
+						IO_Write(0x3cd, 0x00);
+					} else {
+						IO_Write(0x3d4, 0x6a); IO_Write(0x3d5, 0x00);
+					}
+				}
+			}
+			off += 0xa0000;
 			Bitu shift=7-(x & 7);
 			/* Set the read map */
 			*color=0;
