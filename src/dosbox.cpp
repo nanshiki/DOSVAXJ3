@@ -535,6 +535,9 @@ void DOSBOX_Init(void) {
 	Pstring->Set_values(kanjikey_setting);
 	Pstring->Set_help("Key to assign Kanji key at image boot");
 
+	Pbool = secprop->Add_bool("dosv_graphic_mouse_cursor",Property::Changeable::OnlyAtStart,false);
+	Pbool->Set_help("Using a graphical mouse cursor in DOS/V Japanese mode");
+
 	Pbool = secprop->Add_bool("debug",Property::Changeable::OnlyAtStart,false);
 	Pbool->Set_help("debug flag");
 
