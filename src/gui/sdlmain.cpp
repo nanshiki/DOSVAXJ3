@@ -2276,7 +2276,6 @@ void ClipKeySelect(int sym) {
 
 static void HandleMouseMotion(SDL_MouseMotionEvent * motion) {
 	if (sdl.mouse.locked || !sdl.mouse.autoenable) {
-JTrace("%.1f %.1f %.1f %.1f\n", (float)motion->yrel, (float)motion->y, (float)sdl.mouse.ysensitivity, (float)sdl.clip.h);
 		Mouse_CursorMoved((float)motion->xrel*sdl.mouse.xsensitivity/100.0f,
 						  (float)motion->yrel*sdl.mouse.ysensitivity/100.0f,
 						  (float)(motion->x-sdl.clip.x)/(sdl.clip.w-1)*sdl.mouse.xsensitivity/100.0f,
