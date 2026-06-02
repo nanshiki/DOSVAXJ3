@@ -1333,8 +1333,12 @@ public:
 		RealSetVec(0x0c,CALLBACK_RealPointer(call_irq_default)); // IRQ 4
 		RealSetVec(0x0d,CALLBACK_RealPointer(call_irq_default)); // IRQ 5
 		RealSetVec(0x0f,CALLBACK_RealPointer(call_irq_default)); // IRQ 7
-		RealSetVec(0x72,CALLBACK_RealPointer(call_irq_default)); // IRQ 10
-		RealSetVec(0x73,CALLBACK_RealPointer(call_irq_default)); // IRQ 11
+
+		Bitu call_irq815default = CALLBACK_Allocate();
+		CALLBACK_Setup(call_irq815default, NULL, CB_IRET_EOI_PIC2, Real2Phys(BIOS_DEFAULT_IRQ815_DEF_LOCATION), "irq 8-15 default");
+		for (Bit16u ct = 0x70 ; ct < 0x78 ; ct++) {
+			RealSetVec(ct, BIOS_DEFAULT_IRQ815_DEF_LOCATION);
+		}
 
 		// INT 05h: Print Screen
 		// IRQ1 handler calls it when PrtSc key is pressed; does nothing unless hooked
