@@ -65,8 +65,12 @@ bool DOSV_GetMouseCursorMode()
 
 bool DOSV_CheckMouseGraphicCursor()
 {
-	if(IS_DOS_JAPANESE && (TrueVideoMode == 0x03 || TrueVideoMode == 0x12 || (TrueVideoMode >= 0x70 && TrueVideoMode <= 0x73) || (TrueVideoMode >= 0x78 && TrueVideoMode < 0x78 + VTEXT_MODE_COUNT - 1))) {
-		return dosv_graphic_mouse_cursor;
+	if(IS_DOS_JAPANESE) {
+		if(TrueVideoMode == 0x03 || (TrueVideoMode >= 0x70 && TrueVideoMode <= 0x73) || (TrueVideoMode >= 0x78 && TrueVideoMode < 0x78 + VTEXT_MODE_COUNT - 1)) {
+			return dosv_graphic_mouse_cursor;
+		} else if(TrueVideoMode == 0x12) {
+			return true;
+		}
 	}
 	return false;
 }

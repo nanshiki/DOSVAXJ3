@@ -865,7 +865,6 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 		mouse.max_y = 349;
 		break;
 	case 0x11:
-	case 0x12:
 	case 0x52:
 	case 0x53:
 		mouse.max_y = 479;
@@ -874,6 +873,7 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 	case 0x75:
 		mouse.max_y = 399;
 		break;
+	case 0x12:
 	case 0x70:
 		if(DOSV_CheckJapaneseVideoMode()) {
 			mouse.gran_x = (Bit16s)0xfff8;
@@ -891,6 +891,10 @@ void Mouse_AfterNewVideoMode(bool setmode) {
 					mouse.ratio_y = 2.0f;
 				}
 			}
+			break;
+		}
+		if(mode == 0x12) {
+			mouse.max_y = 479;
 			break;
 		}
 	default:
@@ -988,7 +992,7 @@ static Bitu INT33_Handler(void) {
 		break;
 	case 0x03:	/* Return position and Button Status */
 		reg_bx=mouse.buttons;
-		if(DOSV_CheckMouseGraphicCursor()) {
+		if(DOSV_CheckMouseGraphicCursor() && GetTrueVideoMode() != 0x12) {
 			reg_cx=(Bit16u)(mouse.x / mouse.ratio_x) & 0xfff8;
 			reg_dx=(Bit16u)(mouse.y / mouse.ratio_y) & 0xfff8;
 		} else {
