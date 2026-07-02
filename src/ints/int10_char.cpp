@@ -839,6 +839,7 @@ void INT10_SetCursorPos(Bit8u row,Bit8u col,Bit8u page) {
 		page = 0;
 	} else if((IS_J3_ARCH || IS_DOSV) && DOSV_CheckJapaneseVideoMode()) {
 		DOSV_OffCursor();
+		page = 0;
 	}
 	if (page>7) LOG(LOG_INT10,LOG_ERROR)("INT10_SetCursorPos page %d",page);
 	// Bios cursor pos
@@ -1292,8 +1293,9 @@ void WriteCharDOSVSbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 		return;
 	}
 
-	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
+	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72 || real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x12) {
 		if(attr & 0x80) {
+			IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
 			IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 			IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
 			IO_Write(0x3ce, 0x03); IO_Write(0x3cf, 0x18);
@@ -1331,6 +1333,7 @@ void WriteCharDOSVSbcs(Bit16u col, Bit16u row, Bit8u chr, Bit8u attr)
 	off = row * width * height + col;
 	select = StartBankSelect(off);
 
+	IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
 	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 	IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr >> 4);
 	real_writeb(0xa000, off, 0xff); dummy = real_readb(0xa000, off);
@@ -1347,6 +1350,8 @@ static void DrawCharDOSVDbcsHalf(Bitu off, Bit8u *font, Bit8u attr, Bitu width, 
 {
 	volatile Bit8u dummy;
 	Bit8u data;
+
+	IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
 	if(xor_flag) {
 		IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 		IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr & 0x0f);
@@ -1381,6 +1386,7 @@ static inline void DrawCharDOSVDbcs(Bitu off, Bit16u *font, Bit8u attr, Bitu wid
 	volatile Bit16u dummy;
 	Bit16u data;
 
+	IO_Write(0x3ce, 0x08); IO_Write(0x3cf, 0xff);
 	IO_Write(0x3ce, 0x05); IO_Write(0x3cf, 0x03);
 	IO_Write(0x3ce, 0x00); IO_Write(0x3cf, attr >> 4);
 	real_writew(0xa000, off, 0xffff); dummy = real_readw(0xa000, off);
@@ -1414,7 +1420,7 @@ void WriteCharDOSVDbcs(Bit16u col, Bit16u row, Bit16u chr, Bit8u attr)
 	Bit8u *font = GetDbcsFont(chr);
 	Bitu off = row * width * height + col;
 	Bit8u select = StartBankSelect(off);
-	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72) {
+	if(real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x72 || real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_MODE) == 0x12) {
 		if(attr & 0x80) {
 			DrawCharDOSVDbcsHalf(off, font, prevattr, width, height, select, true);
 			if(col != width - 1) {
